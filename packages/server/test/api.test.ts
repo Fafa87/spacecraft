@@ -19,7 +19,7 @@ const run = (patch: Record<string, unknown> = {}) => ({
   kills: 10,
   wave: 0,
   mode: 'local',
-  version: 'test',
+  version: '0.1.0',
   ...patch,
 });
 

@@ -7,7 +7,7 @@ import {
   TICK_DT,
 } from '../constants.js';
 import { defaultContent, type ContentRegistry } from '../data/index.js';
-import { sanitizeName } from '../highscore/validation.js';
+import { sanitizeName } from '../highscore/limits.js';
 import type { RunMode, RunResult, SubmitStatus } from '../highscore/types.js';
 import { randomSeed } from '../math/rng.js';
 import type { Link } from '../net/link.js';

@@ -104,7 +104,8 @@
 
 ```
 HostSession ──RunResult──► submitResult()
-   browser host:  FallbackHighscoreStore ─► HttpHighscoreStore ─► POST /api/highscores
+   browser host:  FallbackHighscoreStore ─► FirestoreHighscoreStore ─► Firestore REST (:commit / :runQuery)
+                                      ├─(or)─► HttpHighscoreStore ─► POST /api/highscores
                                       └─(offline)─► LocalHighscoreStore (localStorage, flushed later)
    WS host:       repo.add() directly
 server: routes.ts ─► RateLimiter ─► validateRunResult ─► HighscoreRepository (sqlite | json | memory)
@@ -112,6 +113,13 @@ server: routes.ts ─► RateLimiter ─► validateRunResult ─► HighscoreRe
 
 Tables are keyed by `teamSize` (1-4), ordered by `survivalMs DESC, submittedAt ASC`. `runId`
 makes submits idempotent. See the README for the anti-cheat roadmap.
+
+The remote store is picked in `client/src/highscores/index.ts`. Firestore is used when
+`VITE_FIREBASE_*` is set (the Pages build), then the HTTP server, then local only. Firestore
+security rules are generated from `shared/src/highscore/{limits,names}.ts` by `npm run rules`, so
+client validation and server-side enforcement can't drift. A test fails if `firestore.rules` is
+stale. Permanent rejections (4xx) are kept in local scores and not retried. Network errors are
+queued and retried.
 
 ## Extension points (where to start)
 

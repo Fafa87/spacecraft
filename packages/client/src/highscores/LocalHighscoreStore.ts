@@ -4,6 +4,18 @@ import type { HighscoreStore, SubmitOutcome, TopResult } from './HighscoreStore.
 
 const KEY = 'sms.highscores.v1';
 const KEEP_PER_TABLE = 50;
+const SUBMITTED_KEY = 'sms.highscores.submitted.v1';
+const KEEP_SUBMITTED = 50;
+
+/** A run this browser got onto the global board (like Pulp Wars' "submitted" list). */
+export interface SubmittedRun {
+  runId: string;
+  teamSize: number;
+  players: string[];
+  survivalMs: number;
+  rank?: number;
+  at: string;
+}
 
 type Tables = Record<string, HighscoreEntry[]>;
 
@@ -20,12 +32,16 @@ export class LocalHighscoreStore implements HighscoreStore {
     storage.set(KEY, t);
   }
 
-  async submit(result: RunResult): Promise<SubmitOutcome> {
+  /**
+   * Stores a run locally. Ids: `local_` = pending (retried against the global board later),
+   * `kept_` = rejected by the board but kept in this browser's table.
+   */
+  async submit(result: RunResult, prefix: 'local_' | 'kept_' = 'local_'): Promise<SubmitOutcome> {
     const tables = this.read();
     const list = (tables[result.teamSize] ??= []);
     let entry = list.find((e) => e.runId === result.runId);
     if (!entry) {
-      entry = { ...result, id: `local_${result.runId}`, submittedAt: new Date().toISOString() };
+      entry = { ...result, id: `${prefix}${result.runId}`, submittedAt: new Date().toISOString() };
       list.push(entry);
       list.sort(sortEntries);
       tables[result.teamSize] = list.slice(0, KEEP_PER_TABLE);
@@ -55,6 +71,43 @@ export class LocalHighscoreStore implements HighscoreStore {
     return Object.values(this.read())
       .flat()
       .filter((e) => e.id.startsWith('local_'));
+  }
+
+  /** Local-only, never retried (the global board rejected it). */
+  keep(result: RunResult): Promise<SubmitOutcome> {
+    return this.submit(result, 'kept_');
+  }
+
+  /** Turns a pending run into a kept one (after a permanent rejection). */
+  markKept(runId: string): void {
+    const tables = this.read();
+    for (const list of Object.values(tables))
+      for (const e of list)
+        if (e.runId === runId && e.id.startsWith('local_')) e.id = `kept_${runId}`;
+    this.write(tables);
+  }
+
+  rememberSubmitted(run: RunResult, rank: number | undefined): void {
+    const list = this.submitted().filter((r) => r.runId !== run.runId);
+    list.unshift({
+      runId: run.runId,
+      teamSize: run.teamSize,
+      players: run.players,
+      survivalMs: run.survivalMs,
+      rank,
+      at: new Date().toISOString(),
+    });
+    storage.set(SUBMITTED_KEY, list.slice(0, KEEP_SUBMITTED));
+  }
+
+  submitted(): SubmittedRun[] {
+    const raw = storage.get<unknown>(SUBMITTED_KEY, []);
+    return Array.isArray(raw)
+      ? raw.filter(
+          (r): r is SubmittedRun =>
+            typeof r === 'object' && r !== null && typeof (r as SubmittedRun).runId === 'string',
+        )
+      : [];
   }
 
   markSynced(runId: string): void {

@@ -1,11 +1,19 @@
 import type { HighscoreEntry, RunResult } from '@sms/shared';
 import type { HighscoreStore, SubmitOutcome, TopResult } from './HighscoreStore.js';
-import { HttpError, type HttpHighscoreStore } from './HttpHighscoreStore.js';
+import { HttpError } from './HttpHighscoreStore.js';
 import type { LocalHighscoreStore } from './LocalHighscoreStore.js';
 
+/** A rejection that retrying can't fix (bad run, denied by rules). 408/429 are transient. */
+const isPermanentRejection = (err: unknown): err is HttpError =>
+  err instanceof HttpError &&
+  err.status >= 400 &&
+  err.status < 500 &&
+  err.status !== 429 &&
+  err.status !== 408;
+
 /**
- * Server first, localStorage as fallback + cache:
- *  - submit: POST to the server; if unreachable, store locally (status 'local') and retry
+ * Global board first (Firestore or the HTTP highscore server), localStorage as fallback + cache:
+ *  - submit: send to the board; if unreachable, store locally (status 'local') and retry
  *    pending local runs next time the server answers.
  *  - top: server table (cached locally); cached/local table when offline.
  * With `remote = null` (no server configured, e.g. a static GitHub Pages deploy) it is a
@@ -15,7 +23,7 @@ export class FallbackHighscoreStore implements HighscoreStore {
   online: boolean | null = null;
 
   constructor(
-    private readonly remote: HttpHighscoreStore | null,
+    private readonly remote: HighscoreStore | null,
     private readonly local: LocalHighscoreStore,
   ) {}
 
@@ -28,17 +36,19 @@ export class FallbackHighscoreStore implements HighscoreStore {
     try {
       const out = await this.remote.submit(result);
       this.online = true;
+      this.local.rememberSubmitted(result, out.rank);
       void this.flushPending();
       return out;
     } catch (err) {
-      // A 4xx means the server rejected the run — don't pretend it counted.
-      if (err instanceof HttpError && err.status >= 400 && err.status < 500 && err.status !== 429) {
-        this.online = true;
-        console.warn('[highscores] server rejected run', err.message);
-        return { status: 'failed' };
+      // A 4xx means the board rejected the run (or, for Firestore, the rules aren't deployed
+      // yet): don't pretend it counted, but keep it in this browser's table (not retried).
+      if (isPermanentRejection(err)) {
+        console.warn('[highscores] leaderboard rejected run', err.message);
+        const kept = await this.local.keep(result);
+        return { status: 'failed', rank: kept.rank };
       }
       this.online = false;
-      console.warn('[highscores] server unreachable, saving locally', err);
+      console.warn('[highscores] leaderboard unreachable, saving locally', err);
       return this.local.submit(result);
     }
   }
@@ -68,10 +78,11 @@ export class FallbackHighscoreStore implements HighscoreStore {
       for (const e of this.local.pending()) {
         const { id: _id, submittedAt: _s, ...run } = e as HighscoreEntry;
         try {
-          await this.remote.submit(run);
+          const out = await this.remote.submit(run);
           this.local.markSynced(run.runId);
+          this.local.rememberSubmitted(run, out.rank);
         } catch (err) {
-          if (err instanceof HttpError && err.status === 400) this.local.markSynced(run.runId);
+          if (isPermanentRejection(err)) this.local.markKept(run.runId);
           else break;
         }
       }

@@ -8,7 +8,10 @@
  */
 import puppeteer from 'puppeteer-core';
 
-const URL_ = process.argv[2] ?? 'http://localhost:4321/spacecraft/';
+// Headless runs must not write to the live leaderboard: Firestore is disabled with ?firestore=0,
+// which exercises the local-scores path.
+const BASE = process.argv[2] ?? 'http://localhost:4321/spacecraft/';
+const URL_ = new URL('?firestore=0', BASE).href;
 const SHOT = process.argv[3] ?? 'docs/pages-live.png';
 const CHROME = process.env.CHROME_PATH ?? '/usr/bin/google-chrome';
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -75,7 +78,9 @@ async function main() {
     }
 
     // Solo run until the swarm wins, then check the local score.
-    await page.goto(new URL('?autosolo=1&name=PagesBot', URL_).href, { waitUntil: 'load' });
+    await page.goto(new URL('?firestore=0&autosolo=1&name=PagesBot', BASE).href, {
+      waitUntil: 'load',
+    });
     await page.waitForSelector('.gameover #submit', { timeout: 90000 });
     await page.waitForFunction(
       () => !/Submitting/.test(document.querySelector('.gameover #submit')?.textContent ?? ''),

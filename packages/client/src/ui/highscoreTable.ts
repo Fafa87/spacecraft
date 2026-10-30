@@ -50,7 +50,7 @@ export function createHighscorePanel(
         ? 'Global leaderboard'
         : store.localOnly
           ? 'Local scores — saved in this browser'
-          : 'Highscore server unreachable — showing scores saved in this browser';
+          : 'Global leaderboard unreachable — showing scores saved in this browser';
   };
   el.querySelectorAll<HTMLButtonElement>('.tabs button').forEach((b) =>
     b.addEventListener('click', () => void load(Number(b.dataset.ts))),

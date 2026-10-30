@@ -64,8 +64,8 @@ export function createGameOverScreen(
             : s.status === 'local' && opts.store.localOnly
               ? `Saved to local scores${s.rank ? ` — local rank #${s.rank}` : ''}`
               : s.status === 'local'
-                ? `Highscore server unreachable — saved locally${s.rank ? ` (local rank #${s.rank})` : ''}, will retry`
-                : 'Score was rejected by the server.';
+                ? `Global leaderboard unreachable — saved locally${s.rank ? ` (local rank #${s.rank})` : ''}, will retry`
+                : `Score was not accepted by the global leaderboard — kept in this browser's scores${s.rank ? ` (local rank #${s.rank})` : ''}.`;
       if (s.status !== 'pending') mountTable();
     },
   };

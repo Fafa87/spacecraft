@@ -64,6 +64,7 @@ export class App {
   }
 
   private serverStatus(): Promise<string> {
+    if (config.firebase) return Promise.resolve('global leaderboard (Firestore)');
     if (!config.hasServer) return Promise.resolve('local scores (saved in this browser)');
     return getServerInfo().then((i) =>
       i

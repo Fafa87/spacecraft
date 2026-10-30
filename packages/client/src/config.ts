@@ -5,6 +5,7 @@
  *   ?join=CODE              open the join flow for a room (QR / share link)
  *   ?ws=1                   use the experimental dedicated WebSocket host instead of P2P
  */
+import type { FirestoreConfig } from './highscores/firestore.js';
 import { parseJoinCode } from './net/joinUrl.js';
 
 const params = new URLSearchParams(location.search);
@@ -30,11 +31,29 @@ function resolveApiUrl(): string | null {
   return url || null;
 }
 
+/**
+ * Global leaderboard in Cloud Firestore (REST, public web config; firestore.rules does the
+ * enforcing). Set VITE_FIREBASE_API_KEY + VITE_FIREBASE_PROJECT_ID at build time, e.g. in
+ * .env.production (committed public defaults) or .env.production.local (repo root, gitignored).
+ * VITE_FIRESTORE_URL points at an emulator. `?firestore=0` disables it for one session.
+ */
+function resolveFirebase(): FirestoreConfig | null {
+  if (params.get('firestore') === '0') return null;
+  const apiKey = import.meta.env.VITE_FIREBASE_API_KEY?.trim();
+  const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID?.trim();
+  if (!apiKey || !projectId) return null;
+  const baseUrl = import.meta.env.VITE_FIRESTORE_URL?.trim() || undefined;
+  return { apiKey, projectId, baseUrl };
+}
+
 const apiUrl = resolveApiUrl();
+const firebase = resolveFirebase();
 const apiParam = params.get('api')?.trim() || null;
 
 export const config = {
   apiUrl,
+  /** Firestore leaderboard config (takes precedence over apiUrl for highscores). */
+  firebase,
   /** False on a static deploy: local-only highscores, no dedicated WS host. */
   hasServer: apiUrl !== null,
   /** Room code from a join link / QR (`?join=CODE`); cleared once used. */

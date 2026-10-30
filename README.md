@@ -5,8 +5,8 @@ endless Tyranid/Zerg-like swarms. The swarm keeps growing, new weapons unlock ov
 **survival time is the only score**. Teams of **1-4 marines** play together, and each team size
 has its **own highscore table**.
 
-**Play it:** https://fafa87.github.io/spacecraft/ (static GitHub Pages build: local highscores,
-P2P co-op through the public PeerJS broker).
+**Play it:** https://fafa87.github.io/spacecraft/ (static GitHub Pages build: global leaderboard
+in Firestore with a local fallback, P2P co-op through the public PeerJS broker).
 
 ![gameplay](docs/screenshot.png)
 
@@ -103,6 +103,9 @@ public PeerJS cloud, so it needs nothing extra.
 | `npm start`                           | Runs the built server.                                                                                                                         |
 | `npm run smoke`                       | Headless end-to-end check: real server, two WS clients, server-side run submit, POST/GET highscores, a full headless solo run.                 |
 | `npm run smoke:browser`               | Headless Chrome against the running Vite client: menu, solo run, host submit to its own in-memory API, P2P + WS co-op, screenshots in `docs/`. |
+| `npm run rules`                       | Regenerates `firestore.rules` from the shared limits and name rules (a test fails if it is stale).                                             |
+| `npm run test:rules`                  | Firestore security-rules tests in the emulator (needs Java 11+), including the REST store end to end.                                          |
+| `npm run check:firestore`             | Live smoke test against the configured Firebase project: create, read, query, duplicate and invalid writes.                                    |
 | `npm run sim -- --bot=kite --seeds=6` | Headless balance simulation: bot survival statistics per team size.                                                                            |
 
 ### Server configuration (env vars)
@@ -120,11 +123,13 @@ public PeerJS cloud, so it needs nothing extra.
 
 Client build-time env:
 
-| Variable                                                                    | Default                                                 | Meaning                                                                                                                     |
-| --------------------------------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `BASE_PATH`                                                                 | `/`                                                     | Public base path (Vite `base`), e.g. `/spacecraft/` for GitHub Pages                                                        |
-| `VITE_HIGHSCORE_URL`                                                        | dev: `http://<page host>:8787`; prod: none              | Highscore server. With none set, a production build uses local (browser) highscores quietly and hides the dedicated WS host |
-| `VITE_PEER_HOST` / `VITE_PEER_PORT` / `VITE_PEER_PATH` / `VITE_PEER_SECURE` | dev: local server via `/api/config`; prod: PeerJS cloud | PeerJS signaling server                                                                                                     |
+| Variable                                                                    | Default                                                 | Meaning                                                                                                                              |
+| --------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `BASE_PATH`                                                                 | `/`                                                     | Public base path (Vite `base`), e.g. `/spacecraft/` for GitHub Pages                                                                 |
+| `VITE_HIGHSCORE_URL`                                                        | dev: `http://<page host>:8787`; prod: none              | Highscore server. With none set, a production build uses local (browser) highscores quietly and hides the dedicated WS host          |
+| `VITE_FIREBASE_API_KEY` / `VITE_FIREBASE_PROJECT_ID`                        | `.env.production`: project `spacecraft-5f703`           | Firestore global leaderboard (see "Highscores with Firebase"). Takes priority over `VITE_HIGHSCORE_URL`; `?firestore=0` turns it off |
+| `VITE_FIRESTORE_URL`                                                        | `https://firestore.googleapis.com/v1`                   | Firestore REST base, e.g. `http://127.0.0.1:8080/v1` for the emulator                                                                |
+| `VITE_PEER_HOST` / `VITE_PEER_PORT` / `VITE_PEER_PATH` / `VITE_PEER_SECURE` | dev: local server via `/api/config`; prod: PeerJS cloud | PeerJS signaling server                                                                                                              |
 
 ## Deploying the client (GitHub Pages)
 
@@ -132,7 +137,9 @@ Client build-time env:
 then builds the client with `BASE_PATH=/<repo>/` and publishes `packages/client/dist` with
 `actions/deploy-pages`. Pages must be set to "GitHub Actions" as its source
 (`gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow`). To use a hosted highscore
-server later, set the repository variable `HIGHSCORE_URL`; the server's `CORS_ORIGIN` must allow
+server later, set the repository variable `HIGHSCORE_URL`. The repository variables
+`FIREBASE_API_KEY` / `FIREBASE_PROJECT_ID` override the Firebase defaults from `.env.production`. For a
+hosted highscore server, the server's `CORS_ORIGIN` must allow
 `https://<owner>.github.io`.
 
 Locally: `npm run build:pages` builds with `/spacecraft/`, and
@@ -186,6 +193,9 @@ an enemy, a sprite, a sound or a music track.
 
 ## How highscores work
 
+> The GitHub Pages build stores scores in **Firestore** (next section). The flow below describes
+> the self-hosted Fastify server, which is used when no Firebase config is set.
+
 1. When a run ends, **only the host** builds a `RunResult`:
    `{ runId, teamSize, players[], survivalMs, kills, wave, endedAt, version, mode }`.
    Every client is told the outcome (`submitted` message → "rank #N on the global leaderboard").
@@ -224,6 +234,95 @@ steps, roughly in order:
    can upload `seed + input log` and the server re-simulates headless to confirm the result.
 4. Account / identity (OAuth) plus moderation tools (shadow-ban, delete entry), and rate limits
    in Redis once the server scales past one instance.
+
+## Highscores with Firebase
+
+Like [Pulp Wars](https://nadbordrozd.github.io/pulp_wars/), the static build talks to **Cloud
+Firestore over its REST API**, straight from the browser: a public web `apiKey`, no auth and no
+SDK (`packages/client/src/highscores/FirestoreHighscoreStore.ts`, about 3 KB).
+
+- **Data:** collection `highscores`, document id = `runId`, with fields `teamSize`, `names[]`,
+  `survivalMs`, `kills`, `wave`, `mode`, `version` and `timestamp` (server `REQUEST_TIME`).
+- **Write:** `documents:commit` with `currentDocument.exists = false`, so writes are create-only and a
+  re-submit returns 409, which counts as already saved. Only the host submits.
+- **Top N:** `documents:runQuery` with `teamSize == N` ordered by `survivalMs desc`. This needs one
+  composite index.
+- **Rank:** `documents:runAggregationQuery` counts runs with `survivalMs >` yours in the same table.
+- **Backend selection:** Firestore if `VITE_FIREBASE_*` is set, otherwise the HTTP server
+  (`VITE_HIGHSCORE_URL`), otherwise local only. The localStorage fallback always stays in place:
+  - When the network fails, runs are kept locally and retried later.
+  - When a run is rejected (for example while the rules are not yet published), it stays in this
+    browser's table, marked as not accepted.
+  - When the leaderboard can't be read (rules or index missing), the local table is shown.
+
+### Setup (one time)
+
+1. In the [Firebase console](https://console.firebase.google.com/), create a project
+   (here: `spacecraft-5f703`) and add a **Web app**. You need only `apiKey` and `projectId` from
+   its config.
+2. Go to **Build → Firestore Database → Create database** (production mode, any location).
+3. **Rules:** open
+   <https://console.firebase.google.com/project/spacecraft-5f703/firestore/databases/-default-/rules>,
+   paste the whole `firestore.rules` file and click **Publish**. Or run `npx firebase deploy --only firestore`
+   after `firebase login`, which uses `firebase.json` and `.firebaserc`.
+4. **Index:** open
+   <https://console.firebase.google.com/project/spacecraft-5f703/firestore/databases/-default-/indexes>,
+   choose **Create index**, and set:
+   - collection `highscores`
+   - fields `teamSize` **Ascending** and `survivalMs` **Descending**
+   - query scope **Collection**
+
+   This index is also in `firestore.indexes.json`. Until it is ready, the first query error links
+   straight to the pre-filled form.
+
+5. **Values to hand back / configure:**
+   - `VITE_FIREBASE_API_KEY=<web apiKey>`
+   - `VITE_FIREBASE_PROJECT_ID=spacecraft-5f703`
+
+   Defaults are in the committed `.env.production`, because the web config is public and ships in
+   the bundle anyway. Put overrides in `.env.production.local` (gitignored) or in the repository
+   variables `FIREBASE_API_KEY` and `FIREBASE_PROJECT_ID` for the Pages workflow.
+
+6. Run `npm run check:firestore`. It writes one hidden test run (`ZZ-test`, version `0.0.0-test`)
+   and checks reads, the index, the duplicate rejection and the invalid-write rejection.
+
+The Spark (free) plan is plenty: 50k reads and 20k writes per day. Each game over costs 1 write
+plus 1 aggregation read, and each leaderboard view costs up to 10 reads per table. Optionally
+restrict the API key to the `https://fafa87.github.io/*` HTTP referrer in Google Cloud → Credentials,
+and enable App Check later.
+
+### What the rules enforce
+
+`firestore.rules` is **generated** (`npm run rules`) from the same constants the client uses, in
+`packages/shared/src/highscore/limits.ts` and `names.ts`:
+
+- Public read, create only (no update or delete), and only the `highscores/{runId}` collection.
+- Exactly the 8 fields, with the right types (ints are real ints).
+- `teamSize` 1-4, and `names.length == teamSize`.
+- `survivalMs` between 1 s and 4 h. Kills at most 25/s per marine plus 50, and a wave cap that
+  follows the surge schedule.
+- A mode whitelist, the version pattern, and `timestamp == request.time` (no backdating).
+- Names: 1-16 characters (letters, digits and `.,!?'_-` plus inner spaces) and a profanity
+  blocklist (English + Polish). The client filter is a superset: it also folds leetspeak and
+  accents. Instead of failing the run, the client replaces an unacceptable name with "Marine N".
+
+### Anti-cheat limitation
+
+There is **no authentication and no server-side verification**. Anyone can call the REST API with
+the public key and write any score that _passes the rules_, for example a plausible 30-minute solo
+run they never played. The rules only stop malformed, absurd, rude or edited entries. Treat the
+board as a friendly leaderboard. Moderate by deleting documents in the console, and see the
+anti-cheat roadmap below (a Cloud Function or the dedicated server that verifies replays would be the
+real fix).
+
+### Testing
+
+- `npm test`: payload, parsing and fallback tests against a mocked `fetch`, plus a check that
+  `firestore.rules` is up to date.
+- `npm run test:rules`: 28 rules tests in the Firestore emulator (Java 11+). They cover valid
+  writes, denied updates and deletes, 21 bad payloads, name rules that match the client, and the
+  REST store end to end, including a forged write.
+- `npm run check:firestore`: the live project.
 
 ## Asset pipeline
 

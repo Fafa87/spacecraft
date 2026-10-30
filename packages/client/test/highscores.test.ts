@@ -29,7 +29,7 @@ const run = (survivalMs: number, teamSize = 1): RunResult => ({
   kills: 1,
   wave: 0,
   endedAt: new Date().toISOString(),
-  version: 'test',
+  version: '0.1.0',
   mode: 'local',
 });
 

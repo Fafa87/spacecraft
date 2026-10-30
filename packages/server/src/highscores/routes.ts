@@ -1,5 +1,10 @@
 import type { FastifyInstance } from 'fastify';
-import { clampLimit, HIGHSCORE_LIMITS, validateRunResult, type TopResponse } from '@sms/shared';
+import {
+  clampLimit,
+  HIGHSCORE_LIMITS,
+  validateLeaderboardRun,
+  type TopResponse,
+} from '@sms/shared';
 import { RateLimiter } from './rateLimiter.js';
 import type { HighscoreRepository } from './repository.js';
 
@@ -71,7 +76,7 @@ export async function highscoreRoutes(
   app.post('/api/highscores', { bodyLimit: 4096 }, async (req, reply) => {
     if (!limiter.take(req.ip))
       return reply.code(429).send({ error: 'rate_limited', message: 'Too many submissions' });
-    const v = validateRunResult(req.body);
+    const v = validateLeaderboardRun(req.body);
     if (!v.ok) return reply.code(400).send({ error: 'invalid_run', details: v.errors });
     const res = await repo.add(v.value);
     req.log.info(

@@ -30,18 +30,24 @@
     "check:mobile": "tsx scripts/mobile-check.ts",
     "predev": "npm run assets --silent",
     "prebuild": "npm run assets --silent",
-    "sim": "tsx scripts/balance-sim.ts"
+    "sim": "tsx scripts/balance-sim.ts",
+    "rules": "tsx scripts/firestore-rules.ts",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-sms \"vitest run --config vitest.rules.config.ts\"",
+    "check:firestore": "tsx scripts/check-firestore.ts"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
     "@eslint/js": "^9.12.0",
+    "@firebase/rules-unit-testing": "^6.0.0",
     "@types/node": "^20.14.0",
     "@types/pngjs": "^6.0.5",
     "concurrently": "^9.0.1",
     "eslint": "^9.12.0",
     "eslint-config-prettier": "^9.1.0",
+    "firebase": "^13.1.0",
+    "firebase-tools": "^15.34.2",
     "globals": "^15.11.0",
     "jsqr": "^1.4.0",
     "pngjs": "^7.0.0",

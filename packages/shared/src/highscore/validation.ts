@@ -1,36 +1,21 @@
 import { GAME_VERSION } from '../constants.js';
 import { DIRECTOR } from '../data/director.js';
+import { HIGHSCORE_LIMITS, sanitizeName } from './limits.js';
+import { leaderboardName } from './names.js';
 import type { RunMode, RunResult } from './types.js';
 
-export const HIGHSCORE_LIMITS = {
-  minTeamSize: 1,
-  maxTeamSize: 4,
-  nameMinLength: 1,
-  nameMaxLength: 16,
-  minSurvivalMs: 1000,
-  /** 4 hours — anything longer is rejected as implausible. */
-  maxSurvivalMs: 4 * 60 * 60 * 1000,
-  /** Upper bound on kills per second of survival per marine. */
-  maxKillsPerSecondPerPlayer: 25,
-  defaultLimit: 10,
-  maxLimit: 100,
-  runIdPattern: /^[A-Za-z0-9_-]{6,64}$/,
-} as const;
+export const RUN_MODES: readonly RunMode[] = ['local', 'p2p', 'dedicated'];
+const MODES = RUN_MODES;
 
-const MODES: RunMode[] = ['local', 'p2p', 'dedicated'];
+/** Max kills for a survival time and team size (mirrored with integer math in firestore.rules). */
+export const maxPlausibleKills = (survivalMs: number, teamSize: number) =>
+  (survivalMs / 1000) * HIGHSCORE_LIMITS.maxKillsPerSecondPerPlayer * teamSize +
+  HIGHSCORE_LIMITS.killsSlack;
 
-/** Trims, strips control chars & collapses whitespace, truncates. */
-export function sanitizeName(raw: string): string {
-  return (
-    raw
-      .replace(/\s+/g, ' ')
-      // eslint-disable-next-line no-control-regex
-      .replace(/[\u0000-\u001f\u007f<>]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, HIGHSCORE_LIMITS.nameMaxLength)
-  );
-}
+/** Highest wave reachable in a survival time (the director's surge schedule + slack). */
+export const maxPlausibleWave = (survivalMs: number) =>
+  Math.floor(Math.max(0, survivalMs / 1000 - DIRECTOR.surge.firstAtSec) / DIRECTOR.surge.interval) +
+  2;
 
 export type ValidationResult<T> = { ok: true; value: T } | { ok: false; errors: string[] };
 
@@ -71,16 +56,16 @@ export function validateRunResult(input: unknown): ValidationResult<RunResult> {
 
   const kills = o.kills ?? 0;
   const wave = o.wave ?? 0;
-  if (!isInt(kills) || kills < 0) errors.push('kills must be a non-negative integer');
-  if (!isInt(wave) || wave < 0) errors.push('wave must be a non-negative integer');
+  if (!isInt(kills) || kills < 0 || kills > L.maxKills)
+    errors.push(`kills must be an integer 0-${L.maxKills}`);
+  if (!isInt(wave) || wave < 0 || wave > L.maxWave)
+    errors.push(`wave must be an integer 0-${L.maxWave}`);
 
   if (errors.length === 0) {
-    const secs = (survivalMs as number) / 1000;
-    if ((kills as number) > secs * L.maxKillsPerSecondPerPlayer * (teamSize as number) + 50)
+    if ((kills as number) > maxPlausibleKills(survivalMs as number, teamSize as number))
       errors.push('kills implausible for survival time');
-    const maxWave =
-      Math.floor(Math.max(0, secs - DIRECTOR.surge.firstAtSec) / DIRECTOR.surge.interval) + 2;
-    if ((wave as number) > maxWave) errors.push('wave implausible for survival time');
+    if ((wave as number) > maxPlausibleWave(survivalMs as number))
+      errors.push('wave implausible for survival time');
   }
 
   let endedAt = new Date().toISOString();
@@ -93,7 +78,9 @@ export function validateRunResult(input: unknown): ValidationResult<RunResult> {
 
   const mode = (o.mode ?? 'p2p') as RunMode;
   if (!MODES.includes(mode)) errors.push(`mode must be one of ${MODES.join(', ')}`);
-  const version = typeof o.version === 'string' ? o.version.slice(0, 20) : GAME_VERSION;
+  const version = o.version === undefined ? GAME_VERSION : o.version;
+  if (typeof version !== 'string' || !L.versionPattern.test(version))
+    errors.push('version must look like 1.2.3 or 1.2.3-tag');
 
   if (errors.length) return { ok: false, errors };
   return {
@@ -106,9 +93,19 @@ export function validateRunResult(input: unknown): ValidationResult<RunResult> {
       kills: kills as number,
       wave: wave as number,
       endedAt,
-      version,
+      version: version as string,
       mode,
     },
+  };
+}
+
+/** validateRunResult + names made board-safe (leaderboardName), as used for global boards. */
+export function validateLeaderboardRun(input: unknown): ValidationResult<RunResult> {
+  const v = validateRunResult(input);
+  if (!v.ok) return v;
+  return {
+    ok: true,
+    value: { ...v.value, players: v.value.players.map((n, i) => leaderboardName(n, i + 1)) },
   };
 }
 

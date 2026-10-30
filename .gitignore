@@ -7,5 +7,6 @@ coverage/
 packages/server/data/
 .env
 .env.local
+.env.*.local
 packages/client/public/assets/generated/
 logs/
