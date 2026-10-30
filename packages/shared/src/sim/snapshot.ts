@@ -46,7 +46,7 @@ export const ENEMY_FLAG = {
   windup: 8,
   dashing: 16,
   attacking: 32,
-  /** End-of-wave hunt: revealed (HUD marker) and closing in. */
+  /** End-of-wave hunt: closing in faster (not marked on the HUD). */
   hunt: 64,
 } as const;
 
@@ -60,7 +60,7 @@ export interface WaveSnap {
   a: 0 | 1;
   /** Breather: seconds until the next wave. */
   nx?: number;
-  /** Stragglers revealed and hunting. */
+  /** Stragglers hunting (not marked on the HUD). */
   h?: 1;
 }
 

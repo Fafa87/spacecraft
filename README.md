@@ -89,11 +89,14 @@ The Power Sword was removed in v0.4.
   only after the whole wave is dead, children included (Biovore spore mines are capped and
   finite). Then comes an 8 s breather with **WAVE N CLEARED** and a countdown. The HUD shows how
   many Tyranids are left. Stragglers can't stall a run: when only a few are left (or after 30 s)
-  they are revealed on the minimap and hunt the squad faster, and a wave is forced on after 240 s.
+  they hunt the squad faster (no markers or arrows point at them), and a wave is forced on after
+  240 s.
   Medkit and crate drops are capped per wave (scaled by squad size), and children never drop.
 - **Spawn points.** Tyranids pour out of six fixed hive breaches (four bulkheads at the arena
-  edges, two floor vents), drawn on the floor and on the minimap. A breach pulses for 1.1 s
-  (2.2 s for a boss) before a group emerges, and spawns avoid breaches right next to a marine.
+  edges, two floor vents), drawn as plain holes and vents on the floor and as dim dots on the
+  minimap. Nothing warns where the next group comes from: no pulse, no edge arrows, no labels.
+  The director still waits 1.1 s (2.2 s for a boss) before a group emerges, and spawns avoid
+  breaches right next to a marine.
 - **Personal points.** Every kill gives its marine the enemy's `points` (Hormagaunt 2,
   Termagant 3, Ripper 1, Genestealer 5, Warrior 15, Ravener 10, Biovore 8, Spore Mine 1,
   Carnifex 50). The HUD shows each marine's points. The game-over screen breaks the squad down
@@ -266,8 +269,9 @@ The site is served from the **`gh-pages` branch** (Pages source "Deploy from a b
 /spacecraft/v0.2.0/          frozen v0.2.0
 /spacecraft/v0.3.0/          frozen v0.3.0
 /spacecraft/v0.4.0/          frozen v0.4.0
-/spacecraft/v0.4.1/          frozen v0.4.1 …
-/spacecraft/versions.json    {"latest":"0.4.1","versions":[{"version","date","title","path"}…]} (newest first)
+/spacecraft/v0.4.1/          frozen v0.4.1
+/spacecraft/v0.4.2/          frozen v0.4.2 …
+/spacecraft/versions.json    {"latest":"0.4.2","versions":[{"version","date","title","path"}…]} (newest first)
 ```
 
 The menu's **Previous versions** link reads `versions.json` from the site root (a frozen build
@@ -284,8 +288,8 @@ loaded. Each version keeps its own localStorage highscore table and its own Fire
    changed). Then commit and push `master` (never force).
 3. Tag and release, targeting the exact commit:
    ```bash
-   git tag -a v0.4.1 -m "v0.4.1: Hive Siege — phones play in landscape" && git push origin v0.4.1
-   gh release create v0.4.1 --target "$(git rev-parse HEAD)" --title "v0.4.1 · Hive Siege" --notes-file notes.md
+   git tag -a v0.4.2 -m "v0.4.2: Hive Siege — no enemy markers or spawn warnings" && git push origin v0.4.2
+   gh release create v0.4.2 --target "$(git rev-parse HEAD)" --title "v0.4.2 · Hive Siege" --notes-file notes.md
    ```
 4. Deploy: `npm run deploy:pages` builds the current checkout twice (into `/` and
    `/v<GAME_VERSION>/`) and adds a worktree of `origin/gh-pages`. In it, it replaces only the root
@@ -297,7 +301,7 @@ loaded. Each version keeps its own localStorage highscore table and its own Fire
      (`git worktree add /tmp/v010 v0.1.0 && cd /tmp/v010 && npm ci && BASE_PATH=/spacecraft/v0.1.0/ npm run build:pages`),
      then installed with `--add 0.1.0=/tmp/v010/packages/client/dist`.
 5. Check it live: `npx tsx scripts/pages-check.ts https://fafa87.github.io/spacecraft/` (also run
-   it on `/v0.1.0/`, `/v0.2.0/`, `/v0.3.0/`, `/v0.4.0/` and `/v0.4.1/`). It checks the menu, assets under the base path, local scores,
+   it on `/v0.1.0/`, `/v0.2.0/`, `/v0.3.0/`, `/v0.4.0/`, `/v0.4.1/` and `/v0.4.2/`). It checks the menu, assets under the base path, local scores,
    a P2P room, a solo run and the console.
 
 CI option: a `pages.yml` workflow that runs the same steps on `v*` tags

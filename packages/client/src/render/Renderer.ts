@@ -1,5 +1,6 @@
 import {
   ARENA,
+  BREACH_STATE,
   defaultContent,
   PLAYER,
   ENEMY_FLAG,
@@ -247,7 +248,7 @@ export class Renderer {
     // Terrain layer: pillars, rubble and edge boulders always sit UNDER every unit.
     this.drawProps();
     // Breach holes / vents (spawn points) are part of the terrain too.
-    this.drawBreaches(f);
+    this.drawBreaches();
     this.drawPickups(f);
     this.drawCorpses();
     this.drawEnemies(f);
@@ -336,14 +337,17 @@ export class Renderer {
     }
   }
 
-  /** Spawn points: holes, tunnels and vents with creep and tendrils (terrain layer). */
-  private drawBreaches(f: RenderFrame): void {
+  /**
+   * Spawn points: holes, tunnels and vents with creep and tendrils (terrain layer). Always drawn
+   * idle: no telegraph glow / pulse, so nothing on the map tells where the next wave comes from.
+   */
+  private drawBreaches(): void {
     const v = this.camera.view(260);
     const pts = this.content.director.spawnPoints;
     for (let i = 0; i < pts.length; i++) {
       const p = pts[i]!;
       if (p.x < v.x0 || p.x > v.x1 || p.y < v.y0 || p.y > v.y1) continue;
-      drawBreach(this.ctx, p, i, f.b.sp?.[i] ?? 0, this.time);
+      drawBreach(this.ctx, p, i, BREACH_STATE.idle, this.time);
     }
   }
 
@@ -653,14 +657,6 @@ export class Renderer {
       }
       if (def?.synapse) synapseAuras.push({ x, y, r: def.synapse.radius });
       this.drawShadow(x, y, r);
-      if (flags & ENEMY_FLAG.synapse) {
-        // driven by a nearby synapse beast: faint violet halo
-        ctx.strokeStyle = `rgba(190,110,255,${0.35 + 0.15 * Math.sin(time * 6 + id)})`;
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(x, y, r + 4, 0, Math.PI * 2);
-        ctx.stroke();
-      }
       const fuse = (flags & ENEMY_FLAG.fuse) !== 0;
       const pulse = fuse ? 1 + Math.sin(time * 30) * 0.08 : 1;
       if (fuse) {

@@ -108,7 +108,7 @@ export interface Enemy {
   children: number;
   /** Seconds until it may spawn its next child. */
   spawnTimer: number;
-  /** End-of-wave hunt: revealed on the HUD, faster, closes in on the marines. */
+  /** End-of-wave hunt: faster, closes in on the marines (no HUD marker). */
   hunt: boolean;
 }
 
@@ -181,7 +181,7 @@ export type GameEvent =
   | { e: 'surge'; n: number; total?: number; f?: 1 }
   /** Every enemy of wave `n` is dead; the next wave starts in `next` seconds. */
   | { e: 'cleared'; n: number; next: number }
-  /** The last few enemies of the wave are revealed and hunt the marines. */
+  /** The last few enemies of the wave hunt the marines. */
   | { e: 'hunt'; n: number }
   /** A hive breach starts pulsing: a group emerges from spawn point `i` soon (`b` = boss). */
   | { e: 'breach'; i: number; t: string; b?: 1 }
@@ -230,7 +230,7 @@ export interface DirectorState {
   waveTotal: number;
   /** Children spawned this wave (capped by waves.maxChildren). */
   waveChildren: number;
-  /** The last enemies are revealed and hunting. */
+  /** The last enemies are hunting. */
   hunting: boolean;
   /** Survival second the hunt starts anyway (-1 = roster not out yet). */
   huntAt: number;

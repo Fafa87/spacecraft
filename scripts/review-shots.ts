@@ -113,7 +113,7 @@ try {
     const t = Date.now() / 900;
     void page.mouse.move(800 + Math.cos(t) * 300, 450 + Math.sin(t) * 250).catch(() => {});
   }, 60);
-  // Spawn points: park the squad by the north-west vent and catch a breach telegraph.
+  // Spawn points: park the squad by a spawn point while a group is pending there (drawn plain).
   await page.evaluate(() => {
     const w = (window as any).__sms.conn.host.world;
     w.players.forEach((p: any, i: number) => {
@@ -143,7 +143,7 @@ try {
     .catch(() => false);
   await sleep(350);
   await shot(page, 'spawn-points.png');
-  check(!!tele, `a breach telegraph is visible at ${tele} (spawn-points.png)`);
+  check(!!tele, `spawn point ${tele} is pending a group but drawn plain (spawn-points.png)`);
   // Wave cleared banner: speed things up by clearing wave 1's leftovers.
   const cleared = await page
     .waitForFunction(

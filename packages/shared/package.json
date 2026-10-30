@@ -1,6 +1,6 @@
 {
   "name": "@sms/shared",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "private": true,
   "type": "module",
   "description": "Game data, deterministic simulation, network protocol and session logic shared by client, server and tools.",

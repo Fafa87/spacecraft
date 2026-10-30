@@ -468,7 +468,7 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
       break;
     case 'hunt':
       audio.play('nid_shriek', { volume: 0.7 });
-      fx.notify(`☠ The last ${ev.n} xenos are revealed — they hunt you!`, 'warn');
+      fx.notify(`☠ The last ${ev.n} xenos are hunting you!`, 'warn');
       break;
     case 'reload': {
       const p = fx.players(ev.p);
@@ -480,26 +480,9 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
     case 'switch':
       if (ev.p === fx.myId) audio.play('ui_click', { volume: 0.5 });
       break;
-    case 'breach': {
-      // telegraph: the breach pulses (renderer reads snapshot `sp`) + a wet rumbling warning
-      const sp = content.director.spawnPoints[ev.i];
-      if (!sp) break;
-      audio.play('breach_telegraph', {
-        x: sp.x,
-        y: sp.y,
-        volume: ev.b ? 1.2 : 0.9,
-        minVolume: 0.35,
-      });
-      P.burst(sp.x, sp.y, ev.b ? 26 : 14, {
-        speed: 70,
-        color: '#c0306a',
-        maxLife: 1.1,
-        size: 4,
-        drag: 2,
-      });
-      r.camera.addShake(ev.b ? 5 : 1.5);
+    case 'breach':
+      // wave telegraph: deliberately silent and invisible, the swarm's direction is a surprise
       break;
-    }
     case 'swarm': {
       const sp = content.director.spawnPoints[ev.i];
       if (!sp) break;

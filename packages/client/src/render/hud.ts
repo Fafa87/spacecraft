@@ -1,7 +1,5 @@
 import {
   ARENA,
-  BREACH_STATE,
-  ENEMY_FLAG,
   PLAYER,
   type ContentRegistry,
   type EnemyDef,
@@ -54,7 +52,7 @@ export interface HudState {
   mode: string;
   muted: boolean;
   debug: string | null;
-  /** Camera centre (world px) + zoom (world px -> CSS px), for offscreen breach arrows. */
+  /** Camera centre (world px) + zoom (world px -> CSS px). */
   camera?: { x: number; y: number; zoom: number };
   /** Render clock, seconds (animations). */
   now?: number;
@@ -150,8 +148,6 @@ export class Hud {
     }
     // sticks + crosshair are positioned in raw CSS px
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    this.breachArrows(ctx, cw, ch, s);
-    this.huntMarkers(ctx, cw, ch, s);
     if (s.touch) this.sticks(ctx, cw, ch, s.touch, s.me?.st === 'alive');
     if (s.me?.st === 'alive' && s.crosshair) this.crosshair(ctx, s.crosshair);
     ctx.restore();
@@ -273,54 +269,6 @@ export class Hud {
     );
   }
 
-  /**
-   * Anti-stall: revealed stragglers get a pulsing ring on screen and an edge arrow when they
-   * are off screen, so the last xenos can always be found.
-   */
-  private huntMarkers(ctx: CanvasRenderingContext2D, cw: number, ch: number, s: HudState): void {
-    const cam = s.camera;
-    if (!cam || !s.snap.wv?.h) return;
-    const t = s.now ?? 0;
-    const m = 30;
-    const pulse = 0.55 + 0.45 * Math.sin(t * 9);
-    for (const e of s.snap.enemies) {
-      if (!(e[6] & ENEMY_FLAG.hunt)) continue;
-      const sx = (e[2] - cam.x) * cam.zoom + cw / 2;
-      const sy = (e[3] - cam.y) * cam.zoom + ch / 2;
-      ctx.strokeStyle = `rgba(255,120,70,${pulse})`;
-      ctx.fillStyle = `rgba(255,120,70,${pulse})`;
-      ctx.lineWidth = 2;
-      if (sx >= 0 && sx <= cw && sy >= 0 && sy <= ch) {
-        const r = 22 + 4 * Math.sin(t * 9);
-        ctx.beginPath();
-        ctx.arc(sx, sy, r, 0, Math.PI * 2);
-        ctx.stroke();
-        for (let q = 0; q < 4; q++) {
-          const a = (q * Math.PI) / 2;
-          ctx.beginPath();
-          ctx.moveTo(sx + Math.cos(a) * (r - 6), sy + Math.sin(a) * (r - 6));
-          ctx.lineTo(sx + Math.cos(a) * (r + 6), sy + Math.sin(a) * (r + 6));
-          ctx.stroke();
-        }
-        continue;
-      }
-      const dx = sx - cw / 2;
-      const dy = sy - ch / 2;
-      const k = Math.min((cw / 2 - m) / Math.abs(dx || 1e-6), (ch / 2 - m) / Math.abs(dy || 1e-6));
-      ctx.save();
-      ctx.translate(cw / 2 + dx * k, ch / 2 + dy * k);
-      ctx.rotate(Math.atan2(dy, dx));
-      ctx.beginPath();
-      ctx.moveTo(12, 0);
-      ctx.lineTo(-7, -9);
-      ctx.lineTo(-3, 0);
-      ctx.lineTo(-7, 9);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    }
-  }
-
   private team(ctx: CanvasRenderingContext2D, s: HudState, top: number): void {
     const players = s.snap.players;
     if (players.length < 2) return;
@@ -385,52 +333,6 @@ export class Hud {
     ctx.fillText(text, w / 2, y);
   }
 
-  /** Edge arrows towards telegraphing / active spawn points that are off screen. */
-  private breachArrows(ctx: CanvasRenderingContext2D, cw: number, ch: number, s: HudState): void {
-    const cam = s.camera;
-    const sp = s.snap.sp;
-    if (!cam || !sp) return;
-    const pts = this.content.director.spawnPoints;
-    const m = 34;
-    const t = s.now ?? 0;
-    for (let i = 0; i < pts.length; i++) {
-      const st = sp[i] ?? 0;
-      if (st === BREACH_STATE.idle) continue;
-      const p = pts[i]!;
-      const sx = (p.x - cam.x) * cam.zoom + cw / 2;
-      const sy = (p.y - cam.y) * cam.zoom + ch / 2;
-      if (sx >= 0 && sx <= cw && sy >= 0 && sy <= ch) continue;
-      const dx = sx - cw / 2;
-      const dy = sy - ch / 2;
-      const k = Math.min((cw / 2 - m) / Math.abs(dx || 1e-6), (ch / 2 - m) / Math.abs(dy || 1e-6));
-      const ax = cw / 2 + dx * k;
-      const ay = ch / 2 + dy * k;
-      const ang = Math.atan2(dy, dx);
-      const pulse = 0.6 + 0.4 * Math.sin(t * (st === BREACH_STATE.active ? 14 : 8) + i);
-      ctx.save();
-      ctx.translate(ax, ay);
-      ctx.rotate(ang);
-      ctx.fillStyle = `rgba(255,${st === BREACH_STATE.active ? 60 : 110},90,${pulse})`;
-      ctx.strokeStyle = 'rgba(20,0,10,0.9)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(18, 0);
-      ctx.lineTo(-10, -13);
-      ctx.lineTo(-4, 0);
-      ctx.lineTo(-10, 13);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
-      ctx.textAlign = 'center';
-      ctx.font = F(800, 10);
-      ctx.fillStyle = `rgba(255,190,170,${pulse})`;
-      const lx = ax - Math.cos(ang) * 26;
-      const ly = ay - Math.sin(ang) * 26 + 4;
-      ctx.fillText(p.kind.toUpperCase(), lx, ly);
-    }
-  }
-
   private minimap(ctx: CanvasRenderingContext2D, w: number, s: HudState): void {
     const mw = 190;
     const mh = (mw * ARENA.height) / ARENA.width;
@@ -440,21 +342,16 @@ export class Hud {
     this.panel(ctx, x0 - 4, y0 - 4, mw + 8, mh + 8);
     ctx.fillStyle = 'rgba(40,30,20,0.6)';
     ctx.fillRect(x0, y0, mw, mh);
-    s.snap.sp?.forEach((st, i) => {
-      const p = this.content.director.spawnPoints[i];
-      if (!p) return;
-      ctx.fillStyle = st ? '#ff4060' : 'rgba(170,80,170,0.8)';
+    // spawn points are plain map features: same dim dot whether idle, telegraphing or active
+    ctx.fillStyle = 'rgba(120,70,120,0.55)';
+    for (const p of this.content.director.spawnPoints) {
       ctx.beginPath();
-      ctx.arc(x0 + p.x * k, y0 + p.y * k, st ? 4.5 : 3, 0, Math.PI * 2);
+      ctx.arc(x0 + p.x * k, y0 + p.y * k, 2.5, 0, Math.PI * 2);
       ctx.fill();
-    });
-    ctx.fillStyle = '#c05ad0';
-    for (const e of s.snap.enemies) {
-      const hunt = e[6] & ENEMY_FLAG.hunt;
-      ctx.fillStyle = hunt ? '#ff8a50' : '#c05ad0';
-      const r = hunt ? 2.5 : 1;
-      ctx.fillRect(x0 + e[2] * k - r, y0 + e[3] * k - r, r * 2, r * 2);
     }
+    // every xeno looks the same (no straggler highlight)
+    ctx.fillStyle = '#c05ad0';
+    for (const e of s.snap.enemies) ctx.fillRect(x0 + e[2] * k - 1, y0 + e[3] * k - 1, 2, 2);
     for (const p of s.snap.pickups) {
       ctx.fillStyle = p.k === 'medkit' ? '#9be07a' : HUD.gold;
       ctx.fillRect(x0 + p.x * k - 2.5, y0 + p.y * k - 2.5, 5, 5);
