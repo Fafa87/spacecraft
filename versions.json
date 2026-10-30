@@ -1,6 +1,12 @@
 {
-  "latest": "0.4.1",
+  "latest": "0.4.2",
   "versions": [
+    {
+      "version": "0.4.2",
+      "date": "2026-10-30",
+      "title": "Spacecraft: Hive Siege",
+      "path": "/spacecraft/v0.4.2/"
+    },
     {
       "version": "0.4.1",
       "date": "2026-10-30",
