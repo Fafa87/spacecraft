@@ -298,6 +298,20 @@ describe('firestore.rules: v0.4+ boards with personal scores', () => {
     await assertSucceeds(setDoc(runRef(id()), v4({ playerScores: [125 * 40 + 500, 0] })));
   });
 
+  it('the same rules serve the v0.5 board (no rules change needed)', async () => {
+    const run = v4({ version: '0.5.0-dev', board: '0.5' });
+    const runId = id();
+    const fs = db();
+    const b = writeBatch(fs);
+    b.set(runRef(runId, '0.5', fs), run);
+    for (const s of [0, 1])
+      b.set(scoreRef(`${runId}-${s}`, '0.5', fs), row(runId, s, run, { board: '0.5' }));
+    await assertSucceeds(b.commit());
+    // A 0.4 client can't write into the 0.5 board, nor a 0.5 client into 0.4.
+    await assertFails(setDoc(runRef(id(), '0.5'), v4()));
+    await assertFails(setDoc(runRef(id(), '0.4'), v4({ version: '0.5.0', board: '0.5' })));
+  });
+
   it('score rows must mirror a run written in the same commit', async () => {
     // no run at all
     await assertFails(setDoc(scoreRef('run_nothere1-0'), row('run_nothere1', 0)));
