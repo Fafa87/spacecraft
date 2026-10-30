@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-30T21:28:52.774Z",
+  "generatedAt": "2026-10-30T23:19:38.889Z",
   "atlas": {
     "image": "atlas.png",
     "width": 2048,
@@ -2623,6 +2623,21 @@
       "source": "procedural",
       "bus": "weapons",
       "priority": 3
+    },
+    "carapace_ricochet": {
+      "file": "sfx/carapace_ricochet_0.wav",
+      "variants": [
+        "sfx/carapace_ricochet_0.wav",
+        "sfx/carapace_ricochet_1.wav",
+        "sfx/carapace_ricochet_2.wav",
+        "sfx/carapace_ricochet_3.wav"
+      ],
+      "volume": 0.32,
+      "maxVoices": 3,
+      "durationSec": 0.339,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 2
     },
     "armour_hit": {
       "file": "sfx/armour_hit_0.wav",
