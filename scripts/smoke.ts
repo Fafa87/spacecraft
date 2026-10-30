@@ -56,14 +56,21 @@ async function main(): Promise<void> {
   const http = `http://127.0.0.1:${server.port}`;
   const ws = `ws://127.0.0.1:${server.port}`;
   try {
-    const health = (await (await fetch(`${http}/api/health`)).json()) as { ok: boolean; store: string };
+    const health = (await (await fetch(`${http}/api/health`)).json()) as {
+      ok: boolean;
+      store: string;
+    };
     check(health.ok && health.store === 'memory', `server up on ${http} (store ${health.store})`);
 
     // 1. two clients on the dedicated host
     const a = await wsClient(ws, 'Alpha', 'create=1');
     const welcome = await waitFor<{ room: string }>((r) => a.once('welcome', r), 5000, 'welcome');
     const b = await wsClient(ws, 'Bravo', `room=${welcome.room}`);
-    await waitFor<void>((r) => a.on('lobby', (l) => l.players.length === 2 && r()), 5000, 'lobby with 2');
+    await waitFor<void>(
+      (r) => a.on('lobby', (l) => l.players.length === 2 && r()),
+      5000,
+      'lobby with 2',
+    );
     check(a.isOwner && !b.isOwner, `room ${welcome.room}: Alpha owns it, Bravo joined`);
     a.requestStart();
     const snaps: Record<string, Snapshot[]> = { a: [], b: [] };
@@ -75,10 +82,16 @@ async function main(): Promise<void> {
       await sleep(1000 / 30);
     }
     const lastB = snaps.b.at(-1)!;
-    check(snaps.a.length > 40 && snaps.b.length > 40, `snapshots streamed (A ${snaps.a.length}, B ${snaps.b.length}, tick ${lastB?.tick})`);
+    check(
+      snaps.a.length > 40 && snaps.b.length > 40,
+      `snapshots streamed (A ${snaps.a.length}, B ${snaps.b.length}, tick ${lastB?.tick})`,
+    );
     const pa = lastB.players.find((p) => p.id === a.playerId)!;
     const pb = lastB.players.find((p) => p.id === b.playerId)!;
-    check(pa.x > 1650 && pb.x < 1550, `inputs applied server-side (A x=${pa.x.toFixed(0)}, B x=${pb.x.toFixed(0)})`);
+    check(
+      pa.x > 1650 && pb.x < 1550,
+      `inputs applied server-side (A x=${pa.x.toFixed(0)}, B x=${pb.x.toFixed(0)})`,
+    );
 
     // 2. end the run: down every marine on the host world
     const room = server.gameHost!.rooms.get(welcome.room)!;
@@ -86,8 +99,15 @@ async function main(): Promise<void> {
       p.state = 'downed';
       p.hp = 0;
     }
-    const submitted = await waitFor<{ status: string; rank?: number }>((r) => b.once('submitted', r), 5000, 'submitted');
-    check(submitted.status === 'server', `dedicated host submitted the run (status ${submitted.status}, rank #${submitted.rank})`);
+    const submitted = await waitFor<{ status: string; rank?: number }>(
+      (r) => b.once('submitted', r),
+      5000,
+      'submitted',
+    );
+    check(
+      submitted.status === 'server',
+      `dedicated host submitted the run (status ${submitted.status}, rank #${submitted.rank})`,
+    );
     const t2 = (await (await fetch(`${http}/api/highscores/2`)).json()) as TopResponse;
     check(
       t2.entries.length === 1 && t2.entries[0]!.players.join() === 'Alpha,Bravo',
@@ -114,15 +134,23 @@ async function main(): Promise<void> {
       body: JSON.stringify(run),
     });
     const postBody = (await post.json()) as { rank: number };
-    check(post.status === 201 && postBody.rank === 1, `POST /api/highscores -> ${post.status}, rank #${postBody.rank}`);
+    check(
+      post.status === 201 && postBody.rank === 1,
+      `POST /api/highscores -> ${post.status}, rank #${postBody.rank}`,
+    );
     const dup = await fetch(`${http}/api/highscores`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(run),
     });
     check(dup.status === 200, `re-POST of the same runId is idempotent (${dup.status})`);
-    const all = (await (await fetch(`${http}/api/highscores?limit=5`)).json()) as { tables: Record<string, unknown[]> };
-    check(all.tables['3']!.length === 1 && all.tables['1']!.length === 0, `GET /api/highscores returns separate tables per team size`);
+    const all = (await (await fetch(`${http}/api/highscores?limit=5`)).json()) as {
+      tables: Record<string, unknown[]>;
+    };
+    check(
+      all.tables['3']!.length === 1 && all.tables['1']!.length === 0,
+      `GET /api/highscores returns separate tables per team size`,
+    );
 
     // 4. headless solo run over local links (same HostSession code path the browser host uses)
     let result: RunResult | null = null;
@@ -146,7 +174,10 @@ async function main(): Promise<void> {
     // Fast-forward the sim directly (stand still, never shoot) until the swarm wins.
     while (!world.over && world.time < 600) host.tick();
     await sleep(50);
-    check(!!result && (result as RunResult).survivalMs > 5000, `solo run ended by the swarm after ${((result as RunResult | null)?.survivalMs ?? 0) / 1000}s`);
+    check(
+      !!result && (result as RunResult).survivalMs > 5000,
+      `solo run ended by the swarm after ${((result as RunResult | null)?.survivalMs ?? 0) / 1000}s`,
+    );
     host.close();
   } finally {
     await server.close();

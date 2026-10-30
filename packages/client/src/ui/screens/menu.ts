@@ -61,7 +61,8 @@ export function createMenuScreen(actions: MenuActions, opts: MenuOptions): HTMLE
     storage.set(NAME_KEY, n);
     return n;
   };
-  const busy = (b: boolean) => el.querySelectorAll('button').forEach((x) => ((x as HTMLButtonElement).disabled = b));
+  const busy = (b: boolean) =>
+    el.querySelectorAll('button').forEach((x) => ((x as HTMLButtonElement).disabled = b));
   const run = (fn: () => void) => {
     err.textContent = '';
     busy(true);

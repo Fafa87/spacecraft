@@ -36,7 +36,14 @@ export function updateProjectiles(world: World, enemyHash: SpatialHash<Enemy>, d
  * Fast projectiles move ~35 px per tick, more than a small enemy's diameter,
  * so a point test would tunnel straight through targets.
  */
-export function segmentDist2(x0: number, y0: number, x1: number, y1: number, px: number, py: number): number {
+export function segmentDist2(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  px: number,
+  py: number,
+): number {
   const dx = x1 - x0;
   const dy = y1 - y0;
   const len2 = dx * dx + dy * dy;
@@ -44,7 +51,13 @@ export function segmentDist2(x0: number, y0: number, x1: number, y1: number, px:
   return dist2(x0 + dx * t, y0 + dy * t, px, py);
 }
 
-function hitEnemies(world: World, pr: Projectile, x0: number, y0: number, hash: SpatialHash<Enemy>): void {
+function hitEnemies(
+  world: World,
+  pr: Projectile,
+  x0: number,
+  y0: number,
+  hash: SpatialHash<Enemy>,
+): void {
   const halfLen = Math.hypot(pr.x - x0, pr.y - y0) / 2;
   const hits: { enemy: Enemy; t: number }[] = [];
   hash.query((pr.x + x0) / 2, (pr.y + y0) / 2, halfLen + pr.radius + QUERY_PAD, (enemy) => {
@@ -71,7 +84,8 @@ function hitEnemies(world: World, pr: Projectile, x0: number, y0: number, hash: 
       ky: pr.vy,
       knockback: pr.knockback,
     });
-    if (pr.kind !== 'flame') world.events.push({ e: 'hit', x: Math.round(enemy.x), y: Math.round(enemy.y), k: pr.kind });
+    if (pr.kind !== 'flame')
+      world.events.push({ e: 'hit', x: Math.round(enemy.x), y: Math.round(enemy.y), k: pr.kind });
     if (pr.pierceLeft-- <= 0) pr.dead = true;
   }
 }

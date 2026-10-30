@@ -87,7 +87,14 @@ export function fireWeapon(world: World, p: Player, def: WeaponDef): void {
   const mx = p.x + Math.cos(p.aim) * muzzle;
   const my = p.y + Math.sin(p.aim) * muzzle;
   world.stats.shots++;
-  world.events.push({ e: 'shot', p: p.id, w: def.id, x: Math.round(mx), y: Math.round(my), a: Math.round(p.aim * 100) / 100 });
+  world.events.push({
+    e: 'shot',
+    p: p.id,
+    w: def.id,
+    x: Math.round(mx),
+    y: Math.round(my),
+    a: Math.round(p.aim * 100) / 100,
+  });
   for (let i = 0; i < def.pellets; i++) {
     const a = p.aim + (world.rng.next() - 0.5) * def.spread;
     const speed = spec.speed * (1 + (world.rng.next() - 0.5) * 2 * (spec.speedJitter ?? 0));

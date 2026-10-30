@@ -21,7 +21,12 @@ export const PROJECTILE_VISUALS: Record<string, ProjectileVisual> = {
   acid: { color: '#9cff3a', glow: true, trail: 20, trailColor: '#8cff40', fallbackRadius: 7 },
 };
 
-export const DEFAULT_PROJECTILE_VISUAL: ProjectileVisual = { color: '#fff', glow: true, trail: 0, fallbackRadius: 4 };
+export const DEFAULT_PROJECTILE_VISUAL: ProjectileVisual = {
+  color: '#fff',
+  glow: true,
+  trail: 0,
+  fallbackRadius: 4,
+};
 
 export interface EnemyVisual {
   color: string;
@@ -40,4 +45,9 @@ export const ENEMY_VISUALS: Record<string, EnemyVisual> = {
   burster: { color: '#d0a030', ichor: '#c8d040', animFps: 8, deathShake: 0 },
 };
 
-export const DEFAULT_ENEMY_VISUAL: EnemyVisual = { color: '#c050c0', ichor: '#802080', animFps: 8, deathShake: 0 };
+export const DEFAULT_ENEMY_VISUAL: EnemyVisual = {
+  color: '#c050c0',
+  ichor: '#802080',
+  animFps: 8,
+  deathShake: 0,
+};

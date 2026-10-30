@@ -34,7 +34,10 @@ export class Camera {
 
   /** Screen (CSS px) -> world. */
   toWorld(sx: number, sy: number): { x: number; y: number } {
-    return { x: (sx - this.width / 2) / this.zoom + this.x, y: (sy - this.height / 2) / this.zoom + this.y };
+    return {
+      x: (sx - this.width / 2) / this.zoom + this.x,
+      y: (sy - this.height / 2) / this.zoom + this.y,
+    };
   }
 
   /** Visible world rect with margin. */

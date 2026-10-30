@@ -34,7 +34,10 @@ export async function buildApp({ config, repo, roomCount }: AppDeps): Promise<Fa
   app.get('/api/config', async () => ({
     version: GAME_VERSION,
     protocol: PROTOCOL_VERSION,
-    peer: config.peerPort > 0 ? { host: config.peerPublicHost, port: config.peerPort, path: config.peerPath } : null,
+    peer:
+      config.peerPort > 0
+        ? { host: config.peerPublicHost, port: config.peerPort, path: config.peerPath }
+        : null,
     wsGameHost: config.wsGameHost ? { path: '/ws' } : null,
   }));
 

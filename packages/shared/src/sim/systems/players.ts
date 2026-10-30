@@ -19,7 +19,9 @@ export function updatePlayerStatus(world: World, dt: number): void {
     if (!p.connected && p.state !== 'dead') kill(world, p.id);
     if (p.state !== 'downed') continue;
     p.downedTime += dt;
-    const reviver = world.players.find((o) => o !== p && o.state === 'alive' && dist2(o.x, o.y, p.x, p.y) <= rr);
+    const reviver = world.players.find(
+      (o) => o !== p && o.state === 'alive' && dist2(o.x, o.y, p.x, p.y) <= rr,
+    );
     if (reviver) {
       p.reviveProgress += dt / PLAYER.reviveTime;
       if (p.reviveProgress >= 1) {

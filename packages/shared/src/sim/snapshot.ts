@@ -93,7 +93,14 @@ export function buildSnapshot(world: World, bleedOutTime: number): Snapshot {
       round(p.y),
       round(Math.atan2(p.vy, p.vx), 2),
     ]),
-    pickups: world.pickups.map((p) => ({ id: p.id, k: p.kind, w: p.weapon, x: round(p.x), y: round(p.y), life: round(p.life, 1) })),
+    pickups: world.pickups.map((p) => ({
+      id: p.id,
+      k: p.kind,
+      w: p.weapon,
+      x: round(p.x),
+      y: round(p.y),
+      life: round(p.life, 1),
+    })),
     events: world.events,
   };
 }

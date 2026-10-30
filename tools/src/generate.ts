@@ -34,7 +34,9 @@ function hashKey(s: string): number {
 
 function loadExistingManifest(): AssetManifest | null {
   try {
-    return JSON.parse(fs.readFileSync(path.join(OUT_DIR, 'manifest.json'), 'utf8')) as AssetManifest;
+    return JSON.parse(
+      fs.readFileSync(path.join(OUT_DIR, 'manifest.json'), 'utf8'),
+    ) as AssetManifest;
   } catch {
     return null;
   }
@@ -43,7 +45,8 @@ function loadExistingManifest(): AssetManifest | null {
 async function buildSprites(manifest: AssetManifest): Promise<void> {
   const t0 = Date.now();
   const items: Array<{ id: string; w: number; h: number }> = [];
-  for (const s of SPRITES) for (let f = 0; f < s.frames; f++) items.push({ id: `${s.key}#${f}`, w: s.w, h: s.h });
+  for (const s of SPRITES)
+    for (let f = 0; f < s.frames; f++) items.push({ id: `${s.key}#${f}`, w: s.w, h: s.h });
   const packed = packShelves(items, 1024, 2);
   const atlas = createCanvas(packed.width, packed.height);
   const actx = atlas.getContext('2d');
@@ -71,11 +74,21 @@ async function buildSprites(manifest: AssetManifest): Promise<void> {
       actx.restore();
     }
     const [ax, ay] = s.anchor ?? [0.5, 0.5];
-    manifest.sprites[s.key] = { w: s.w, h: s.h, ax: s.w * ax, ay: s.h * ay, frames, source: override ? 'override' : 'procedural', group: s.group };
+    manifest.sprites[s.key] = {
+      w: s.w,
+      h: s.h,
+      ax: s.w * ax,
+      ay: s.h * ay,
+      frames,
+      source: override ? 'override' : 'procedural',
+      group: s.group,
+    };
   }
   fs.writeFileSync(path.join(OUT_DIR, 'atlas.png'), await atlas.encode('png'));
   manifest.atlas = { image: 'atlas.png', width: packed.width, height: packed.height };
-  console.log(`  sprites: ${SPRITES.length} sprites / ${items.length} frames -> atlas ${packed.width}x${packed.height} (${overrides} overrides) in ${Date.now() - t0} ms`);
+  console.log(
+    `  sprites: ${SPRITES.length} sprites / ${items.length} frames -> atlas ${packed.width}x${packed.height} (${overrides} overrides) in ${Date.now() - t0} ms`,
+  );
 }
 
 function buildAudio(manifest: AssetManifest): void {
@@ -95,7 +108,13 @@ function buildAudio(manifest: AssetManifest): void {
     } else buf = encodeWav(renderSfx(def), 44100);
     fs.writeFileSync(path.join(OUT_DIR, file), buf);
     const wav = decodeWav(buf);
-    manifest.sounds[def.key] = { file, volume: def.volume, maxVoices: def.maxVoices, durationSec: +(wav.samples.length / wav.channels / wav.sampleRate).toFixed(3), source };
+    manifest.sounds[def.key] = {
+      file,
+      volume: def.volume,
+      maxVoices: def.maxVoices,
+      durationSec: +(wav.samples.length / wav.channels / wav.sampleRate).toFixed(3),
+      source,
+    };
   }
   for (const song of SONGS) {
     const file = `music/${song.key}.wav`;
@@ -109,9 +128,17 @@ function buildAudio(manifest: AssetManifest): void {
     } else buf = encodeWav(renderSong(song, 22050), 22050);
     fs.writeFileSync(path.join(OUT_DIR, file), buf);
     const wav = decodeWav(buf);
-    manifest.music[song.key] = { file, volume: song.volume, loop: true, durationSec: +(wav.samples.length / wav.channels / wav.sampleRate).toFixed(2), source };
+    manifest.music[song.key] = {
+      file,
+      volume: song.volume,
+      loop: true,
+      durationSec: +(wav.samples.length / wav.channels / wav.sampleRate).toFixed(2),
+      source,
+    };
   }
-  console.log(`  audio: ${SFX.length} sfx + ${SONGS.length} music tracks (${overrides} overrides) in ${Date.now() - t0} ms`);
+  console.log(
+    `  audio: ${SFX.length} sfx + ${SONGS.length} music tracks (${overrides} overrides) in ${Date.now() - t0} ms`,
+  );
 }
 
 function checkCoverage(manifest: AssetManifest): string[] {
@@ -143,7 +170,9 @@ async function main(): Promise<void> {
     console.error(`  MISSING assets referenced by content: ${missing.join(', ')}`);
     process.exitCode = 1;
   } else console.log('  coverage: every asset referenced by content data exists ✓');
-  console.log(`Done. Open ${path.join(OUT_DIR, 'preview.html')} (or /assets/generated/preview.html on the dev server) to browse.`);
+  console.log(
+    `Done. Open ${path.join(OUT_DIR, 'preview.html')} (or /assets/generated/preview.html on the dev server) to browse.`,
+  );
 }
 
 main().catch((err) => {

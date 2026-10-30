@@ -3,7 +3,17 @@ import type { ContentRegistry } from '../data/index.js';
 import type { ReferencedAssetKeys } from './manifest.js';
 
 /** Sounds the client plays for game events / UI (not tied to content data). */
-export const CORE_SOUNDS = ['player_hurt', 'player_down', 'revive', 'pickup', 'unlock', 'surge', 'crate_drop', 'ui_click', 'explosion'] as const;
+export const CORE_SOUNDS = [
+  'player_hurt',
+  'player_down',
+  'revive',
+  'pickup',
+  'unlock',
+  'surge',
+  'crate_drop',
+  'ui_click',
+  'explosion',
+] as const;
 
 /** Music tracks the client expects. */
 export const CORE_MUSIC = ['menu', 'battle', 'gameover'] as const;
@@ -12,7 +22,15 @@ export const DECAL_VARIANTS = 3;
 
 /** Collects every sprite / sound key the given content (plus the core client) references. */
 export function referencedAssetKeys(content: ContentRegistry): ReferencedAssetKeys {
-  const sprites = new Set<string>(['medkit', 'shadow', 'fx_explosion', 'fx_muzzle', 'fx_particle', 'fx_ring', 'decal_scorch_0']);
+  const sprites = new Set<string>([
+    'medkit',
+    'shadow',
+    'fx_explosion',
+    'fx_muzzle',
+    'fx_particle',
+    'fx_ring',
+    'decal_scorch_0',
+  ]);
   const sounds = new Set<string>(CORE_SOUNDS);
   for (let i = 0; i < MAX_PLAYERS; i++) {
     sprites.add(`marine_${i}`);

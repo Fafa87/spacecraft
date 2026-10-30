@@ -1,4 +1,11 @@
-import { ARENA, PLAYER, PLAYER_COLORS, type ContentRegistry, type PlayerSnap, type Snapshot } from '@sms/shared';
+import {
+  ARENA,
+  PLAYER,
+  PLAYER_COLORS,
+  type ContentRegistry,
+  type PlayerSnap,
+  type Snapshot,
+} from '@sms/shared';
 import type { NoticeKind } from '../game/fx.js';
 import { formatTime } from '../ui/format.js';
 import type { Assets } from './assets.js';
@@ -24,7 +31,12 @@ export interface HudState {
   debug: string | null;
 }
 
-const NOTICE_COLORS: Record<NoticeKind, string> = { info: '#cfe3ff', good: '#7dffa0', bad: '#ff7070', warn: '#ffc04a' };
+const NOTICE_COLORS: Record<NoticeKind, string> = {
+  info: '#cfe3ff',
+  good: '#7dffa0',
+  bad: '#ff7070',
+  warn: '#ffc04a',
+};
 
 /** Screen-space HUD drawn on the game canvas. */
 export class Hud {
@@ -70,7 +82,11 @@ export class Hud {
     ctx.font = '600 12px system-ui, sans-serif';
     ctx.fillStyle = '#9fc4ff';
     const kills = s.snap.players.reduce((a, p) => a + p.k, 0);
-    ctx.fillText(`WAVE ${s.snap.wave}   ·   ${s.snap.enemies.length} HOSTILES   ·   ${kills} KILLS`, w / 2, 64);
+    ctx.fillText(
+      `WAVE ${s.snap.wave}   ·   ${s.snap.enemies.length} HOSTILES   ·   ${kills} KILLS`,
+      w / 2,
+      64,
+    );
   }
 
   private team(ctx: CanvasRenderingContext2D, s: HudState): void {
@@ -93,7 +109,12 @@ export class Hud {
       ctx.fillStyle = 'rgba(255,255,255,0.12)';
       ctx.fillRect(34, y + 14, 160, 3);
       ctx.fillStyle = p.st === 'alive' ? '#5fe07a' : '#ff5050';
-      ctx.fillRect(34, y + 14, p.st === 'alive' ? (160 * p.hp) / p.mhp : (160 * p.bo) / PLAYER.bleedOutTime, 3);
+      ctx.fillRect(
+        34,
+        y + 14,
+        p.st === 'alive' ? (160 * p.hp) / p.mhp : (160 * p.bo) / PLAYER.bleedOutTime,
+        3,
+      );
     });
   }
 
@@ -170,7 +191,15 @@ export class Hud {
       ctx.textAlign = 'center';
       ctx.font = '600 10px system-ui, sans-serif';
       ctx.fillStyle = '#ddd';
-      ctx.fillText(owned ? def.name.toUpperCase() : def.unlockAtSec ? `UNLOCK ${formatTime(def.unlockAtSec * 1000)}` : 'CRATE ONLY', x + cell / 2, y + 56);
+      ctx.fillText(
+        owned
+          ? def.name.toUpperCase()
+          : def.unlockAtSec
+            ? `UNLOCK ${formatTime(def.unlockAtSec * 1000)}`
+            : 'CRATE ONLY',
+        x + cell / 2,
+        y + 56,
+      );
       if (active) {
         // ammo / reload
         const by = y - 14;
@@ -216,7 +245,8 @@ export class Hud {
     ctx.textAlign = 'center';
     notices.slice(-5).forEach((n, i) => {
       ctx.globalAlpha = Math.min(1, n.ttl);
-      ctx.font = n.kind === 'warn' ? '800 22px system-ui, sans-serif' : '700 16px system-ui, sans-serif';
+      ctx.font =
+        n.kind === 'warn' ? '800 22px system-ui, sans-serif' : '700 16px system-ui, sans-serif';
       ctx.fillStyle = 'rgba(0,0,0,0.7)';
       ctx.fillText(n.text, w / 2 + 1, 111 + i * 26);
       ctx.fillStyle = NOTICE_COLORS[n.kind];
@@ -230,7 +260,11 @@ export class Hud {
     ctx.font = '500 11px ui-monospace, monospace';
     ctx.fillStyle = 'rgba(200,220,255,0.6)';
     const room = s.mode === 'local' ? 'SOLO' : `ROOM ${s.roomCode}`;
-    ctx.fillText(`${room} · ${s.mode.toUpperCase()} · ping ${Math.round(s.ping)}ms · ${Math.round(s.fps)} fps${s.muted ? ' · MUTED (M)' : ''}`, w - 12, h - 10);
+    ctx.fillText(
+      `${room} · ${s.mode.toUpperCase()} · ping ${Math.round(s.ping)}ms · ${Math.round(s.fps)} fps${s.muted ? ' · MUTED (M)' : ''}`,
+      w - 12,
+      h - 10,
+    );
     if (s.debug) {
       ctx.textAlign = 'left';
       ctx.fillText(s.debug, 12, h - 96);

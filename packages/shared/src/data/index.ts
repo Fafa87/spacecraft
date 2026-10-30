@@ -72,8 +72,10 @@ export class ContentRegistry {
       eids.add(e.id);
       if (e.hp <= 0) errors.push(`enemy ${e.id} hp must be > 0`);
       if (e.threat <= 0) errors.push(`enemy ${e.id} threat must be > 0`);
-      if (e.behavior === 'ranged' && !e.ranged) errors.push(`enemy ${e.id} is ranged but has no ranged spec`);
-      if (e.behavior === 'kamikaze' && !e.explode) errors.push(`enemy ${e.id} is kamikaze but has no explode spec`);
+      if (e.behavior === 'ranged' && !e.ranged)
+        errors.push(`enemy ${e.id} is ranged but has no ranged spec`);
+      if (e.behavior === 'kamikaze' && !e.explode)
+        errors.push(`enemy ${e.id} is kamikaze but has no explode spec`);
     }
     let prev = -1;
     for (const entry of this.director.waveTable) {

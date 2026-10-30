@@ -9,29 +9,82 @@ const ICONS: Record<string, (ctx: Ctx, c: string, d: string) => void> = {
   rifle: (ctx, c, d) => {
     roundRect(ctx, 6, 9, 40, 9, 2, c, d, 1.5);
     roundRect(ctx, 44, 11, 14, 4, 1, c, d, 1.2);
-    poly(ctx, [[18, 17], [25, 17], [22, 26], [16, 26]], c, d, 1.2);
-    poly(ctx, [[6, 9], [0, 7], [0, 20], [6, 18]], c, d, 1.2);
+    poly(
+      ctx,
+      [
+        [18, 17],
+        [25, 17],
+        [22, 26],
+        [16, 26],
+      ],
+      c,
+      d,
+      1.2,
+    );
+    poly(
+      ctx,
+      [
+        [6, 9],
+        [0, 7],
+        [0, 20],
+        [6, 18],
+      ],
+      c,
+      d,
+      1.2,
+    );
     roundRect(ctx, 20, 5, 12, 4, 1, c, d, 1);
   },
   shotgun: (ctx, c, d) => {
     roundRect(ctx, 14, 8, 46, 6, 2, c, d, 1.5);
     roundRect(ctx, 14, 14, 36, 4, 1, c, d, 1.2);
     roundRect(ctx, 30, 14, 14, 6, 2, c, d, 1.2);
-    poly(ctx, [[14, 8], [2, 10], [2, 22], [10, 22], [16, 16]], c, d, 1.2);
+    poly(
+      ctx,
+      [
+        [14, 8],
+        [2, 10],
+        [2, 22],
+        [10, 22],
+        [16, 16],
+      ],
+      c,
+      d,
+      1.2,
+    );
   },
   flamer: (ctx, c, d) => {
     roundRect(ctx, 4, 7, 38, 11, 3, c, d, 1.5);
     roundRect(ctx, 40, 10, 16, 5, 1, c, d, 1.2);
     circle(ctx, 14, 22, 5, c, d, 1.2);
     circle(ctx, 28, 22, 5, c, d, 1.2);
-    poly(ctx, [[56, 8], [63, 12.5], [56, 17]], '#ff9a2e');
+    poly(
+      ctx,
+      [
+        [56, 8],
+        [63, 12.5],
+        [56, 17],
+      ],
+      '#ff9a2e',
+    );
   },
   plasma: (ctx, c, d) => {
     roundRect(ctx, 6, 8, 36, 12, 4, c, d, 1.5);
     roundRect(ctx, 40, 10, 16, 8, 2, c, d, 1.2);
     for (let i = 0; i < 3; i++) line(ctx, 14 + i * 8, 9, 14 + i * 8, 19, '#5fd0ff', 2);
     circle(ctx, 58, 14, 3.5, '#9ae6ff');
-    poly(ctx, [[16, 20], [24, 20], [21, 27], [15, 27]], c, d, 1.2);
+    poly(
+      ctx,
+      [
+        [16, 20],
+        [24, 20],
+        [21, 27],
+        [15, 27],
+      ],
+      c,
+      d,
+      1.2,
+    );
   },
   rocket: (ctx, c, d) => {
     roundRect(ctx, 2, 7, 56, 12, 5, c, d, 1.5);
@@ -42,7 +95,18 @@ const ICONS: Record<string, (ctx: Ctx, c: string, d: string) => void> = {
   },
   generic: (ctx, c, d) => {
     roundRect(ctx, 6, 9, 46, 10, 3, c, d, 1.5);
-    poly(ctx, [[18, 18], [26, 18], [22, 26], [16, 26]], c, d, 1.2);
+    poly(
+      ctx,
+      [
+        [18, 18],
+        [26, 18],
+        [22, 26],
+        [16, 26],
+      ],
+      c,
+      d,
+      1.2,
+    );
   },
 };
 
@@ -90,7 +154,13 @@ const crates: SpriteDef[] = weapons.map(({ id, sprites }) => ({
     ctx.scale(0.38, 0.38);
     drawIcon(ctx, id, '#1d2416');
     ctx.restore();
-    for (const [x, y] of [[9, 11], [39, 11], [9, 37], [39, 37]]) circle(ctx, x, y, 1.5, '#9aa77f');
+    for (const [x, y] of [
+      [9, 11],
+      [39, 11],
+      [9, 37],
+      [39, 37],
+    ])
+      circle(ctx, x, y, 1.5, '#9aa77f');
   },
 }));
 
@@ -176,9 +246,33 @@ const projectiles: SpriteDef[] = [
     draw: (ctx) => {
       glow(ctx, 5, 6, 6, '#ff9a2e', 1);
       roundRect(ctx, 6, 3, 17, 6, 3, '#c2c8d0', '#30343a', 1);
-      poly(ctx, [[22, 3], [28, 6], [22, 9]], '#e0283a');
-      poly(ctx, [[8, 3], [5, 0], [11, 3]], '#30343a');
-      poly(ctx, [[8, 9], [5, 12], [11, 9]], '#30343a');
+      poly(
+        ctx,
+        [
+          [22, 3],
+          [28, 6],
+          [22, 9],
+        ],
+        '#e0283a',
+      );
+      poly(
+        ctx,
+        [
+          [8, 3],
+          [5, 0],
+          [11, 3],
+        ],
+        '#30343a',
+      );
+      poly(
+        ctx,
+        [
+          [8, 9],
+          [5, 12],
+          [11, 9],
+        ],
+        '#30343a',
+      );
     },
   },
   {
@@ -198,14 +292,23 @@ const projectiles: SpriteDef[] = [
 
 /* ------------------------------------------------------------------- tiles */
 
-function plate(ctx: Ctx, rng: { next(): number; range(a: number, b: number): number }, base: string): void {
+function plate(
+  ctx: Ctx,
+  rng: { next(): number; range(a: number, b: number): number },
+  base: string,
+): void {
   ctx.fillStyle = base;
   ctx.fillRect(0, 0, 64, 64);
   // Grime noise.
   for (let i = 0; i < 260; i++) {
     const a = rng.range(0.02, 0.09);
     ctx.fillStyle = rng.next() < 0.5 ? `rgba(0,0,0,${a})` : `rgba(255,255,255,${a * 0.5})`;
-    ctx.fillRect(Math.floor(rng.next() * 64), Math.floor(rng.next() * 64), 1 + Math.floor(rng.next() * 3), 1 + Math.floor(rng.next() * 2));
+    ctx.fillRect(
+      Math.floor(rng.next() * 64),
+      Math.floor(rng.next() * 64),
+      1 + Math.floor(rng.next() * 3),
+      1 + Math.floor(rng.next() * 2),
+    );
   }
   // Seams + bevel.
   ctx.fillStyle = 'rgba(0,0,0,0.45)';
@@ -214,15 +317,40 @@ function plate(ctx: Ctx, rng: { next(): number; range(a: number, b: number): num
   ctx.fillStyle = 'rgba(255,255,255,0.06)';
   ctx.fillRect(1, 1, 63, 1);
   ctx.fillRect(1, 1, 1, 63);
-  for (const [x, y] of [[5, 5], [59, 5], [5, 59], [59, 59]]) {
+  for (const [x, y] of [
+    [5, 5],
+    [59, 5],
+    [5, 59],
+    [59, 59],
+  ]) {
     circle(ctx, x, y, 1.6, 'rgba(0,0,0,0.5)');
     circle(ctx, x - 0.4, y - 0.4, 0.9, 'rgba(255,255,255,0.15)');
   }
 }
 
 const tiles: SpriteDef[] = [
-  { key: 'tile_floor_0', group: 'tile', w: 64, h: 64, frames: 1, prompt: 'Seamless dark sci-fi metal floor plate with rivets, top-down', draw: (ctx, _f, rng) => plate(ctx, rng, '#262a30') },
-  { key: 'tile_floor_1', group: 'tile', w: 64, h: 64, frames: 1, prompt: 'Seamless dark sci-fi metal floor plate, scuffed variant', draw: (ctx, _f, rng) => { plate(ctx, rng, '#23272c'); line(ctx, 10, 40, 30, 52, 'rgba(0,0,0,0.3)', 2); line(ctx, 34, 12, 50, 20, 'rgba(255,255,255,0.05)', 1); } },
+  {
+    key: 'tile_floor_0',
+    group: 'tile',
+    w: 64,
+    h: 64,
+    frames: 1,
+    prompt: 'Seamless dark sci-fi metal floor plate with rivets, top-down',
+    draw: (ctx, _f, rng) => plate(ctx, rng, '#262a30'),
+  },
+  {
+    key: 'tile_floor_1',
+    group: 'tile',
+    w: 64,
+    h: 64,
+    frames: 1,
+    prompt: 'Seamless dark sci-fi metal floor plate, scuffed variant',
+    draw: (ctx, _f, rng) => {
+      plate(ctx, rng, '#23272c');
+      line(ctx, 10, 40, 30, 52, 'rgba(0,0,0,0.3)', 2);
+      line(ctx, 34, 12, 50, 20, 'rgba(255,255,255,0.05)', 1);
+    },
+  },
   {
     key: 'tile_floor_2',
     group: 'tile',
@@ -249,7 +377,17 @@ const tiles: SpriteDef[] = [
       ctx.beginPath();
       ctx.rect(0, 26, 64, 12);
       ctx.clip();
-      for (let i = -2; i < 10; i++) poly(ctx, [[i * 10, 38], [i * 10 + 6, 38], [i * 10 + 18, 26], [i * 10 + 12, 26]], 'rgba(214,168,32,0.55)');
+      for (let i = -2; i < 10; i++)
+        poly(
+          ctx,
+          [
+            [i * 10, 38],
+            [i * 10 + 6, 38],
+            [i * 10 + 18, 26],
+            [i * 10 + 12, 26],
+          ],
+          'rgba(214,168,32,0.55)',
+        );
       ctx.restore();
     },
   },
@@ -257,11 +395,25 @@ const tiles: SpriteDef[] = [
 
 /* ------------------------------------------------------------------ decals */
 
-function splat(ctx: Ctx, rng: { next(): number; range(a: number, b: number): number }, color: string): void {
+function splat(
+  ctx: Ctx,
+  rng: { next(): number; range(a: number, b: number): number },
+  color: string,
+): void {
   for (let i = 0; i < 14; i++) {
     const a = rng.next() * Math.PI * 2;
     const d = rng.range(0, 20);
-    ellipse(ctx, 32 + Math.cos(a) * d, 32 + Math.sin(a) * d, rng.range(3, 11), rng.range(3, 9), rgba(color, rng.range(0.35, 0.7)), undefined, 0, a);
+    ellipse(
+      ctx,
+      32 + Math.cos(a) * d,
+      32 + Math.sin(a) * d,
+      rng.range(3, 11),
+      rng.range(3, 9),
+      rgba(color, rng.range(0.35, 0.7)),
+      undefined,
+      0,
+      a,
+    );
   }
   for (let i = 0; i < 10; i++) {
     const a = rng.next() * Math.PI * 2;
@@ -271,8 +423,24 @@ function splat(ctx: Ctx, rng: { next(): number; range(a: number, b: number): num
 }
 
 const decals: SpriteDef[] = [
-  ...[0, 1, 2].map((i): SpriteDef => ({ key: `decal_blood_${i}`, group: 'decal', w: 64, h: 64, frames: 1, prompt: 'Top-down purple alien ichor splatter on the floor', draw: (ctx, _f, rng) => splat(ctx, rng, '#5b1a6e') })),
-  ...[0, 1, 2].map((i): SpriteDef => ({ key: `decal_acid_${i}`, group: 'decal', w: 64, h: 64, frames: 1, prompt: 'Top-down green acid splatter on the floor', draw: (ctx, _f, rng) => splat(ctx, rng, '#4f9a1a') })),
+  ...[0, 1, 2].map((i): SpriteDef => ({
+    key: `decal_blood_${i}`,
+    group: 'decal',
+    w: 64,
+    h: 64,
+    frames: 1,
+    prompt: 'Top-down purple alien ichor splatter on the floor',
+    draw: (ctx, _f, rng) => splat(ctx, rng, '#5b1a6e'),
+  })),
+  ...[0, 1, 2].map((i): SpriteDef => ({
+    key: `decal_acid_${i}`,
+    group: 'decal',
+    w: 64,
+    h: 64,
+    frames: 1,
+    prompt: 'Top-down green acid splatter on the floor',
+    draw: (ctx, _f, rng) => splat(ctx, rng, '#4f9a1a'),
+  })),
   {
     key: 'decal_scorch_0',
     group: 'decal',
@@ -289,7 +457,15 @@ const decals: SpriteDef[] = [
       ctx.fillRect(0, 0, 96, 96);
       for (let i = 0; i < 12; i++) {
         const a = rng.next() * Math.PI * 2;
-        line(ctx, 48, 48, 48 + Math.cos(a) * rng.range(25, 46), 48 + Math.sin(a) * rng.range(25, 46), 'rgba(0,0,0,0.25)', rng.range(1, 3));
+        line(
+          ctx,
+          48,
+          48,
+          48 + Math.cos(a) * rng.range(25, 46),
+          48 + Math.sin(a) * rng.range(25, 46),
+          'rgba(0,0,0,0.25)',
+          rng.range(1, 3),
+        );
       }
     },
   },
@@ -314,7 +490,13 @@ const fx: SpriteDef[] = [
       for (let i = 0; i < 9; i++) {
         const a = (i / 9) * Math.PI * 2 + rng.range(-0.3, 0.3);
         const d = r * 0.6;
-        circle(ctx, 64 + Math.cos(a) * d, 64 + Math.sin(a) * d, r * 0.45, `rgba(${60 + t * 40},${50 + t * 40},${45 + t * 40},${0.7 - t * 0.3})`);
+        circle(
+          ctx,
+          64 + Math.cos(a) * d,
+          64 + Math.sin(a) * d,
+          r * 0.45,
+          `rgba(${60 + t * 40},${50 + t * 40},${45 + t * 40},${0.7 - t * 0.3})`,
+        );
       }
       if (t < 0.75) {
         glow(ctx, 64, 64, r * 1.1, '#ff6a00', 1 - t);
@@ -334,8 +516,26 @@ const fx: SpriteDef[] = [
     draw: (ctx, frame) => {
       glow(ctx, 8, 12, 12, '#ffcf5a', 1);
       const len = frame ? 26 : 20;
-      poly(ctx, [[2, 12], [len, 7], [len - 4, 12], [len, 17]], 'rgba(255,240,180,0.95)');
-      poly(ctx, [[4, 12], [12, 2], [10, 12], [12, 22]], 'rgba(255,220,120,0.8)');
+      poly(
+        ctx,
+        [
+          [2, 12],
+          [len, 7],
+          [len - 4, 12],
+          [len, 17],
+        ],
+        'rgba(255,240,180,0.95)',
+      );
+      poly(
+        ctx,
+        [
+          [4, 12],
+          [12, 2],
+          [10, 12],
+          [12, 22],
+        ],
+        'rgba(255,220,120,0.8)',
+      );
     },
   },
   {
@@ -379,4 +579,12 @@ const fx: SpriteDef[] = [
   },
 ];
 
-export const itemSprites: SpriteDef[] = [...icons, ...crates, medkit, ...projectiles, ...tiles, ...decals, ...fx];
+export const itemSprites: SpriteDef[] = [
+  ...icons,
+  ...crates,
+  medkit,
+  ...projectiles,
+  ...tiles,
+  ...decals,
+  ...fx,
+];

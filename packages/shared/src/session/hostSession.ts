@@ -1,10 +1,24 @@
-import { GAME_VERSION, MAX_CATCHUP_TICKS, MAX_PLAYERS, PLAYER, PROTOCOL_VERSION, TICK_DT } from '../constants.js';
+import {
+  GAME_VERSION,
+  MAX_CATCHUP_TICKS,
+  MAX_PLAYERS,
+  PLAYER,
+  PROTOCOL_VERSION,
+  TICK_DT,
+} from '../constants.js';
 import { defaultContent, type ContentRegistry } from '../data/index.js';
 import { sanitizeName } from '../highscore/validation.js';
 import type { RunMode, RunResult, SubmitStatus } from '../highscore/types.js';
 import { randomSeed } from '../math/rng.js';
 import type { Link } from '../net/link.js';
-import { isClientMessage, type ClientMessage, type HostMessage, type LobbyPlayer, type PlayerSummary, type SessionPhase } from '../net/protocol.js';
+import {
+  isClientMessage,
+  type ClientMessage,
+  type HostMessage,
+  type LobbyPlayer,
+  type PlayerSummary,
+  type SessionPhase,
+} from '../net/protocol.js';
 import { applyInput, stepWorld } from '../sim/simulation.js';
 import { buildSnapshot } from '../sim/snapshot.js';
 import { stepPlayerMovement, playerMoveSpeed } from '../sim/systems/movement.js';
@@ -105,10 +119,16 @@ export class HostSession {
     switch (msg.t) {
       case 'input':
         member.inputs.push(msg.i);
-        if (member.inputs.length > MAX_QUEUED_INPUTS) member.inputs.splice(0, member.inputs.length - MAX_QUEUED_INPUTS);
+        if (member.inputs.length > MAX_QUEUED_INPUTS)
+          member.inputs.splice(0, member.inputs.length - MAX_QUEUED_INPUTS);
         break;
       case 'start':
-        if (member.playerId !== this.ownerId) this.send(link, { t: 'error', code: 'not_owner', message: 'Only the room owner can start' });
+        if (member.playerId !== this.ownerId)
+          this.send(link, {
+            t: 'error',
+            code: 'not_owner',
+            message: 'Only the room owner can start',
+          });
         else this.start();
         break;
       case 'toLobby':
@@ -122,17 +142,29 @@ export class HostSession {
 
   private handleJoin(link: Link, rawName: string, protocol: number): void {
     if (protocol !== PROTOCOL_VERSION) {
-      this.send(link, { t: 'error', code: 'protocol', message: `Protocol mismatch (host ${PROTOCOL_VERSION}, client ${protocol}). Refresh the page.` });
+      this.send(link, {
+        t: 'error',
+        code: 'protocol',
+        message: `Protocol mismatch (host ${PROTOCOL_VERSION}, client ${protocol}). Refresh the page.`,
+      });
       link.close();
       return;
     }
     if (this.phase === 'playing') {
-      this.send(link, { t: 'error', code: 'in_progress', message: 'A run is in progress. Try again after it ends.' });
+      this.send(link, {
+        t: 'error',
+        code: 'in_progress',
+        message: 'A run is in progress. Try again after it ends.',
+      });
       link.close();
       return;
     }
     if (this.members.size >= this.maxPlayers) {
-      this.send(link, { t: 'error', code: 'full', message: `Room is full (${this.maxPlayers} marines max).` });
+      this.send(link, {
+        t: 'error',
+        code: 'full',
+        message: `Room is full (${this.maxPlayers} marines max).`,
+      });
       link.close();
       return;
     }
@@ -149,8 +181,15 @@ export class HostSession {
     };
     this.members.set(link.id, member);
     if (this.ownerId < 0) this.ownerId = member.playerId;
-    this.send(link, { t: 'welcome', playerId: member.playerId, room: this.roomCode, protocol: PROTOCOL_VERSION });
-    this.opts.log?.(`[room ${this.roomCode}] ${member.name} joined (${this.members.size}/${this.maxPlayers})`);
+    this.send(link, {
+      t: 'welcome',
+      playerId: member.playerId,
+      room: this.roomCode,
+      protocol: PROTOCOL_VERSION,
+    });
+    this.opts.log?.(
+      `[room ${this.roomCode}] ${member.name} joined (${this.members.size}/${this.maxPlayers})`,
+    );
     this.broadcastLobby();
   }
 
@@ -178,7 +217,11 @@ export class HostSession {
   }
 
   lobbyPlayers(): LobbyPlayer[] {
-    return [...this.members.values()].map((m) => ({ id: m.playerId, name: m.name, colorIndex: m.colorIndex }));
+    return [...this.members.values()].map((m) => ({
+      id: m.playerId,
+      name: m.name,
+      colorIndex: m.colorIndex,
+    }));
   }
 
   private broadcastLobby(): void {
@@ -202,7 +245,9 @@ export class HostSession {
     this.phase = 'playing';
     this.broadcast({ t: 'start', seed, players });
     this.broadcastLobby();
-    this.opts.log?.(`[room ${this.roomCode}] run started with ${players.length} marine(s), seed ${seed}`);
+    this.opts.log?.(
+      `[room ${this.roomCode}] run started with ${players.length} marine(s), seed ${seed}`,
+    );
     this.lastTime = this.scheduler.now();
     this.acc = 0;
     this.stopLoop();
@@ -235,7 +280,13 @@ export class HostSession {
         const extra = m.inputs.shift()!;
         const p = world.players.find((x) => x.id === m.playerId);
         if (p && p.state === 'alive') {
-          stepPlayerMovement(p, extra.mx, extra.my, playerMoveSpeed(this.content.weapon(p.current).moveSpeedMul), TICK_DT);
+          stepPlayerMovement(
+            p,
+            extra.mx,
+            extra.my,
+            playerMoveSpeed(this.content.weapon(p.current).moveSpeedMul),
+            TICK_DT,
+          );
           p.lastInputSeq = Math.max(p.lastInputSeq, extra.seq);
         }
       }
@@ -276,11 +327,15 @@ export class HostSession {
     }));
     this.broadcast({ t: 'over', result, summary });
     this.broadcastLobby();
-    this.opts.log?.(`[room ${this.roomCode}] run over: ${(result.survivalMs / 1000).toFixed(1)}s, ${result.kills} kills`);
+    this.opts.log?.(
+      `[room ${this.roomCode}] run over: ${(result.survivalMs / 1000).toFixed(1)}s, ${result.kills} kills`,
+    );
     const submit = this.opts.submitResult;
     if (submit && result.survivalMs >= 1000) {
       submit(result)
-        .then((r) => this.broadcast({ t: 'submitted', runId: result.runId, status: r.status, rank: r.rank }))
+        .then((r) =>
+          this.broadcast({ t: 'submitted', runId: result.runId, status: r.status, rank: r.rank }),
+        )
         .catch(() => this.broadcast({ t: 'submitted', runId: result.runId, status: 'failed' }));
     } else {
       this.broadcast({ t: 'submitted', runId: result.runId, status: 'failed' });

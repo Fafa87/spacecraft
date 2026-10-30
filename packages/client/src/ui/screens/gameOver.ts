@@ -44,7 +44,9 @@ export function createGameOverScreen(
   const hsHost = $(el, '#hs');
   const mountTable = () => {
     hsHost.innerHTML = '';
-    hsHost.append(createHighscorePanel(opts.store, { teamSize: result.teamSize, highlightRunId: result.runId }));
+    hsHost.append(
+      createHighscorePanel(opts.store, { teamSize: result.teamSize, highlightRunId: result.runId }),
+    );
   };
   mountTable();
   $(el, '#menu').addEventListener('click', () => actions.menu());

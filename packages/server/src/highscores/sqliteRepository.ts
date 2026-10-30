@@ -92,7 +92,19 @@ export class SqliteHighscoreRepository implements HighscoreRepository {
     this.db.run(
       `INSERT INTO highscores (id, run_id, team_size, players, survival_ms, wave, kills, ended_at, submitted_at, version, mode)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [e.id, e.runId, e.teamSize, JSON.stringify(e.players), e.survivalMs, e.wave, e.kills, e.endedAt, e.submittedAt, e.version, e.mode],
+      [
+        e.id,
+        e.runId,
+        e.teamSize,
+        JSON.stringify(e.players),
+        e.survivalMs,
+        e.wave,
+        e.kills,
+        e.endedAt,
+        e.submittedAt,
+        e.version,
+        e.mode,
+      ],
     );
     await this.flush();
     return { entry: e, rank: this.rankOf(e), duplicate: false };

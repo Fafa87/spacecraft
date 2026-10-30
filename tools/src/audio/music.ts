@@ -92,7 +92,16 @@ class Track {
     this.buf = new Float32Array(length);
   }
 
-  tone(start: number, dur: number, freq: number, osc: Osc, gain: number, env: Env, duty = 0.5, vibrato = 0): void {
+  tone(
+    start: number,
+    dur: number,
+    freq: number,
+    osc: Osc,
+    gain: number,
+    env: Env,
+    duty = 0.5,
+    vibrato = 0,
+  ): void {
     const sr = this.sampleRate;
     const n = Math.floor((dur + env.r) * sr);
     const s0 = Math.floor(start * sr);
@@ -105,7 +114,8 @@ class Track {
       else if (t < env.a + env.d) e = 1 - (1 - env.s) * ((t - env.a) / env.d);
       else if (t < dur) e = env.s;
       else e = env.s * Math.max(0, 1 - (t - dur) / env.r);
-      const f = vibrato > 0 && t > 0.15 ? freq * (1 + Math.sin(t * 2 * Math.PI * 5.5) * vibrato) : freq;
+      const f =
+        vibrato > 0 && t > 0.15 ? freq * (1 + Math.sin(t * 2 * Math.PI * 5.5) * vibrato) : freq;
       phase = (phase + f / sr) % 1;
       let v: number;
       switch (osc) {
@@ -134,7 +144,8 @@ class Track {
       const t = i / sr;
       const f = 45 + 110 * Math.exp(-t * 28);
       phase += f / sr;
-      this.buf[(s0 + i) % this.buf.length] += Math.sin(phase * 2 * Math.PI) * Math.exp(-t * 12) * gain;
+      this.buf[(s0 + i) % this.buf.length] +=
+        Math.sin(phase * 2 * Math.PI) * Math.exp(-t * 12) * gain;
     }
   }
 
@@ -157,7 +168,8 @@ class Track {
     const a = 1 - Math.exp((-2 * Math.PI * cutoffHz) / this.sampleRate);
     let y = 0;
     // two passes so the loop seam is smooth
-    for (let pass = 0; pass < 2; pass++) for (let i = 0; i < this.buf.length; i++) this.buf[i] = y += a * (this.buf[i] - y);
+    for (let pass = 0; pass < 2; pass++)
+      for (let i = 0; i < this.buf.length; i++) this.buf[i] = y += a * (this.buf[i] - y);
   }
 
   /** Circular feedback delay (echo). */
@@ -166,20 +178,28 @@ class Track {
     const len = this.buf.length;
     const wet = new Float32Array(len);
     for (let pass = 0; pass < 2; pass++)
-      for (let i = 0; i < len; i++) wet[i] = this.buf[(i - d + len) % len] + wet[(i - d + len) % len] * feedback;
+      for (let i = 0; i < len; i++)
+        wet[i] = this.buf[(i - d + len) % len] + wet[(i - d + len) % len] * feedback;
     for (let i = 0; i < len; i++) this.buf[i] += wet[i] * mix;
   }
 }
 
 function chordNotes(spec: SongSpec, degree: number, octave = 0): number[] {
   const s = spec.scale;
-  const note = (deg: number) => spec.root + 12 * (octave + Math.floor(deg / s.length)) + s[((deg % s.length) + s.length) % s.length];
+  const note = (deg: number) =>
+    spec.root +
+    12 * (octave + Math.floor(deg / s.length)) +
+    s[((deg % s.length) + s.length) % s.length];
   return [note(degree), note(degree + 2), note(degree + 4)];
 }
 
 function scaleNote(spec: SongSpec, deg: number, octave: number): number {
   const s = spec.scale;
-  return spec.root + 12 * (octave + Math.floor(deg / s.length)) + s[((deg % s.length) + s.length) % s.length];
+  return (
+    spec.root +
+    12 * (octave + Math.floor(deg / s.length)) +
+    s[((deg % s.length) + s.length) % s.length]
+  );
 }
 
 /** Renders a song to mono samples. Length = bars * 4 beats exactly (seamless loop). */
@@ -214,13 +234,26 @@ export function renderSong(spec: SongSpec, sampleRate = 22050): Float32Array {
       // Bass: driving 8ths with octave jumps.
       for (let i = 0; i < 8; i++) {
         const n = chord[0] + (i % 4 === 3 ? 12 : 0);
-        bass.tone(t0 + i * step * 2, step * 1.7, midiToFreq(n), 'triangle', 0.55, { a: 0.003, d: 0.05, s: 0.7, r: 0.03 });
+        bass.tone(t0 + i * step * 2, step * 1.7, midiToFreq(n), 'triangle', 0.55, {
+          a: 0.003,
+          d: 0.05,
+          s: 0.7,
+          r: 0.03,
+        });
       }
       // Arp: 16ths over chord, 2 octaves up.
       if (section > 0) {
         for (let i = 0; i < 16; i++) {
           const n = chord[i % 3] + 24 + (i % 6 >= 3 ? 12 : 0);
-          arp.tone(t0 + i * step, step * 0.6, midiToFreq(n), 'pulse', 0.09, { a: 0.002, d: 0.04, s: 0.4, r: 0.02 }, 0.125);
+          arp.tone(
+            t0 + i * step,
+            step * 0.6,
+            midiToFreq(n),
+            'pulse',
+            0.09,
+            { a: 0.002, d: 0.04, s: 0.4, r: 0.02 },
+            0.125,
+          );
         }
       }
       // Lead melody.
@@ -229,34 +262,66 @@ export function renderSong(spec: SongSpec, sampleRate = 22050): Float32Array {
           const m = motif[(bar % 2) * 16 + i];
           if (m === null) continue;
           let dur = step;
-          while (i + 1 < 16 && motif[(bar % 2) * 16 + i + 1] === null && dur < step * 3) dur += step;
+          while (i + 1 < 16 && motif[(bar % 2) * 16 + i + 1] === null && dur < step * 3)
+            dur += step;
           const variation = intense && i % 8 === 4 ? 2 : 0;
           const n = scaleNote(spec, degree + m + variation, 2);
-          lead.tone(t0 + i * step, dur * 0.9, midiToFreq(n), 'pulse', 0.16, { a: 0.005, d: 0.08, s: 0.6, r: 0.05 }, 0.25, 0.006);
+          lead.tone(
+            t0 + i * step,
+            dur * 0.9,
+            midiToFreq(n),
+            'pulse',
+            0.16,
+            { a: 0.005, d: 0.08, s: 0.6, r: 0.05 },
+            0.25,
+            0.006,
+          );
         }
       }
       // Drums.
       for (let i = 0; i < 16; i++) {
         const t = t0 + i * step;
-        if (i === 0 || i === 8 || (intense && (i === 10 || i === 14)) || (!intense && i === 11)) drums.kick(t, 0.9);
+        if (i === 0 || i === 8 || (intense && (i === 10 || i === 14)) || (!intense && i === 11))
+          drums.kick(t, 0.9);
         if (i === 4 || i === 12) drums.noise(t, 0.18, 0.45, 18, rng, 0.2);
         if (i % 2 === 0 || intense) drums.noise(t, 0.04, i % 4 === 2 ? 0.16 : 0.09, 60, rng, 0.95);
       }
-      if (bar % 4 === 3) for (let i = 12; i < 16; i++) drums.noise(t0 + i * step, 0.1, 0.25, 25, rng, 0.3); // fill
+      if (bar % 4 === 3)
+        for (let i = 12; i < 16; i++) drums.noise(t0 + i * step, 0.1, 0.25, 25, rng, 0.3); // fill
     } else {
       // Ambient: pad chords, slow bass, sparse bell melody, heartbeat.
       for (const n of chord) {
-        pad.tone(t0, barLen, midiToFreq(n + 12), 'saw', 0.09, { a: barLen * 0.35, d: 0.2, s: 0.8, r: barLen * 0.4 });
-        pad.tone(t0, barLen, midiToFreq(n + 12) * 1.004, 'saw', 0.07, { a: barLen * 0.35, d: 0.2, s: 0.8, r: barLen * 0.4 });
+        pad.tone(t0, barLen, midiToFreq(n + 12), 'saw', 0.09, {
+          a: barLen * 0.35,
+          d: 0.2,
+          s: 0.8,
+          r: barLen * 0.4,
+        });
+        pad.tone(t0, barLen, midiToFreq(n + 12) * 1.004, 'saw', 0.07, {
+          a: barLen * 0.35,
+          d: 0.2,
+          s: 0.8,
+          r: barLen * 0.4,
+        });
       }
-      bass.tone(t0, barLen * 0.9, midiToFreq(chord[0]), 'triangle', 0.5, { a: 0.05, d: 0.3, s: 0.6, r: 0.4 });
+      bass.tone(t0, barLen * 0.9, midiToFreq(chord[0]), 'triangle', 0.5, {
+        a: 0.05,
+        d: 0.3,
+        s: 0.6,
+        r: 0.4,
+      });
       const beats = spec.style === 'tension' ? [0] : [0, 1.5];
       for (const b of beats) drums.kick(t0 + b * beat, spec.style === 'tension' ? 0.5 : 0.6);
       for (let i = 0; i < 8; i++) {
         const m = motif[(bar % 4) * 8 + i];
         if (m === null || rng.chance(0.4)) continue;
         const n = scaleNote(spec, degree + m, 3);
-        lead.tone(t0 + i * step * 2, step * 2, midiToFreq(n), 'sine', 0.12, { a: 0.01, d: 0.4, s: 0.2, r: 0.6 });
+        lead.tone(t0 + i * step * 2, step * 2, midiToFreq(n), 'sine', 0.12, {
+          a: 0.01,
+          d: 0.4,
+          s: 0.2,
+          r: 0.6,
+        });
       }
     }
   }

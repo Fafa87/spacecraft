@@ -32,12 +32,23 @@ const peerIdFor = (code: string) => `${PEER_PREFIX}${code}`;
 
 /** Solo play: host + client in the same tab over an in-memory link. */
 export function createLocalGame(name: string, submit: SubmitFn): GameConnection {
-  const host = new HostSession({ roomCode: 'SOLO', mode: 'local', maxPlayers: 1, submitResult: submit });
+  const host = new HostSession({
+    roomCode: 'SOLO',
+    mode: 'local',
+    maxPlayers: 1,
+    submitResult: submit,
+  });
   const [hostSide, clientSide] = createLocalLinkPair('local');
   host.addLink(hostSide);
   const session = new ClientSession(clientSide, name);
   session.join();
-  return { mode: 'local', roomCode: 'SOLO', session, host, close: () => (session.close(), host.close()) };
+  return {
+    mode: 'local',
+    roomCode: 'SOLO',
+    session,
+    host,
+    close: () => (session.close(), host.close()),
+  };
 }
 
 async function peerOptions(): Promise<PeerOptions> {
@@ -89,7 +100,12 @@ export async function hostPeerGame(name: string, submit: SubmitFn): Promise<Game
     }
   }
   if (!peer) throw new Error('Could not allocate a room code, try again.');
-  const host = new HostSession({ roomCode: code, mode: 'p2p', submitResult: submit, log: (...a) => console.info(...a) });
+  const host = new HostSession({
+    roomCode: code,
+    mode: 'p2p',
+    submitResult: submit,
+    log: (...a) => console.info(...a),
+  });
   peer.on('connection', (conn) => {
     conn.on('open', () => host.addLink(new PeerLink(conn)));
   });
@@ -128,7 +144,11 @@ export async function joinPeerGame(rawCode: string, name: string): Promise<GameC
     });
     peer.on('error', (err) => {
       clearTimeout(timer);
-      reject((err as { type?: string }).type === 'peer-unavailable' ? new Error(`Room ${code} not found.`) : err);
+      reject(
+        (err as { type?: string }).type === 'peer-unavailable'
+          ? new Error(`Room ${code} not found.`)
+          : err,
+      );
     });
   }).catch((err) => {
     peer.destroy();
@@ -136,7 +156,13 @@ export async function joinPeerGame(rawCode: string, name: string): Promise<GameC
   });
   const session = new ClientSession(new PeerLink(conn), name);
   session.join();
-  return { mode: 'p2p', roomCode: code, session, host: null, close: () => (session.close(), peer.destroy()) };
+  return {
+    mode: 'p2p',
+    roomCode: code,
+    session,
+    host: null,
+    close: () => (session.close(), peer.destroy()),
+  };
 }
 
 /** EXPERIMENTAL: create/join a room on the dedicated WebSocket host (?ws=1). */
@@ -149,7 +175,12 @@ export async function connectDedicated(name: string, rawCode?: string): Promise<
   const ws = new WebSocket(url);
   await new Promise<void>((resolve, reject) => {
     ws.addEventListener('open', () => resolve(), { once: true });
-    ws.addEventListener('error', () => reject(new Error(rawCode ? 'Room not found.' : 'Could not connect to the dedicated host.')), { once: true });
+    ws.addEventListener(
+      'error',
+      () =>
+        reject(new Error(rawCode ? 'Room not found.' : 'Could not connect to the dedicated host.')),
+      { once: true },
+    );
   });
   const session = new ClientSession(new BrowserWsLink(ws), name);
   const welcomed = new Promise<string>((resolve) => session.on('welcome', (w) => resolve(w.room)));

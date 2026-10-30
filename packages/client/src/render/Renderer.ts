@@ -1,9 +1,22 @@
-import { ARENA, defaultContent, PLAYER, PLAYER_COLORS, type ContentRegistry, type PlayerSnap, type Snapshot } from '@sms/shared';
+import {
+  ARENA,
+  defaultContent,
+  PLAYER,
+  PLAYER_COLORS,
+  type ContentRegistry,
+  type PlayerSnap,
+  type Snapshot,
+} from '@sms/shared';
 import { lerp, lerpAngle } from '../game/interpolation.js';
 import type { Assets } from './assets.js';
 import { Camera } from './camera.js';
 import { Particles } from './particles.js';
-import { DEFAULT_ENEMY_VISUAL, DEFAULT_PROJECTILE_VISUAL, ENEMY_VISUALS, PROJECTILE_VISUALS } from './visuals.js';
+import {
+  DEFAULT_ENEMY_VISUAL,
+  DEFAULT_PROJECTILE_VISUAL,
+  ENEMY_VISUALS,
+  PROJECTILE_VISUALS,
+} from './visuals.js';
 
 /** Everything the renderer needs for one frame. */
 export interface RenderFrame {
@@ -97,7 +110,14 @@ export class Renderer {
     ctx.fillStyle = '#07090c';
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     const s = this.dpr * camera.zoom;
-    ctx.setTransform(s, 0, 0, s, (camera.width / 2) * this.dpr - (camera.x + camera.shakeX) * s, (camera.height / 2) * this.dpr - (camera.y + camera.shakeY) * s);
+    ctx.setTransform(
+      s,
+      0,
+      0,
+      s,
+      (camera.width / 2) * this.dpr - (camera.x + camera.shakeX) * s,
+      (camera.height / 2) * this.dpr - (camera.y + camera.shakeY) * s,
+    );
     ctx.imageSmoothingEnabled = true;
 
     this.drawFloor();
@@ -175,7 +195,8 @@ export class Renderer {
       ctx.fillStyle = g;
       ctx.fillRect(p.x - 42, p.y - 42, 84, 84);
       this.drawShadow(p.x, p.y + 6, 16);
-      const key = p.k === 'medkit' ? 'medkit' : (this.content.weapons.get(p.w ?? '')?.sprites.pickup ?? '');
+      const key =
+        p.k === 'medkit' ? 'medkit' : (this.content.weapons.get(p.w ?? '')?.sprites.pickup ?? '');
       const frame = Math.floor(time * 2) % 2;
       if (!this.assets.draw(ctx, key, frame, p.x, p.y + bob)) {
         ctx.fillStyle = p.k === 'medkit' ? '#e8e8e8' : '#b07a2a';
@@ -258,7 +279,11 @@ export class Renderer {
         ctx.fillRect(x - r, y - r - 10, (r * 2 * hp) / 100, 4);
       }
     }
-    for (const id of this.lastHp.keys()) if (!seen.has(id)) (this.lastHp.delete(id), this.hitFlash.delete(id));
+    for (const id of this.lastHp.keys()) {
+      if (seen.has(id)) continue;
+      this.lastHp.delete(id);
+      this.hitFlash.delete(id);
+    }
   }
 
   private playerPose(f: RenderFrame, p: PlayerSnap): { x: number; y: number; a: number } {
@@ -402,7 +427,19 @@ export class Renderer {
       ctx.globalCompositeOperation = p.additive ? 'lighter' : 'source-over';
       if (p.shape === 'sprite' && p.sprite) {
         const frames = this.assets.frameCount(p.sprite);
-        if (frames && this.assets.draw(ctx, p.sprite, Math.min(frames - 1, Math.floor(t * frames)), p.x, p.y, p.angle, size)) continue;
+        if (
+          frames &&
+          this.assets.draw(
+            ctx,
+            p.sprite,
+            Math.min(frames - 1, Math.floor(t * frames)),
+            p.x,
+            p.y,
+            p.angle,
+            size,
+          )
+        )
+          continue;
         ctx.fillStyle = p.color;
         ctx.beginPath();
         ctx.arc(p.x, p.y, 40 * size * (0.5 + t), 0, Math.PI * 2);
@@ -429,7 +466,14 @@ export class Renderer {
     const { ctx, canvas } = this;
     if (!this.vignette) {
       const r = Math.hypot(canvas.width, canvas.height) / 2;
-      const g = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, r * 0.45, canvas.width / 2, canvas.height / 2, r);
+      const g = ctx.createRadialGradient(
+        canvas.width / 2,
+        canvas.height / 2,
+        r * 0.45,
+        canvas.width / 2,
+        canvas.height / 2,
+        r,
+      );
       g.addColorStop(0, 'rgba(0,0,0,0)');
       g.addColorStop(1, 'rgba(0,0,0,0.55)');
       this.vignette = g;

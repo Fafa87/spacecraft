@@ -7,7 +7,12 @@ export interface RoomActions {
 }
 
 /** Pre-game lobby: room code + share link, player list, owner starts the run. */
-export function createRoomScreen(session: ClientSession, roomCode: string, mode: string, actions: RoomActions): { el: HTMLElement; dispose(): void } {
+export function createRoomScreen(
+  session: ClientSession,
+  roomCode: string,
+  mode: string,
+  actions: RoomActions,
+): { el: HTMLElement; dispose(): void } {
   const link = `${location.origin}${location.pathname}?join=${roomCode}${mode === 'dedicated' ? '&ws=1' : ''}`;
   const el = html(`<div class="screen room">
     <div class="card">
@@ -36,7 +41,9 @@ export function createRoomScreen(session: ClientSession, roomCode: string, mode:
     const owner = session.isOwner;
     start.style.display = owner ? '' : 'none';
     start.disabled = l.phase === 'playing';
-    hint.textContent = owner ? `Start when your squad is ready (${l.players.length}/${l.maxPlayers}).` : 'Waiting for the squad leader to start…';
+    hint.textContent = owner
+      ? `Start when your squad is ready (${l.players.length}/${l.maxPlayers}).`
+      : 'Waiting for the squad leader to start…';
   };
   render(session.lobby);
   const off = session.on('lobby', render);

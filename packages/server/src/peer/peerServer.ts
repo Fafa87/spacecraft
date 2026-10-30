@@ -6,7 +6,11 @@ import { PeerServer } from 'peer';
  * this only brokers the initial handshake so we don't depend on the public
  * 0.peerjs.com cloud during development.
  */
-export function startPeerServer(port: number, path: string, log: (msg: string) => void): { close: () => void } {
+export function startPeerServer(
+  port: number,
+  path: string,
+  log: (msg: string) => void,
+): { close: () => void } {
   let http: Server | null = null;
   let closed = false;
   PeerServer({ port, path, allow_discovery: false }, (server) => {

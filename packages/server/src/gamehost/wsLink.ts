@@ -8,7 +8,9 @@ export class WsLink extends BaseLink {
     private readonly ws: WebSocket,
   ) {
     super(id);
-    ws.on('message', (data, isBinary) => this.deliver(codec.decode(isBinary ? data : data.toString())));
+    ws.on('message', (data, isBinary) =>
+      this.deliver(codec.decode(isBinary ? data : data.toString())),
+    );
     ws.on('close', () => this.markClosed());
     ws.on('error', () => this.markClosed());
   }

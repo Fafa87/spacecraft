@@ -15,9 +15,17 @@ export default tseslint.config(
       globals: { ...globals.node, ...globals.browser },
     },
     rules: {
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
       '@typescript-eslint/no-explicit-any': 'warn',
       'no-constant-condition': ['error', { checkLoops: false }],
     },
+  },
+  {
+    // Smoke scripts poke at the page's debug hook (window.__sms) with loose types.
+    files: ['scripts/**/*.ts'],
+    rules: { '@typescript-eslint/no-explicit-any': 'off' },
   },
 );

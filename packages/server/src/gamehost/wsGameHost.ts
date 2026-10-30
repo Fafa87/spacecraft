@@ -1,7 +1,13 @@
 import type { Server as HttpServer, IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
 import { WebSocketServer } from 'ws';
-import { HostSession, makeRoomCode, normalizeRoomCode, type RunResult, type SubmitStatus } from '@sms/shared';
+import {
+  HostSession,
+  makeRoomCode,
+  normalizeRoomCode,
+  type RunResult,
+  type SubmitStatus,
+} from '@sms/shared';
 import { WsLink } from './wsLink.js';
 
 export interface WsGameHostOptions {

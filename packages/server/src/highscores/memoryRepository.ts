@@ -37,7 +37,9 @@ export class MemoryHighscoreRepository implements HighscoreRepository {
   }
 
   async count(teamSize?: number): Promise<number> {
-    return teamSize ? this.entries.filter((e) => e.teamSize === teamSize).length : this.entries.length;
+    return teamSize
+      ? this.entries.filter((e) => e.teamSize === teamSize).length
+      : this.entries.length;
   }
 
   protected async persist(): Promise<void> {}

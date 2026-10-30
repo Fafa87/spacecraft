@@ -16,7 +16,10 @@ export function waveEntryAt(cfg: DirectorConfig, t: number): WaveTableEntry {
 /** Threat points per second at survival time t (seconds). */
 export function budgetRate(cfg: DirectorConfig, t: number, teamSize: number): number {
   const minutes = t / 60;
-  return (cfg.budget.base + cfg.budget.perMinute * minutes ** cfg.budget.exponent) * teamScale(cfg, teamSize);
+  return (
+    (cfg.budget.base + cfg.budget.perMinute * minutes ** cfg.budget.exponent) *
+    teamScale(cfg, teamSize)
+  );
 }
 
 export function maxAlive(cfg: DirectorConfig, t: number, teamSize: number): number {
@@ -24,7 +27,8 @@ export function maxAlive(cfg: DirectorConfig, t: number, teamSize: number): numb
   return Math.min(cfg.maxAlive.cap, Math.floor(raw));
 }
 
-export const enemyHpScale = (cfg: DirectorConfig, t: number): number => 1 + cfg.hpScalePerMinute * (t / 60);
+export const enemyHpScale = (cfg: DirectorConfig, t: number): number =>
+  1 + cfg.hpScalePerMinute * (t / 60);
 
 /** Escalating spawn director: earns a threat budget over time and spends it on enemy groups. */
 export function updateDirector(world: World, dt: number): void {
@@ -55,8 +59,13 @@ export function updateDirector(world: World, dt: number): void {
     const def = world.content.enemy(type);
     const affordable = Math.floor(st.budget / def.threat);
     if (affordable < 1) break;
-    const groupMax = def.threat >= 5 ? Math.max(1, Math.floor(cfg.spawn.groupMax / 3)) : cfg.spawn.groupMax;
-    const n = Math.min(affordable, cap - world.enemies.length, world.rng.int(cfg.spawn.groupMin, groupMax));
+    const groupMax =
+      def.threat >= 5 ? Math.max(1, Math.floor(cfg.spawn.groupMax / 3)) : cfg.spawn.groupMax;
+    const n = Math.min(
+      affordable,
+      cap - world.enemies.length,
+      world.rng.int(cfg.spawn.groupMin, groupMax),
+    );
     if (n < 1) break;
     const [gx, gy] = pickSpawnPoint(world, cfg.spawn.minDistance, cfg.spawn.maxDistance, 80);
     const hpMul = enemyHpScale(cfg, t);
@@ -90,7 +99,12 @@ export function updateDirector(world: World, dt: number): void {
 }
 
 /** Random point in a ring around a random alive marine, kept inside the arena and away from all marines. */
-export function pickSpawnPoint(world: World, minD: number, maxD: number, margin: number): [number, number] {
+export function pickSpawnPoint(
+  world: World,
+  minD: number,
+  maxD: number,
+  margin: number,
+): [number, number] {
   const alive = alivePlayers(world);
   let best: [number, number] = [margin, margin];
   let bestScore = -Infinity;
@@ -117,7 +131,8 @@ export function spawnCrate(world: World): void {
   const cfg = world.content.director.crates;
   const weights: Record<string, number> = {};
   for (const w of world.content.weaponOrder) {
-    if (w.crateWeight > 0 && alive.some((p) => !p.weapons.includes(w.id))) weights[w.id] = w.crateWeight;
+    if (w.crateWeight > 0 && alive.some((p) => !p.weapons.includes(w.id)))
+      weights[w.id] = w.crateWeight;
   }
   const weapon = world.rng.weighted(weights);
   const [x, y] = pickSpawnPoint(world, cfg.minDistance, cfg.maxDistance, 60);

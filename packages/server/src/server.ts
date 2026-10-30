@@ -38,9 +38,14 @@ export async function startServer(config: ServerConfig): Promise<RunningServer> 
   await app.listen({ host: config.host, port: config.port });
   const addr = app.server.address();
   const port = typeof addr === 'object' && addr ? addr.port : config.port;
-  app.log.info(`Highscore API on http://localhost:${port}/api (store: ${repo.kind}, data: ${config.dataDir})`);
+  app.log.info(
+    `Highscore API on http://localhost:${port}/api (store: ${repo.kind}, data: ${config.dataDir})`,
+  );
 
-  const peer = config.peerPort > 0 ? startPeerServer(config.peerPort, config.peerPath, (m) => app.log.info(m)) : null;
+  const peer =
+    config.peerPort > 0
+      ? startPeerServer(config.peerPort, config.peerPath, (m) => app.log.info(m))
+      : null;
 
   return {
     app,

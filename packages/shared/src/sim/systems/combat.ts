@@ -14,7 +14,12 @@ export interface DamageOpts {
 }
 
 /** Applies damage to an enemy (armor, knockback, death handling). Returns damage dealt. */
-export function damageEnemy(world: World, enemy: Enemy, amount: number, opts: DamageOpts = {}): number {
+export function damageEnemy(
+  world: World,
+  enemy: Enemy,
+  amount: number,
+  opts: DamageOpts = {},
+): number {
   if (enemy.dead) return 0;
   const def = world.content.enemy(enemy.type);
   const dmg = opts.armorPierce ? amount : Math.max(amount * 0.2, amount - def.armor);
@@ -25,7 +30,9 @@ export function damageEnemy(world: World, enemy: Enemy, amount: number, opts: Da
     enemy.vy += ((opts.ky ?? 0) / l) * (opts.knockback / def.mass);
   }
   const shooter =
-    opts.sourcePlayerId !== undefined ? world.players.find((p) => p.id === opts.sourcePlayerId) : undefined;
+    opts.sourcePlayerId !== undefined
+      ? world.players.find((p) => p.id === opts.sourcePlayerId)
+      : undefined;
   if (shooter) shooter.damageDealt += dmg;
   if (enemy.hp <= 0) killEnemy(world, enemy, shooter);
   return dmg;
@@ -38,9 +45,16 @@ export function killEnemy(world: World, enemy: Enemy, killer?: Player): void {
   world.stats.kills++;
   if (killer) killer.kills++;
   world.events.push({ e: 'die', t: enemy.type, x: Math.round(enemy.x), y: Math.round(enemy.y) });
-  if (def.explode?.onDeath) explode(world, enemy.x, enemy.y, def.explode, { hurtsPlayers: true, hurtsEnemies: true });
+  if (def.explode?.onDeath)
+    explode(world, enemy.x, enemy.y, def.explode, { hurtsPlayers: true, hurtsEnemies: true });
   if (world.rng.chance(def.medkitDropChance)) {
-    world.pickups.push({ id: allocId(world), kind: 'medkit', x: enemy.x, y: enemy.y, life: PICKUP.lifetime });
+    world.pickups.push({
+      id: allocId(world),
+      kind: 'medkit',
+      x: enemy.x,
+      y: enemy.y,
+      life: PICKUP.lifetime,
+    });
   }
 }
 
@@ -66,9 +80,16 @@ export interface ExplodeOpts {
 }
 
 /** Radial damage with linear falloff to `edgeFactor` at the rim. Ignores armor. */
-export function explode(world: World, x: number, y: number, spec: ExplosionSpec, opts: ExplodeOpts): void {
+export function explode(
+  world: World,
+  x: number,
+  y: number,
+  spec: ExplosionSpec,
+  opts: ExplodeOpts,
+): void {
   world.events.push({ e: 'boom', x: Math.round(x), y: Math.round(y), r: spec.radius });
-  const falloff = (d: number) => spec.damage * (1 - (1 - spec.edgeFactor) * Math.min(1, d / spec.radius));
+  const falloff = (d: number) =>
+    spec.damage * (1 - (1 - spec.edgeFactor) * Math.min(1, d / spec.radius));
   if (opts.hurtsEnemies) {
     for (const enemy of world.enemies) {
       if (enemy.dead) continue;

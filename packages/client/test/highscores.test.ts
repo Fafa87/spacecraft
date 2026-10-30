@@ -1,0 +1,101 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { RunResult } from '@sms/shared';
+import { FallbackHighscoreStore } from '../src/highscores/FallbackHighscoreStore.js';
+import { HttpError, type HttpHighscoreStore } from '../src/highscores/HttpHighscoreStore.js';
+import { LocalHighscoreStore } from '../src/highscores/LocalHighscoreStore.js';
+
+class MemStorage {
+  private m = new Map<string, string>();
+  getItem(k: string) {
+    return this.m.has(k) ? this.m.get(k)! : null;
+  }
+  setItem(k: string, v: string) {
+    this.m.set(k, v);
+  }
+  removeItem(k: string) {
+    this.m.delete(k);
+  }
+  clear() {
+    this.m.clear();
+  }
+}
+
+let n = 0;
+const run = (survivalMs: number, teamSize = 1): RunResult => ({
+  runId: `run_${n++}_abcdef`,
+  teamSize,
+  players: Array.from({ length: teamSize }, (_, i) => `P${i}`),
+  survivalMs,
+  kills: 1,
+  wave: 0,
+  endedAt: new Date().toISOString(),
+  version: 'test',
+  mode: 'local',
+});
+
+beforeEach(() => {
+  (globalThis as { localStorage?: unknown }).localStorage = new MemStorage();
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
+});
+
+describe('LocalHighscoreStore', () => {
+  it('ranks per team size and is idempotent', async () => {
+    const s = new LocalHighscoreStore();
+    await s.submit(run(10_000));
+    const r = run(20_000);
+    expect((await s.submit(r)).rank).toBe(1);
+    expect((await s.submit(r)).rank).toBe(1);
+    await s.submit(run(5_000, 2));
+    expect((await s.top(1)).entries.map((e) => e.survivalMs)).toEqual([20_000, 10_000]);
+    expect((await s.top(2)).entries).toHaveLength(1);
+    expect(s.pending()).toHaveLength(3);
+  });
+});
+
+describe('FallbackHighscoreStore', () => {
+  const fakeRemote = () => {
+    const state = { up: true, received: [] as RunResult[], reject: 0 };
+    const remote = {
+      async submit(r: RunResult) {
+        if (!state.up) throw new TypeError('fetch failed');
+        if (state.reject) throw new HttpError(state.reject, 'nope');
+        state.received.push(r);
+        return { status: 'server' as const, rank: state.received.length };
+      },
+      async top() {
+        if (!state.up) throw new TypeError('fetch failed');
+        return { entries: [], source: 'server' as const };
+      },
+    } as unknown as HttpHighscoreStore;
+    return { state, remote };
+  };
+
+  it('uses the server when online', async () => {
+    const { state, remote } = fakeRemote();
+    const s = new FallbackHighscoreStore(remote, new LocalHighscoreStore());
+    expect((await s.submit(run(30_000))).status).toBe('server');
+    expect(state.received).toHaveLength(1);
+    expect(s.online).toBe(true);
+  });
+
+  it('falls back to localStorage offline and flushes later', async () => {
+    const { state, remote } = fakeRemote();
+    const local = new LocalHighscoreStore();
+    const s = new FallbackHighscoreStore(remote, local);
+    state.up = false;
+    expect((await s.submit(run(30_000))).status).toBe('local');
+    expect(s.online).toBe(false);
+    expect((await s.top(1)).source).toBe('local');
+    state.up = true;
+    await s.flushPending();
+    expect(state.received).toHaveLength(1);
+    expect(local.pending()).toHaveLength(0);
+  });
+
+  it('reports failed (not local) when the server rejects the run', async () => {
+    const { state, remote } = fakeRemote();
+    state.reject = 400;
+    const s = new FallbackHighscoreStore(remote, new LocalHighscoreStore());
+    expect((await s.submit(run(30_000))).status).toBe('failed');
+  });
+});

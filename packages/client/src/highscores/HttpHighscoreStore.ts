@@ -24,13 +24,16 @@ export class HttpHighscoreStore implements HighscoreStore {
       body: JSON.stringify(result),
       signal: AbortSignal.timeout(this.timeoutMs),
     });
-    if (!res.ok) throw new HttpError(res.status, `submit failed: ${res.status} ${await res.text()}`);
+    if (!res.ok)
+      throw new HttpError(res.status, `submit failed: ${res.status} ${await res.text()}`);
     const body = (await res.json()) as SubmitResponse;
     return { status: 'server', rank: body.rank };
   }
 
   async top(teamSize: number, limit = 10): Promise<TopResult> {
-    const res = await fetch(`${this.baseUrl}/api/highscores/${teamSize}?limit=${limit}`, { signal: AbortSignal.timeout(this.timeoutMs) });
+    const res = await fetch(`${this.baseUrl}/api/highscores/${teamSize}?limit=${limit}`, {
+      signal: AbortSignal.timeout(this.timeoutMs),
+    });
     if (!res.ok) throw new HttpError(res.status, `top failed: ${res.status}`);
     const body = (await res.json()) as TopResponse;
     return { entries: body.entries, source: 'server' };

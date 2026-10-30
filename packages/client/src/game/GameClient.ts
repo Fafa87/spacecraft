@@ -59,7 +59,8 @@ export class GameClient extends Emitter<GameClientEvents> {
     this.hud = new Hud(assets, content);
     this.input = new InputState(canvas);
     this.input.onKey = (code) => {
-      if (code === 'KeyM') this.notify(this.audio.toggleMute() ? 'Sound muted' : 'Sound on', 'info');
+      if (code === 'KeyM')
+        this.notify(this.audio.toggleMute() ? 'Sound muted' : 'Sound on', 'info');
       if (code === 'F3') config.debug = !config.debug;
     };
     const s = conn.session;
@@ -190,10 +191,12 @@ export class GameClient extends Emitter<GameClientEvents> {
     const latest = this.buffer.latest!;
     const meLatest = this.me(latest);
     const alive = meLatest?.st === 'alive';
-    const myPos = this.predictor.ready && alive ? this.predictor.renderPos(this.inputAcc / TICK_DT, dt) : null;
+    const myPos =
+      this.predictor.ready && alive ? this.predictor.renderPos(this.inputAcc / TICK_DT, dt) : null;
 
     // camera: own marine (with aim look-ahead), or the first living teammate when dead
-    let target: { x: number; y: number } | undefined = myPos ?? (meLatest && meLatest.st !== 'dead' ? meLatest : undefined);
+    let target: { x: number; y: number } | undefined =
+      myPos ?? (meLatest && meLatest.st !== 'dead' ? meLatest : undefined);
     if (!target) target = latest.players.find((p) => p.st !== 'dead') ?? meLatest;
     if (target) {
       const look = myPos ? 0.18 : 0;
@@ -204,7 +207,15 @@ export class GameClient extends Emitter<GameClientEvents> {
     }
     this.audio.listener = { x: r.camera.x, y: r.camera.y };
 
-    r.render({ a: sample.a, b: sample.b, t: sample.t, myId: this.myId, me: myPos ? { ...myPos, aim: this.aim } : null, nowMs: now, dt });
+    r.render({
+      a: sample.a,
+      b: sample.b,
+      t: sample.t,
+      myId: this.myId,
+      me: myPos ? { ...myPos, aim: this.aim } : null,
+      nowMs: now,
+      dt,
+    });
     this.hurt = Math.max(0, this.hurt - dt * 1.2);
     r.ctx.setTransform(1, 0, 0, 1, 0, 0);
     r.damageOverlay(this.hurt);

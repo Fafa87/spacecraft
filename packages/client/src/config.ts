@@ -14,7 +14,10 @@ function defaultApiUrl(): string {
 }
 
 export const config = {
-  apiUrl: (params.get('api') ?? import.meta.env.VITE_HIGHSCORE_URL ?? defaultApiUrl()).replace(/\/$/, ''),
+  apiUrl: (params.get('api') ?? import.meta.env.VITE_HIGHSCORE_URL ?? defaultApiUrl()).replace(
+    /\/$/,
+    '',
+  ),
   joinCode: params.get('join') ?? '',
   useDedicatedHost: params.get('ws') === '1',
   debug: params.get('debug') === '1',

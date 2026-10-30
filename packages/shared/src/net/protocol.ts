@@ -32,7 +32,14 @@ export type ClientMessage =
 
 export type HostMessage =
   | { t: 'welcome'; playerId: number; room: string; protocol: number }
-  | { t: 'lobby'; room: string; ownerId: number; phase: SessionPhase; maxPlayers: number; players: LobbyPlayer[] }
+  | {
+      t: 'lobby';
+      room: string;
+      ownerId: number;
+      phase: SessionPhase;
+      maxPlayers: number;
+      players: LobbyPlayer[];
+    }
   | { t: 'start'; seed: number; players: LobbyPlayer[] }
   | { t: 'snap'; s: Snapshot }
   | { t: 'over'; result: RunResult; summary: PlayerSummary[] }
@@ -40,7 +47,8 @@ export type HostMessage =
   | { t: 'error'; code: ErrorCode; message: string }
   | { t: 'pong'; ts: number };
 
-export type ErrorCode = 'full' | 'in_progress' | 'protocol' | 'not_owner' | 'bad_message' | 'closed';
+export type ErrorCode =
+  'full' | 'in_progress' | 'protocol' | 'not_owner' | 'bad_message' | 'closed';
 
 const CLIENT_TYPES = new Set(['join', 'input', 'start', 'toLobby', 'ping']);
 

@@ -21,12 +21,15 @@ const MODES: RunMode[] = ['local', 'p2p', 'dedicated'];
 
 /** Trims, strips control chars & collapses whitespace, truncates. */
 export function sanitizeName(raw: string): string {
-  return raw
-    // eslint-disable-next-line no-control-regex
-    .replace(/[\u0000-\u001f\u007f<>]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, HIGHSCORE_LIMITS.nameMaxLength);
+  return (
+    raw
+      .replace(/\s+/g, ' ')
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\u0000-\u001f\u007f<>]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, HIGHSCORE_LIMITS.nameMaxLength)
+  );
 }
 
 export type ValidationResult<T> = { ok: true; value: T } | { ok: false; errors: string[] };
@@ -40,7 +43,8 @@ const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isInt
  */
 export function validateRunResult(input: unknown): ValidationResult<RunResult> {
   const errors: string[] = [];
-  if (typeof input !== 'object' || input === null) return { ok: false, errors: ['body must be an object'] };
+  if (typeof input !== 'object' || input === null)
+    return { ok: false, errors: ['body must be an object'] };
   const o = input as Record<string, unknown>;
   const L = HIGHSCORE_LIMITS;
 
@@ -55,8 +59,10 @@ export function validateRunResult(input: unknown): ValidationResult<RunResult> {
   if (!Array.isArray(o.players)) errors.push('players must be an array of names');
   else {
     players = o.players.map((n) => (typeof n === 'string' ? sanitizeName(n) : ''));
-    if (players.some((n) => n.length < L.nameMinLength)) errors.push(`player names must be ${L.nameMinLength}-${L.nameMaxLength} chars`);
-    if (isInt(teamSize) && players.length !== teamSize) errors.push('players.length must equal teamSize');
+    if (players.some((n) => n.length < L.nameMinLength))
+      errors.push(`player names must be ${L.nameMinLength}-${L.nameMaxLength} chars`);
+    if (isInt(teamSize) && players.length !== teamSize)
+      errors.push('players.length must equal teamSize');
   }
 
   const survivalMs = o.survivalMs;
@@ -72,7 +78,8 @@ export function validateRunResult(input: unknown): ValidationResult<RunResult> {
     const secs = (survivalMs as number) / 1000;
     if ((kills as number) > secs * L.maxKillsPerSecondPerPlayer * (teamSize as number) + 50)
       errors.push('kills implausible for survival time');
-    const maxWave = Math.floor(Math.max(0, secs - DIRECTOR.surge.firstAtSec) / DIRECTOR.surge.interval) + 2;
+    const maxWave =
+      Math.floor(Math.max(0, secs - DIRECTOR.surge.firstAtSec) / DIRECTOR.surge.interval) + 2;
     if ((wave as number) > maxWave) errors.push('wave implausible for survival time');
   }
 

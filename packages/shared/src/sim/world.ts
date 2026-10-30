@@ -42,7 +42,9 @@ export function createWorld(
   players.forEach((setup, i) => {
     const a = (i / Math.max(1, players.length)) * Math.PI * 2;
     const offset = players.length > 1 ? 50 : 0;
-    world.players.push(createPlayer(content, setup, i, cx + Math.cos(a) * offset, cy + Math.sin(a) * offset));
+    world.players.push(
+      createPlayer(content, setup, i, cx + Math.cos(a) * offset, cy + Math.sin(a) * offset),
+    );
   });
   return world;
 }

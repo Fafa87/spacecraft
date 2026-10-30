@@ -67,7 +67,11 @@ const appState = (page: Page) =>
  * Two tabs: A hosts, B joins by code, A starts, both receive snapshots and B's input
  * reaches the host. Returns 'blocked' if a P2P join timed out at the WebRTC layer.
  */
-async function coop(browser: Browser, mode: 'p2p' | 'ws', allErrors: string[]): Promise<'ok' | 'blocked'> {
+async function coop(
+  browser: Browser,
+  mode: 'p2p' | 'ws',
+  allErrors: string[],
+): Promise<'ok' | 'blocked'> {
   const q = `api=${encodeURIComponent(API)}${mode === 'ws' ? '&ws=1' : ''}`;
   const label = mode === 'p2p' ? 'P2P (PeerJS)' : 'dedicated WS host';
   const a = await newPage(browser, `${mode}-hostA`);
@@ -85,7 +89,10 @@ async function coop(browser: Browser, mode: 'p2p' | 'ws', allErrors: string[]): 
     await b.page.goto(`${CLIENT}/?join=ZZZZZ&${q}`, { waitUntil: 'networkidle0' });
     await b.page.waitForSelector('.menu #join', { timeout: 10000 });
     await b.page.click('#join');
-    await b.page.waitForFunction(() => document.querySelector('#err')?.textContent?.includes('not found'), { timeout: 15000 });
+    await b.page.waitForFunction(
+      () => document.querySelector('#err')?.textContent?.includes('not found'),
+      { timeout: 15000 },
+    );
     check(true, `${label}: unknown room code reported as not found`);
   }
   await b.page.goto(`${CLIENT}/?join=${code}&${q}`, { waitUntil: 'networkidle0' });
@@ -104,7 +111,10 @@ async function coop(browser: Browser, mode: 'p2p' | 'ws', allErrors: string[]): 
     check(false, `${label}: join failed (${err})`);
     return 'ok';
   }
-  await a.page.waitForFunction(() => document.querySelectorAll('.room .players li:not(.empty)').length === 2, { timeout: 10000 });
+  await a.page.waitForFunction(
+    () => document.querySelectorAll('.room .players li:not(.empty)').length === 2,
+    { timeout: 10000 },
+  );
   check(true, `${label}: player B joined; lobby shows 2 marines`);
   await a.page.bringToFront();
   await a.page.$eval('#start', (e) => (e as HTMLButtonElement).click());
@@ -121,7 +131,10 @@ async function coop(browser: Browser, mode: 'p2p' | 'ws', allErrors: string[]): 
   await b.page.mouse.up();
   const sa = await appState(a.page);
   const sb = await appState(b.page);
-  check(sa.players === 2 && sb.players === 2 && sb.tick > 60, `${label}: both tabs receive snapshots (A tick ${sa.tick}, B tick ${sb.tick})`);
+  check(
+    sa.players === 2 && sb.players === 2 && sb.tick > 60,
+    `${label}: both tabs receive snapshots (A tick ${sa.tick}, B tick ${sb.tick})`,
+  );
   const bx = await b.page.evaluate(() => {
     const app = (window as any).__sms;
     const snap = app.game.buffer.latest;
@@ -138,7 +151,13 @@ async function coop(browser: Browser, mode: 'p2p' | 'ws', allErrors: string[]): 
 async function main(): Promise<void> {
   let server: RunningServer | null = null;
   if (!API) {
-    server = await startServer({ ...loadConfig({}), port: 8797, peerPort: 9007, store: 'memory', logLevel: 'warn' });
+    server = await startServer({
+      ...loadConfig({}),
+      port: 8797,
+      peerPort: 9007,
+      store: 'memory',
+      logLevel: 'warn',
+    });
     API = `http://localhost:${server.port}`;
     console.log(`(test server on ${API}, PeerJS on :9007, memory store)`);
   }
@@ -152,7 +171,11 @@ async function main(): Promise<void> {
       '--disable-renderer-backgrounding',
       '--disable-backgrounding-occluded-windows',
       // Headless Chrome hides LAN candidates behind mDNS names that don't resolve in CI/VMs.
-      '--disable-features=WebRtcHideLocalIpsWithMdns', '--autoplay-policy=no-user-gesture-required', '--use-gl=swiftshader', '--enable-unsafe-swiftshader'],
+      '--disable-features=WebRtcHideLocalIpsWithMdns',
+      '--autoplay-policy=no-user-gesture-required',
+      '--use-gl=swiftshader',
+      '--enable-unsafe-swiftshader',
+    ],
   });
   const allErrors: string[] = [];
   try {
@@ -161,7 +184,10 @@ async function main(): Promise<void> {
       const { page, errors } = await newPage(browser, 'menu');
       await page.goto(`${CLIENT}/?api=${encodeURIComponent(API)}`, { waitUntil: 'networkidle0' });
       await page.waitForSelector('.menu #solo', { timeout: 10000 });
-      await page.waitForFunction(() => !document.querySelector('#status')?.textContent?.includes('checking'), { timeout: 5000 });
+      await page.waitForFunction(
+        () => !document.querySelector('#status')?.textContent?.includes('checking'),
+        { timeout: 5000 },
+      );
       const status = await page.$eval('#status', (e) => e.textContent ?? '');
       check(status.includes('online'), `menu renders, ${status}`);
       await page.screenshot({ path: path.join(docs, 'menu.png') });
@@ -173,8 +199,12 @@ async function main(): Promise<void> {
     {
       const { page, errors } = await newPage(browser, 'solo');
       const name = `Smoke${Date.now() % 10000}`;
-      await page.goto(`${CLIENT}/?autosolo=1&name=${name}&api=${encodeURIComponent(API)}`, { waitUntil: 'networkidle0' });
-      await page.waitForFunction(() => (window as any).__sms?.screen === 'game', { timeout: 10000 });
+      await page.goto(`${CLIENT}/?autosolo=1&name=${name}&api=${encodeURIComponent(API)}`, {
+        waitUntil: 'networkidle0',
+      });
+      await page.waitForFunction(() => (window as any).__sms?.screen === 'game', {
+        timeout: 10000,
+      });
       await page.mouse.move(1000, 300);
       await page.keyboard.down('KeyD');
       await page.mouse.down();
@@ -189,12 +219,18 @@ async function main(): Promise<void> {
       await sleep(5500);
       await page.mouse.up();
       const st = await appState(page);
-      check(st.screen === 'game' && st.tick > 200, `solo run is simulating (tick ${st.tick}, ${st.enemies} enemies)`);
+      check(
+        st.screen === 'game' && st.tick > 200,
+        `solo run is simulating (tick ${st.tick}, ${st.enemies} enemies)`,
+      );
       const moved = await page.evaluate(() => {
         const p = (window as any).__sms.conn.host.world.players[0];
         return { x: p.x, y: p.y, kills: p.kills };
       });
-      check(Math.abs(moved.x - 1600) > 50, `marine moved with WASD (x=${moved.x.toFixed(0)}, kills=${moved.kills})`);
+      check(
+        Math.abs(moved.x - 1600) > 50,
+        `marine moved with WASD (x=${moved.x.toFixed(0)}, kills=${moved.kills})`,
+      );
       await page.screenshot({ path: path.join(docs, 'screenshot.png') });
       // Force the end of the run (the sim ends it when no marine is alive).
       await page.evaluate(() => {
@@ -202,13 +238,20 @@ async function main(): Promise<void> {
         p.state = 'downed';
         p.hp = 0;
       });
-      await page.waitForFunction(() => (window as any).__sms?.screen === 'over', { timeout: 10000 });
-      await page.waitForFunction(() => !document.querySelector('#submit')?.textContent?.includes('Submitting'), { timeout: 8000 });
+      await page.waitForFunction(() => (window as any).__sms?.screen === 'over', {
+        timeout: 10000,
+      });
+      await page.waitForFunction(
+        () => !document.querySelector('#submit')?.textContent?.includes('Submitting'),
+        { timeout: 8000 },
+      );
       const submitText = await page.$eval('#submit', (e) => e.textContent ?? '');
       check(submitText.includes('global leaderboard'), `host submitted score: "${submitText}"`);
       await sleep(800);
       await page.screenshot({ path: path.join(docs, 'gameover.png') });
-      const top = (await (await fetch(`${API}/api/highscores/1?limit=100`)).json()) as { entries: { players: string[] }[] };
+      const top = (await (await fetch(`${API}/api/highscores/1?limit=100`)).json()) as {
+        entries: { players: string[] }[];
+      };
       check(
         top.entries.some((e) => e.players.includes(name)),
         `server GET /api/highscores/1 contains the run by ${name}`,
@@ -232,8 +275,13 @@ async function main(): Promise<void> {
     await server?.close();
   }
   const relevant = allErrors.filter((e) => !/favicon|AudioContext/.test(e));
-  check(relevant.length === 0, `no page errors${relevant.length ? ':\n  ' + relevant.join('\n  ') : ''}`);
-  console.log(failures ? `\n${failures} check(s) failed` : '\nbrowser smoke OK — screenshots in docs/');
+  check(
+    relevant.length === 0,
+    `no page errors${relevant.length ? ':\n  ' + relevant.join('\n  ') : ''}`,
+  );
+  console.log(
+    failures ? `\n${failures} check(s) failed` : '\nbrowser smoke OK — screenshots in docs/',
+  );
   process.exit(failures ? 1 : 0);
 }
 

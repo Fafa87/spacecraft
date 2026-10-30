@@ -42,7 +42,16 @@ function drawMarine(ctx: Ctx, color: string, frame: number, downed: boolean): vo
   }
   // Helmet.
   circle(ctx, 2, 0, 6.5, mid, dark, 1.8);
-  poly(ctx, [[5, -3.5], [9, -1.5], [9, 1.5], [5, 3.5]], '#0f2a1a');
+  poly(
+    ctx,
+    [
+      [5, -3.5],
+      [9, -1.5],
+      [9, 1.5],
+      [5, 3.5],
+    ],
+    '#0f2a1a',
+  );
   line(ctx, 6, -2.5, 8.5, -1, '#6dff9c', 1.4);
   line(ctx, 6, 2.5, 8.5, 1, '#6dff9c', 1.4);
   ctx.restore();
@@ -106,12 +115,32 @@ function drawSwarmer(ctx: Ctx, frame: number): void {
     ctx.save();
     ctx.translate(6, s * 5);
     ctx.rotate(s * (0.5 + cl));
-    poly(ctx, [[0, -1.5], [14, -2], [19, s * 4], [13, 0], [0, 1.5]], CHITIN_LIGHT, CHITIN_DARK, 1.2);
+    poly(
+      ctx,
+      [
+        [0, -1.5],
+        [14, -2],
+        [19, s * 4],
+        [13, 0],
+        [0, 1.5],
+      ],
+      CHITIN_LIGHT,
+      CHITIN_DARK,
+      1.2,
+    );
     ctx.restore();
   }
   // Head.
   ellipse(ctx, 9, 0, 6, 5, CHITIN_LIGHT, CHITIN_DARK, 1.5);
-  poly(ctx, [[13, -2], [18, 0], [13, 2]], FLESH);
+  poly(
+    ctx,
+    [
+      [13, -2],
+      [18, 0],
+      [13, 2],
+    ],
+    FLESH,
+  );
   circle(ctx, 11, -2.5, 1.3, '#ffdf3d');
   circle(ctx, 11, 2.5, 1.3, '#ffdf3d');
   ctx.restore();
@@ -131,7 +160,19 @@ function drawBrute(ctx: Ctx, frame: number): void {
   ellipse(ctx, -6, 0, 28, 25, '#43195a', CHITIN_DARK, 3);
   for (let i = 0; i < 4; i++) ellipse(ctx, -22 + i * 9, 0, 7, 20 - i * 2, CHITIN, CHITIN_DARK, 2);
   // Back spines.
-  for (let i = 0; i < 5; i++) poly(ctx, [[-26 + i * 8, -3], [-30 + i * 8, 0], [-26 + i * 8, 3], [-18 + i * 8, 0]], '#e7d3a6', '#6d5a37', 1);
+  for (let i = 0; i < 5; i++)
+    poly(
+      ctx,
+      [
+        [-26 + i * 8, -3],
+        [-30 + i * 8, 0],
+        [-26 + i * 8, 3],
+        [-18 + i * 8, 0],
+      ],
+      '#e7d3a6',
+      '#6d5a37',
+      1,
+    );
   // Crushing claws.
   const reach = Math.sin(ph) * 3;
   for (const s of [-1, 1]) {
@@ -139,13 +180,46 @@ function drawBrute(ctx: Ctx, frame: number): void {
     ctx.translate(14, s * 18);
     ctx.rotate(s * 0.35);
     roundRect(ctx, 0, -6, 18 + reach, 12, 5, CHITIN_LIGHT, CHITIN_DARK, 2);
-    poly(ctx, [[16 + reach, -8], [32 + reach, -2], [16 + reach, 2]], '#e7d3a6', '#6d5a37', 1.5);
-    poly(ctx, [[16 + reach, 8], [30 + reach, 4], [16 + reach, 0]], '#e7d3a6', '#6d5a37', 1.5);
+    poly(
+      ctx,
+      [
+        [16 + reach, -8],
+        [32 + reach, -2],
+        [16 + reach, 2],
+      ],
+      '#e7d3a6',
+      '#6d5a37',
+      1.5,
+    );
+    poly(
+      ctx,
+      [
+        [16 + reach, 8],
+        [30 + reach, 4],
+        [16 + reach, 0],
+      ],
+      '#e7d3a6',
+      '#6d5a37',
+      1.5,
+    );
     ctx.restore();
   }
   // Head with armoured crest.
   ellipse(ctx, 18, 0, 13, 12, CHITIN, CHITIN_DARK, 2.5);
-  poly(ctx, [[8, -12], [26, -6], [30, 0], [26, 6], [8, 12], [12, 0]], CHITIN_LIGHT, CHITIN_DARK, 2);
+  poly(
+    ctx,
+    [
+      [8, -12],
+      [26, -6],
+      [30, 0],
+      [26, 6],
+      [8, 12],
+      [12, 0],
+    ],
+    CHITIN_LIGHT,
+    CHITIN_DARK,
+    2,
+  );
   circle(ctx, 24, -4, 2, '#ff3b2f');
   circle(ctx, 24, 4, 2, '#ff3b2f');
   ctx.restore();
@@ -179,11 +253,19 @@ function drawBurster(ctx: Ctx, frame: number): void {
   ctx.save();
   ctx.translate(28, 28);
   const sw = frame === 0 ? 1 : 1.12;
-  for (const s of [-1, 1]) for (let i = 0; i < 3; i++) leg(ctx, -4 + i * 5, s * 8, -8 + i * 9 + (frame ? 2 : -2), s * 19, s * -3, '#4a3a12', 2);
+  for (const s of [-1, 1])
+    for (let i = 0; i < 3; i++)
+      leg(ctx, -4 + i * 5, s * 8, -8 + i * 9 + (frame ? 2 : -2), s * 19, s * -3, '#4a3a12', 2);
   glow(ctx, 0, 0, 22 * sw, '#f7ff4a', 0.4);
   ellipse(ctx, -1, 0, 15 * sw, 14 * sw, '#a9a326', '#4a3a12', 2);
   // Pustules.
-  const pts: Array<[number, number, number]> = [[-6, -6, 4], [3, -8, 3], [-8, 5, 3.5], [2, 6, 4.5], [-2, -1, 3]];
+  const pts: Array<[number, number, number]> = [
+    [-6, -6, 4],
+    [3, -8, 3],
+    [-8, 5, 3.5],
+    [2, 6, 4.5],
+    [-2, -1, 3],
+  ];
   for (const [x, y, r] of pts) {
     ellipse(ctx, x * sw, y * sw, r * sw, r * sw, '#eaff5a', '#6e7a14', 1);
     circle(ctx, x * sw - 1, y * sw - 1, r * 0.35, '#ffffd0');
@@ -195,10 +277,45 @@ function drawBurster(ctx: Ctx, frame: number): void {
 }
 
 const enemies: SpriteDef[] = [
-  { key: 'enemy_swarmer', group: 'enemy', w: 48, h: 48, frames: 3, prompt: 'Top-down small purple chitinous alien bug with scything claws, six legs, facing right, 3-frame scuttle', draw: drawSwarmer },
-  { key: 'enemy_brute', group: 'enemy', w: 96, h: 96, frames: 2, prompt: 'Top-down huge armoured purple alien beast with bone crest and crushing claws, facing right, 2-frame stomp', draw: drawBrute },
-  { key: 'enemy_spitter', group: 'enemy', w: 56, h: 56, frames: 2, prompt: 'Top-down green alien with glowing acid sac on its back, facing right, 2-frame pulse', draw: drawSpitter },
-  { key: 'enemy_burster', group: 'enemy', w: 56, h: 56, frames: 2, prompt: 'Top-down bloated yellow alien covered in glowing pustules about to explode, facing right, 2-frame throb', draw: drawBurster },
+  {
+    key: 'enemy_swarmer',
+    group: 'enemy',
+    w: 48,
+    h: 48,
+    frames: 3,
+    prompt:
+      'Top-down small purple chitinous alien bug with scything claws, six legs, facing right, 3-frame scuttle',
+    draw: drawSwarmer,
+  },
+  {
+    key: 'enemy_brute',
+    group: 'enemy',
+    w: 96,
+    h: 96,
+    frames: 2,
+    prompt:
+      'Top-down huge armoured purple alien beast with bone crest and crushing claws, facing right, 2-frame stomp',
+    draw: drawBrute,
+  },
+  {
+    key: 'enemy_spitter',
+    group: 'enemy',
+    w: 56,
+    h: 56,
+    frames: 2,
+    prompt: 'Top-down green alien with glowing acid sac on its back, facing right, 2-frame pulse',
+    draw: drawSpitter,
+  },
+  {
+    key: 'enemy_burster',
+    group: 'enemy',
+    w: 56,
+    h: 56,
+    frames: 2,
+    prompt:
+      'Top-down bloated yellow alien covered in glowing pustules about to explode, facing right, 2-frame throb',
+    draw: drawBurster,
+  },
 ];
 
 export const characterSprites: SpriteDef[] = [...marines, ...enemies];

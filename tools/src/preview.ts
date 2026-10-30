@@ -6,7 +6,10 @@ export function writePreview(m: AssetManifest, file: string): void {
   const sprites = Object.entries(m.sprites)
     .map(([key, s]) => {
       const frames = s.frames
-        .map(([x, y]) => `<div class="f" style="width:${s.w}px;height:${s.h}px;background:url(${m.atlas.image}) -${x}px -${y}px"></div>`)
+        .map(
+          ([x, y]) =>
+            `<div class="f" style="width:${s.w}px;height:${s.h}px;background:url(${m.atlas.image}) -${x}px -${y}px"></div>`,
+        )
         .join('');
       return `<div class="card"><div class="frames">${frames}</div><code>${key}</code><small>${s.group} · ${s.frames.length}f · ${s.source}</small></div>`;
     })
@@ -15,7 +18,10 @@ export function writePreview(m: AssetManifest, file: string): void {
     .map(([key, s]) => `<button onclick="new Audio('${s.file}').play()">▶ ${key}</button>`)
     .join(' ');
   const music = Object.entries(m.music)
-    .map(([key, s]) => `<div><b>${key}</b> (${s.durationSec}s) <audio controls loop src="${s.file}"></audio></div>`)
+    .map(
+      ([key, s]) =>
+        `<div><b>${key}</b> (${s.durationSec}s) <audio controls loop src="${s.file}"></audio></div>`,
+    )
     .join('\n');
   fs.writeFileSync(
     file,

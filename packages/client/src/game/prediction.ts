@@ -48,7 +48,9 @@ export class Predictor {
     const before = { ...this.pos };
     this.pending = this.pending.filter((p) => p.input.seq > ackSeq);
     const next = { x: serverX, y: serverY };
-    if (canMove) for (const p of this.pending) stepPlayerMovement(next, p.input.mx, p.input.my, p.speed, TICK_DT);
+    if (canMove)
+      for (const p of this.pending)
+        stepPlayerMovement(next, p.input.mx, p.input.my, p.speed, TICK_DT);
     const dx = before.x - next.x;
     const dy = before.y - next.y;
     const err = Math.hypot(dx, dy);

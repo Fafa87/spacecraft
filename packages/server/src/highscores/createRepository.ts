@@ -5,7 +5,10 @@ import { MemoryHighscoreRepository } from './memoryRepository.js';
 import type { HighscoreRepository } from './repository.js';
 import { SqliteHighscoreRepository } from './sqliteRepository.js';
 
-export async function createRepository(kind: StoreKind, dataDir: string): Promise<HighscoreRepository> {
+export async function createRepository(
+  kind: StoreKind,
+  dataDir: string,
+): Promise<HighscoreRepository> {
   let repo: HighscoreRepository;
   switch (kind) {
     case 'memory':

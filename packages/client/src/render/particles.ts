@@ -46,9 +46,17 @@ export class Particles {
   }
 
   /** Radial burst helper. */
-  burst(x: number, y: number, n: number, opts: Partial<Particle> & { speed: number; spread?: number; dir?: number }): void {
+  burst(
+    x: number,
+    y: number,
+    n: number,
+    opts: Partial<Particle> & { speed: number; spread?: number; dir?: number },
+  ): void {
     for (let i = 0; i < n; i++) {
-      const a = opts.dir !== undefined ? opts.dir + (Math.random() - 0.5) * (opts.spread ?? Math.PI * 2) : Math.random() * Math.PI * 2;
+      const a =
+        opts.dir !== undefined
+          ? opts.dir + (Math.random() - 0.5) * (opts.spread ?? Math.PI * 2)
+          : Math.random() * Math.PI * 2;
       const s = opts.speed * (0.3 + Math.random() * 0.7);
       this.spawn({
         ...opts,

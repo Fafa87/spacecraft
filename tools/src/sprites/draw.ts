@@ -19,7 +19,17 @@ export function rgba(hex: string, a: number): string {
   return `rgba(${r},${g},${b},${a})`;
 }
 
-export function ellipse(ctx: Ctx, x: number, y: number, rx: number, ry: number, fill: string, stroke?: string, lw = 1.5, rot = 0): void {
+export function ellipse(
+  ctx: Ctx,
+  x: number,
+  y: number,
+  rx: number,
+  ry: number,
+  fill: string,
+  stroke?: string,
+  lw = 1.5,
+  rot = 0,
+): void {
   ctx.beginPath();
   ctx.ellipse(x, y, Math.max(0.1, rx), Math.max(0.1, ry), rot, 0, Math.PI * 2);
   ctx.fillStyle = fill;
@@ -31,11 +41,29 @@ export function ellipse(ctx: Ctx, x: number, y: number, rx: number, ry: number, 
   }
 }
 
-export function circle(ctx: Ctx, x: number, y: number, r: number, fill: string, stroke?: string, lw = 1.5): void {
+export function circle(
+  ctx: Ctx,
+  x: number,
+  y: number,
+  r: number,
+  fill: string,
+  stroke?: string,
+  lw = 1.5,
+): void {
   ellipse(ctx, x, y, r, r, fill, stroke, lw);
 }
 
-export function roundRect(ctx: Ctx, x: number, y: number, w: number, h: number, r: number, fill: string, stroke?: string, lw = 1.5): void {
+export function roundRect(
+  ctx: Ctx,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+  fill: string,
+  stroke?: string,
+  lw = 1.5,
+): void {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -52,7 +80,13 @@ export function roundRect(ctx: Ctx, x: number, y: number, w: number, h: number, 
   }
 }
 
-export function poly(ctx: Ctx, pts: Array<[number, number]>, fill: string, stroke?: string, lw = 1.5): void {
+export function poly(
+  ctx: Ctx,
+  pts: Array<[number, number]>,
+  fill: string,
+  stroke?: string,
+  lw = 1.5,
+): void {
   ctx.beginPath();
   pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
   ctx.closePath();
@@ -65,7 +99,16 @@ export function poly(ctx: Ctx, pts: Array<[number, number]>, fill: string, strok
   }
 }
 
-export function line(ctx: Ctx, x1: number, y1: number, x2: number, y2: number, color: string, lw: number, cap: CanvasLineCap = 'round'): void {
+export function line(
+  ctx: Ctx,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  color: string,
+  lw: number,
+  cap: CanvasLineCap = 'round',
+): void {
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
@@ -85,7 +128,16 @@ export function glow(ctx: Ctx, x: number, y: number, r: number, color: string, a
 }
 
 /** Draws a jointed insect leg from the body to a foot point. */
-export function leg(ctx: Ctx, x0: number, y0: number, x1: number, y1: number, bend: number, color: string, lw: number): void {
+export function leg(
+  ctx: Ctx,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  bend: number,
+  color: string,
+  lw: number,
+): void {
   const mx = (x0 + x1) / 2;
   const my = (y0 + y1) / 2;
   const dx = x1 - x0;

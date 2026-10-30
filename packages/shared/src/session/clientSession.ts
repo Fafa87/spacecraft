@@ -1,7 +1,13 @@
 import { PROTOCOL_VERSION } from '../constants.js';
 import type { RunResult, SubmitStatus } from '../highscore/types.js';
 import type { Link } from '../net/link.js';
-import type { ErrorCode, HostMessage, LobbyPlayer, PlayerSummary, SessionPhase } from '../net/protocol.js';
+import type {
+  ErrorCode,
+  HostMessage,
+  LobbyPlayer,
+  PlayerSummary,
+  SessionPhase,
+} from '../net/protocol.js';
 import type { Snapshot } from '../sim/snapshot.js';
 import type { PlayerInput } from '../sim/types.js';
 import { Emitter } from '../util/emitter.js';
@@ -81,7 +87,13 @@ export class ClientSession extends Emitter<ClientSessionEvents> {
         this.emit('welcome', { playerId: m.playerId, room: m.room });
         break;
       case 'lobby':
-        this.lobby = { room: m.room, ownerId: m.ownerId, phase: m.phase, maxPlayers: m.maxPlayers, players: m.players };
+        this.lobby = {
+          room: m.room,
+          ownerId: m.ownerId,
+          phase: m.phase,
+          maxPlayers: m.maxPlayers,
+          players: m.players,
+        };
         this.emit('lobby', this.lobby);
         break;
       case 'start':

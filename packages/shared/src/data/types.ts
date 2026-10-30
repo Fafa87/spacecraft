@@ -120,8 +120,27 @@ export interface DirectorConfig {
   /** Enemy HP multiplier grows by this fraction per minute survived. */
   hpScalePerMinute: number;
   /** Periodic big waves ("surges"). */
-  surge: { firstAtSec: number; interval: number; duration: number; budgetMultiplier: number; bonusThreat: number; bonusThreatPerWave: number };
-  spawn: { minDistance: number; maxDistance: number; groupMin: number; groupMax: number; groupSpread: number };
-  crates: { firstAtSec: number; intervalMin: number; intervalMax: number; minDistance: number; maxDistance: number };
+  surge: {
+    firstAtSec: number;
+    interval: number;
+    duration: number;
+    budgetMultiplier: number;
+    bonusThreat: number;
+    bonusThreatPerWave: number;
+  };
+  spawn: {
+    minDistance: number;
+    maxDistance: number;
+    groupMin: number;
+    groupMax: number;
+    groupSpread: number;
+  };
+  crates: {
+    firstAtSec: number;
+    intervalMin: number;
+    intervalMax: number;
+    minDistance: number;
+    maxDistance: number;
+  };
   waveTable: WaveTableEntry[];
 }

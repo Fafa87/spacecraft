@@ -7,7 +7,11 @@ export function makeRoomCode(length = 5, rand: () => number = Math.random): stri
   return s;
 }
 
-export const normalizeRoomCode = (code: string): string => code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+export const normalizeRoomCode = (code: string): string =>
+  code
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
 
 export function makeRunId(rand: () => number = Math.random): string {
   const t = Date.now().toString(36);

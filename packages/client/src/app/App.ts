@@ -1,9 +1,20 @@
-import { defaultContent, type ContentRegistry, type PlayerSummary, type RunResult } from '@sms/shared';
+import {
+  defaultContent,
+  type ContentRegistry,
+  type PlayerSummary,
+  type RunResult,
+} from '@sms/shared';
 import { AudioEngine } from '../audio/AudioEngine.js';
 import { config, getServerInfo } from '../config.js';
 import { GameClient } from '../game/GameClient.js';
 import { createHighscoreStore, type FallbackHighscoreStore } from '../highscores/index.js';
-import { connectDedicated, createLocalGame, hostPeerGame, joinPeerGame, type GameConnection } from '../net/connection.js';
+import {
+  connectDedicated,
+  createLocalGame,
+  hostPeerGame,
+  joinPeerGame,
+  type GameConnection,
+} from '../net/connection.js';
 import { Assets } from '../render/assets.js';
 import { createGameOverScreen, type SubmitInfo } from '../ui/screens/gameOver.js';
 import { createMenuScreen } from '../ui/screens/menu.js';
@@ -50,7 +61,11 @@ export class App {
   }
 
   private serverStatus(): Promise<string> {
-    return getServerInfo().then((i) => (i ? `highscore server online (${config.apiUrl})` : `highscore server offline — scores saved locally`));
+    return getServerInfo().then((i) =>
+      i
+        ? `highscore server online (${config.apiUrl})`
+        : `highscore server offline — scores saved locally`,
+    );
   }
 
   showMenu(error?: string): void {
@@ -61,10 +76,24 @@ export class App {
       createMenuScreen(
         {
           solo: (name) => this.solo(name),
-          host: (name) => void this.connect(() => (config.useDedicatedHost ? connectDedicated(name) : hostPeerGame(name, (r) => this.submit(r)))),
-          join: (name, code) => void this.connect(() => (config.useDedicatedHost ? connectDedicated(name, code) : joinPeerGame(code, name))),
+          host: (name) =>
+            void this.connect(() =>
+              config.useDedicatedHost
+                ? connectDedicated(name)
+                : hostPeerGame(name, (r) => this.submit(r)),
+            ),
+          join: (name, code) =>
+            void this.connect(() =>
+              config.useDedicatedHost ? connectDedicated(name, code) : joinPeerGame(code, name),
+            ),
         },
-        { store: this.store, joinCode: config.joinCode, error, serverStatus: this.serverStatus(), dedicated: config.useDedicatedHost },
+        {
+          store: this.store,
+          joinCode: config.joinCode,
+          error,
+          serverStatus: this.serverStatus(),
+          dedicated: config.useDedicatedHost,
+        },
       ),
     );
   }
@@ -102,18 +131,25 @@ export class App {
     this.connCleanup.push(
       s.on('start', () => this.startGame()),
       s.on('lobby', (l) => {
-        if (l.phase === 'lobby' && (this.screen === 'over' || this.screen === 'game') && conn.mode !== 'local') this.showRoom();
+        if (
+          l.phase === 'lobby' &&
+          (this.screen === 'over' || this.screen === 'game') &&
+          conn.mode !== 'local'
+        )
+          this.showRoom();
       }),
       s.on('submitted', (sub) => {
         this.lastSubmit = { status: sub.status, rank: sub.rank };
         this.gameOverUi?.setSubmit(this.lastSubmit);
       }),
       s.on('error', (e) => {
-        if (e.code === 'full' || e.code === 'in_progress' || e.code === 'protocol') this.showMenu(e.message);
+        if (e.code === 'full' || e.code === 'in_progress' || e.code === 'protocol')
+          this.showMenu(e.message);
         else console.warn('[session]', e);
       }),
       s.on('closed', () => {
-        if (!this.leaving) this.showMenu(conn.host ? 'Session closed.' : 'Lost connection to the squad host.');
+        if (!this.leaving)
+          this.showMenu(conn.host ? 'Session closed.' : 'Lost connection to the squad host.');
       }),
     );
   }
@@ -137,7 +173,9 @@ export class App {
     this.game = null;
     this.screen = 'room';
     this.audio.playMusic('menu');
-    const room = createRoomScreen(conn.session, conn.roomCode, conn.mode, { leave: () => this.showMenu() });
+    const room = createRoomScreen(conn.session, conn.roomCode, conn.mode, {
+      leave: () => this.showMenu(),
+    });
     this.setUi(room.el);
     this.cleanup.push(room.dispose);
   }
@@ -163,13 +201,18 @@ export class App {
     if (!conn || this.screen !== 'game') return;
     this.screen = 'over';
     const colors = new Map((conn.session.lobby?.players ?? []).map((p) => [p.id, p.colorIndex]));
-    const ui = createGameOverScreen(result, summary, { store: this.store, canRestart: conn.session.isOwner, colors }, {
-      again: () => {
-        // Back to lobby; solo auto-starts from there, squads return to the room screen.
-        conn.session.requestLobby();
+    const ui = createGameOverScreen(
+      result,
+      summary,
+      { store: this.store, canRestart: conn.session.isOwner, colors },
+      {
+        again: () => {
+          // Back to lobby; solo auto-starts from there, squads return to the room screen.
+          conn.session.requestLobby();
+        },
+        menu: () => this.showMenu(),
       },
-      menu: () => this.showMenu(),
-    });
+    );
     this.gameOverUi = ui;
     this.setUi(ui.el);
     ui.setSubmit(this.lastSubmit);

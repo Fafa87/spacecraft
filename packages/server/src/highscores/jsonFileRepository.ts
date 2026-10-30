@@ -16,7 +16,9 @@ export class JsonFileHighscoreRepository extends MemoryHighscoreRepository {
   override async init(): Promise<void> {
     await fs.mkdir(path.dirname(this.file), { recursive: true });
     try {
-      const raw = JSON.parse(await fs.readFile(this.file, 'utf8')) as { entries?: HighscoreEntry[] };
+      const raw = JSON.parse(await fs.readFile(this.file, 'utf8')) as {
+        entries?: HighscoreEntry[];
+      };
       this.entries = (raw.entries ?? []).sort(compareEntries);
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;

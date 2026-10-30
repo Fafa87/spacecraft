@@ -24,7 +24,8 @@ export function packShelves(items: PackInput[], maxWidth = 1024, padding = 2): P
   let shelfH = 0;
   let usedW = 0;
   for (const it of sorted) {
-    if (it.w + padding * 2 > maxWidth) throw new Error(`Sprite '${it.id}' (${it.w}px) wider than atlas (${maxWidth}px)`);
+    if (it.w + padding * 2 > maxWidth)
+      throw new Error(`Sprite '${it.id}' (${it.w}px) wider than atlas (${maxWidth}px)`);
     if (x + it.w + padding > maxWidth) {
       x = padding;
       y += shelfH + padding;

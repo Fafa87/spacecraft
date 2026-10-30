@@ -20,7 +20,8 @@ export interface ServerConfig {
   logLevel: string;
 }
 
-const bool = (v: string | undefined, def: boolean) => (v === undefined ? def : !['0', 'false', 'no', 'off'].includes(v.toLowerCase()));
+const bool = (v: string | undefined, def: boolean) =>
+  v === undefined ? def : !['0', 'false', 'no', 'off'].includes(v.toLowerCase());
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const cors = env.CORS_ORIGIN ?? '*';

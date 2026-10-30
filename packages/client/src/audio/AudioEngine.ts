@@ -32,12 +32,15 @@ export class AudioEngine {
       this.ensureContext();
       void this.ctx?.resume();
     };
-    for (const ev of ['pointerdown', 'keydown']) window.addEventListener(ev, unlock, { capture: true });
+    for (const ev of ['pointerdown', 'keydown'])
+      window.addEventListener(ev, unlock, { capture: true });
   }
 
   private ensureContext(): void {
     if (this.ctx || !this.manifest) return;
-    const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    const Ctor =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!Ctor) return;
     this.ctx = new Ctor();
     this.master = this.ctx.createGain();
@@ -50,7 +53,8 @@ export class AudioEngine {
     this.musicBus.gain.value = 0.6;
     this.musicBus.connect(this.master);
     // Preload all SFX in the background.
-    for (const key of Object.keys(this.manifest.sounds)) void this.buffer(`sfx:${key}`, this.manifest.sounds[key].file);
+    for (const key of Object.keys(this.manifest.sounds))
+      void this.buffer(`sfx:${key}`, this.manifest.sounds[key].file);
     if (this.wantedMusic) this.playMusic(this.wantedMusic);
   }
 
@@ -72,7 +76,8 @@ export class AudioEngine {
   toggleMute(): boolean {
     this.muted = !this.muted;
     storage.set('sms.muted', this.muted);
-    if (this.master && this.ctx) this.master.gain.setTargetAtTime(this.muted ? 0 : 1, this.ctx.currentTime, 0.05);
+    if (this.master && this.ctx)
+      this.master.gain.setTargetAtTime(this.muted ? 0 : 1, this.ctx.currentTime, 0.05);
     return this.muted;
   }
 

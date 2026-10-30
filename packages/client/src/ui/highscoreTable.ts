@@ -4,7 +4,8 @@ import { $, html } from './dom.js';
 import { escapeHtml, formatDate, formatTime } from './format.js';
 
 export function highscoreRows(entries: HighscoreEntry[], highlightRunId?: string): string {
-  if (!entries.length) return `<tr><td colspan="5" class="muted center">No runs yet — be the first.</td></tr>`;
+  if (!entries.length)
+    return `<tr><td colspan="5" class="muted center">No runs yet — be the first.</td></tr>`;
   return entries
     .map(
       (e, i) => `<tr class="${e.runId === highlightRunId ? 'hl' : ''}">
@@ -19,7 +20,10 @@ export function highscoreRows(entries: HighscoreEntry[], highlightRunId?: string
 }
 
 /** Tabbed highscore widget: one table per team size (1..4). */
-export function createHighscorePanel(store: HighscoreStore, opts: { teamSize?: number; highlightRunId?: string; limit?: number } = {}): HTMLElement {
+export function createHighscorePanel(
+  store: HighscoreStore,
+  opts: { teamSize?: number; highlightRunId?: string; limit?: number } = {},
+): HTMLElement {
   const el = html(`<div class="highscores">
     <div class="tabs">${Array.from({ length: MAX_PLAYERS }, (_, i) => `<button data-ts="${i + 1}">${i + 1} ${i ? 'MARINES' : 'MARINE'}</button>`).join('')}</div>
     <table><thead><tr><th>#</th><th>SURVIVED</th><th>SQUAD</th><th>WAVE</th><th>DATE</th></tr></thead><tbody></tbody></table>
@@ -30,14 +34,21 @@ export function createHighscorePanel(store: HighscoreStore, opts: { teamSize?: n
   let current = opts.teamSize ?? 1;
   const load = async (ts: number) => {
     current = ts;
-    el.querySelectorAll<HTMLButtonElement>('.tabs button').forEach((b) => b.classList.toggle('active', Number(b.dataset.ts) === ts));
+    el.querySelectorAll<HTMLButtonElement>('.tabs button').forEach((b) =>
+      b.classList.toggle('active', Number(b.dataset.ts) === ts),
+    );
     body.innerHTML = `<tr><td colspan="5" class="muted center">Loading…</td></tr>`;
     const res = await store.top(ts, opts.limit ?? 10);
     if (current !== ts) return;
     body.innerHTML = highscoreRows(res.entries, opts.highlightRunId);
-    source.textContent = res.source === 'server' ? 'Global leaderboard' : 'Highscore server unreachable — showing scores saved in this browser';
+    source.textContent =
+      res.source === 'server'
+        ? 'Global leaderboard'
+        : 'Highscore server unreachable — showing scores saved in this browser';
   };
-  el.querySelectorAll<HTMLButtonElement>('.tabs button').forEach((b) => b.addEventListener('click', () => void load(Number(b.dataset.ts))));
+  el.querySelectorAll<HTMLButtonElement>('.tabs button').forEach((b) =>
+    b.addEventListener('click', () => void load(Number(b.dataset.ts))),
+  );
   void load(current);
   (el as HTMLElement & { reload?: () => void }).reload = () => void load(current);
   return el;

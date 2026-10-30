@@ -23,8 +23,13 @@ export function encodeWav(samples: Float32Array, sampleRate: number): Buffer {
 }
 
 /** Decodes a 16-bit PCM mono/stereo WAV (used by tests and override validation). */
-export function decodeWav(buf: Buffer): { sampleRate: number; channels: number; samples: Float32Array } {
-  if (buf.toString('ascii', 0, 4) !== 'RIFF' || buf.toString('ascii', 8, 12) !== 'WAVE') throw new Error('not a WAV file');
+export function decodeWav(buf: Buffer): {
+  sampleRate: number;
+  channels: number;
+  samples: Float32Array;
+} {
+  if (buf.toString('ascii', 0, 4) !== 'RIFF' || buf.toString('ascii', 8, 12) !== 'WAVE')
+    throw new Error('not a WAV file');
   let off = 12;
   let sampleRate = 0;
   let channels = 1;

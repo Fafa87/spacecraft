@@ -118,7 +118,7 @@ export function renderSfxr(p: SfxrParams, seed = 1, sampleRate = 44100): Float32
   let fltdp = 0;
   let fltw = Math.pow(p.lpfFreq, 3) * 0.1;
   const fltwD = 1 + p.lpfRamp * 0.0001;
-  let fltdmp = 5 / (1 + Math.pow(p.lpfResonance, 2) * 20) * (0.01 + fltw);
+  let fltdmp = (5 / (1 + Math.pow(p.lpfResonance, 2) * 20)) * (0.01 + fltw);
   if (fltdmp > 0.8) fltdmp = 0.8;
   let fltphp = 0;
   let flthp = Math.pow(p.hpfFreq, 2) * 0.1;
@@ -146,7 +146,8 @@ export function renderSfxr(p: SfxrParams, seed = 1, sampleRate = 44100): Float32
   const noiseBuffer = new Float32Array(32);
   for (let i = 0; i < 32; i++) noiseBuffer[i] = noise();
 
-  const repLimit = p.repeatSpeed === 0 ? 0 : Math.floor(Math.pow(1 - p.repeatSpeed, 2) * 20000 + 32);
+  const repLimit =
+    p.repeatSpeed === 0 ? 0 : Math.floor(Math.pow(1 - p.repeatSpeed, 2) * 20000 + 32);
   let repTime = 0;
 
   let phase = 0;

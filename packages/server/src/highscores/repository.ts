@@ -16,7 +16,9 @@ export interface HighscoreRepository {
 }
 
 export const compareEntries = (a: HighscoreEntry, b: HighscoreEntry): number =>
-  b.survivalMs - a.survivalMs || a.submittedAt.localeCompare(b.submittedAt) || a.id.localeCompare(b.id);
+  b.survivalMs - a.survivalMs ||
+  a.submittedAt.localeCompare(b.submittedAt) ||
+  a.id.localeCompare(b.id);
 
 let counter = 0;
 export const newEntryId = (): string => `hs_${Date.now().toString(36)}_${(counter++).toString(36)}`;

@@ -8,7 +8,16 @@
  * Bots: "turret" stands still and aims at the nearest enemy; "kite" also moves away
  * from nearby enemies, circles the arena centre, picks up crates and revives teammates.
  */
-import { applyInput, ARENA, createWorld, emptyInput, PLAYER, stepWorld, TICK_DT, type World } from '@sms/shared';
+import {
+  applyInput,
+  ARENA,
+  createWorld,
+  emptyInput,
+  PLAYER,
+  stepWorld,
+  TICK_DT,
+  type World,
+} from '@sms/shared';
 
 const args = Object.fromEntries(
   process.argv.slice(2).map((a) => {
@@ -19,7 +28,9 @@ const args = Object.fromEntries(
 const bot = (args.bot ?? 'kite') as 'kite' | 'turret';
 const seeds = Number(args.seeds ?? 6);
 const maxSec = Number(args.max ?? 600);
-const sizes = String(args.sizes ?? '1,2,3,4').split(',').map(Number);
+const sizes = String(args.sizes ?? '1,2,3,4')
+  .split(',')
+  .map(Number);
 
 function think(world: World, id: number, seq: number) {
   const p = world.players.find((x) => x.id === id)!;
@@ -42,7 +53,8 @@ function think(world: World, id: number, seq: number) {
     const cy = ARENA.height / 2 - p.y;
     const downed = world.players.find((o) => o.state === 'downed');
     const crate = world.pickups[0];
-    const target = downed ?? (crate && Math.hypot(crate.x - p.x, crate.y - p.y) < 500 ? crate : null);
+    const target =
+      downed ?? (crate && Math.hypot(crate.x - p.x, crate.y - p.y) < 500 ? crate : null);
     mx = fx * 900 + cx * 0.0012 - cy * 0.0009;
     my = fy * 900 + cy * 0.0012 + cx * 0.0009;
     if (target) {

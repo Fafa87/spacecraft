@@ -15,7 +15,11 @@ export class InputState {
   onKey: ((code: string) => void) | null = null;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
-    const on = <K extends keyof WindowEventMap>(target: Window | HTMLElement, type: K, fn: (e: WindowEventMap[K]) => void) => {
+    const on = <K extends keyof WindowEventMap>(
+      target: Window | HTMLElement,
+      type: K,
+      fn: (e: WindowEventMap[K]) => void,
+    ) => {
       target.addEventListener(type, fn as EventListener);
       this.listeners.push(() => target.removeEventListener(type, fn as EventListener));
     };
@@ -57,8 +61,12 @@ export class InputState {
 
   /** Movement vector from WASD / arrows. */
   move(): { mx: number; my: number } {
-    const mx = (this.down('KeyD') || this.down('ArrowRight') ? 1 : 0) - (this.down('KeyA') || this.down('ArrowLeft') ? 1 : 0);
-    const my = (this.down('KeyS') || this.down('ArrowDown') ? 1 : 0) - (this.down('KeyW') || this.down('ArrowUp') ? 1 : 0);
+    const mx =
+      (this.down('KeyD') || this.down('ArrowRight') ? 1 : 0) -
+      (this.down('KeyA') || this.down('ArrowLeft') ? 1 : 0);
+    const my =
+      (this.down('KeyS') || this.down('ArrowDown') ? 1 : 0) -
+      (this.down('KeyW') || this.down('ArrowUp') ? 1 : 0);
     return { mx, my };
   }
 
