@@ -125,7 +125,13 @@ describe('v0.5 WH40k profiles', () => {
     const r = damageEnemy(w, e, 40, {});
     expect(r).toEqual({ dmg: 40, saved: false });
     const e2 = spawnEnemy(w, 'warrior', 900, 900);
-    explode(w, 900, 900, { radius: 50, damage: 30, edgeFactor: 1 }, { hurtsEnemies: true });
+    explode(
+      w,
+      900,
+      900,
+      { radius: 50, damage: 30, edgeFactor: 1 },
+      { hurtsEnemies: true, hurtsPlayers: false },
+    );
     expect(e2.hp).toBeCloseTo(e2.maxHp - 30);
   });
 
@@ -247,7 +253,7 @@ describe('v0.5 squad-size scaling', () => {
       teamScaling: { ...DIRECTOR.teamScaling, hp: [1, 1.2] },
     };
     const errs = new ContentRegistry(
-      content.weaponOrder,
+      [...content.weaponOrder],
       [...content.enemies.values()],
       bad,
     ).validate();
