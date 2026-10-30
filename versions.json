@@ -1,0 +1,17 @@
+{
+  "latest": "0.2.0",
+  "versions": [
+    {
+      "version": "0.2.0",
+      "date": "2026-10-30",
+      "title": "Spacecraft: Hive Siege",
+      "path": "/spacecraft/v0.2.0/"
+    },
+    {
+      "version": "0.1.0",
+      "date": "2026-10-30",
+      "title": "Space Marine Survival (Firestore leaderboard)",
+      "path": "/spacecraft/v0.1.0/"
+    }
+  ]
+}

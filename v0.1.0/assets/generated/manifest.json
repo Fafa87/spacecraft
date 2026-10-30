@@ -1,0 +1,923 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-30T16:59:01.379Z",
+  "atlas": {
+    "image": "atlas.png",
+    "width": 1024,
+    "height": 512
+  },
+  "sprites": {
+    "marine_0": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          954,
+          132
+        ],
+        [
+          2,
+          262
+        ],
+        [
+          68,
+          262
+        ],
+        [
+          134,
+          262
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_0_down": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          888,
+          132
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_1": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          266,
+          262
+        ],
+        [
+          332,
+          262
+        ],
+        [
+          398,
+          262
+        ],
+        [
+          464,
+          262
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_1_down": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          200,
+          262
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_2": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          596,
+          262
+        ],
+        [
+          662,
+          262
+        ],
+        [
+          728,
+          262
+        ],
+        [
+          794,
+          262
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_2_down": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          530,
+          262
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_3": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          926,
+          262
+        ],
+        [
+          2,
+          328
+        ],
+        [
+          68,
+          328
+        ],
+        [
+          134,
+          328
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_3_down": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          860,
+          262
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "enemy_swarmer": {
+      "w": 48,
+      "h": 48,
+      "ax": 24,
+      "ay": 24,
+      "frames": [
+        [
+          252,
+          394
+        ],
+        [
+          302,
+          394
+        ],
+        [
+          352,
+          394
+        ]
+      ],
+      "source": "procedural",
+      "group": "enemy"
+    },
+    "enemy_brute": {
+      "w": 96,
+      "h": 96,
+      "ax": 48,
+      "ay": 48,
+      "frames": [
+        [
+          230,
+          132
+        ],
+        [
+          328,
+          132
+        ]
+      ],
+      "source": "procedural",
+      "group": "enemy"
+    },
+    "enemy_spitter": {
+      "w": 56,
+      "h": 56,
+      "ax": 28,
+      "ay": 28,
+      "frames": [
+        [
+          646,
+          328
+        ],
+        [
+          704,
+          328
+        ]
+      ],
+      "source": "procedural",
+      "group": "enemy"
+    },
+    "enemy_burster": {
+      "w": 56,
+      "h": 56,
+      "ax": 28,
+      "ay": 28,
+      "frames": [
+        [
+          530,
+          328
+        ],
+        [
+          588,
+          328
+        ]
+      ],
+      "source": "procedural",
+      "group": "enemy"
+    },
+    "icon_rifle": {
+      "w": 64,
+      "h": 28,
+      "ax": 32,
+      "ay": 14,
+      "frames": [
+        [
+          652,
+          394
+        ]
+      ],
+      "source": "procedural",
+      "group": "icon"
+    },
+    "icon_shotgun": {
+      "w": 64,
+      "h": 28,
+      "ax": 32,
+      "ay": 14,
+      "frames": [
+        [
+          784,
+          394
+        ]
+      ],
+      "source": "procedural",
+      "group": "icon"
+    },
+    "icon_flamer": {
+      "w": 64,
+      "h": 28,
+      "ax": 32,
+      "ay": 14,
+      "frames": [
+        [
+          520,
+          394
+        ]
+      ],
+      "source": "procedural",
+      "group": "icon"
+    },
+    "icon_plasma": {
+      "w": 64,
+      "h": 28,
+      "ax": 32,
+      "ay": 14,
+      "frames": [
+        [
+          586,
+          394
+        ]
+      ],
+      "source": "procedural",
+      "group": "icon"
+    },
+    "icon_rocket": {
+      "w": 64,
+      "h": 28,
+      "ax": 32,
+      "ay": 14,
+      "frames": [
+        [
+          718,
+          394
+        ]
+      ],
+      "source": "procedural",
+      "group": "icon"
+    },
+    "crate_rifle": {
+      "w": 48,
+      "h": 48,
+      "ax": 24,
+      "ay": 24,
+      "frames": [
+        [
+          962,
+          328
+        ],
+        [
+          2,
+          394
+        ]
+      ],
+      "source": "procedural",
+      "group": "pickup"
+    },
+    "crate_shotgun": {
+      "w": 48,
+      "h": 48,
+      "ax": 24,
+      "ay": 24,
+      "frames": [
+        [
+          152,
+          394
+        ],
+        [
+          202,
+          394
+        ]
+      ],
+      "source": "procedural",
+      "group": "pickup"
+    },
+    "crate_flamer": {
+      "w": 48,
+      "h": 48,
+      "ax": 24,
+      "ay": 24,
+      "frames": [
+        [
+          762,
+          328
+        ],
+        [
+          812,
+          328
+        ]
+      ],
+      "source": "procedural",
+      "group": "pickup"
+    },
+    "crate_plasma": {
+      "w": 48,
+      "h": 48,
+      "ax": 24,
+      "ay": 24,
+      "frames": [
+        [
+          862,
+          328
+        ],
+        [
+          912,
+          328
+        ]
+      ],
+      "source": "procedural",
+      "group": "pickup"
+    },
+    "crate_rocket": {
+      "w": 48,
+      "h": 48,
+      "ax": 24,
+      "ay": 24,
+      "frames": [
+        [
+          52,
+          394
+        ],
+        [
+          102,
+          394
+        ]
+      ],
+      "source": "procedural",
+      "group": "pickup"
+    },
+    "medkit": {
+      "w": 40,
+      "h": 40,
+      "ax": 20,
+      "ay": 20,
+      "frames": [
+        [
+          402,
+          394
+        ],
+        [
+          444,
+          394
+        ]
+      ],
+      "source": "procedural",
+      "group": "pickup"
+    },
+    "proj_bullet": {
+      "w": 24,
+      "h": 8,
+      "ax": 12,
+      "ay": 4,
+      "frames": [
+        [
+          2,
+          444
+        ]
+      ],
+      "source": "procedural",
+      "group": "projectile"
+    },
+    "proj_pellet": {
+      "w": 14,
+      "h": 8,
+      "ax": 7,
+      "ay": 4,
+      "frames": [
+        [
+          28,
+          444
+        ]
+      ],
+      "source": "procedural",
+      "group": "projectile"
+    },
+    "proj_flame": {
+      "w": 32,
+      "h": 32,
+      "ax": 16,
+      "ay": 16,
+      "frames": [
+        [
+          486,
+          394
+        ]
+      ],
+      "source": "procedural",
+      "group": "projectile"
+    },
+    "proj_plasma": {
+      "w": 32,
+      "h": 20,
+      "ax": 16,
+      "ay": 10,
+      "frames": [
+        [
+          918,
+          394
+        ]
+      ],
+      "source": "procedural",
+      "group": "projectile"
+    },
+    "proj_rocket": {
+      "w": 28,
+      "h": 12,
+      "ax": 14,
+      "ay": 6,
+      "frames": [
+        [
+          992,
+          394
+        ]
+      ],
+      "source": "procedural",
+      "group": "projectile"
+    },
+    "proj_acid": {
+      "w": 20,
+      "h": 20,
+      "ax": 10,
+      "ay": 10,
+      "frames": [
+        [
+          952,
+          394
+        ]
+      ],
+      "source": "procedural",
+      "group": "projectile"
+    },
+    "tile_floor_0": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          266,
+          328
+        ]
+      ],
+      "source": "procedural",
+      "group": "tile"
+    },
+    "tile_floor_1": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          332,
+          328
+        ]
+      ],
+      "source": "procedural",
+      "group": "tile"
+    },
+    "tile_floor_2": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          398,
+          328
+        ]
+      ],
+      "source": "procedural",
+      "group": "tile"
+    },
+    "tile_floor_3": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          464,
+          328
+        ]
+      ],
+      "source": "procedural",
+      "group": "tile"
+    },
+    "decal_blood_0": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          624,
+          132
+        ]
+      ],
+      "source": "procedural",
+      "group": "decal"
+    },
+    "decal_blood_1": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          690,
+          132
+        ]
+      ],
+      "source": "procedural",
+      "group": "decal"
+    },
+    "decal_blood_2": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          756,
+          132
+        ]
+      ],
+      "source": "procedural",
+      "group": "decal"
+    },
+    "decal_acid_0": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          426,
+          132
+        ]
+      ],
+      "source": "procedural",
+      "group": "decal"
+    },
+    "decal_acid_1": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          492,
+          132
+        ]
+      ],
+      "source": "procedural",
+      "group": "decal"
+    },
+    "decal_acid_2": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          558,
+          132
+        ]
+      ],
+      "source": "procedural",
+      "group": "decal"
+    },
+    "decal_scorch_0": {
+      "w": 96,
+      "h": 96,
+      "ax": 48,
+      "ay": 48,
+      "frames": [
+        [
+          132,
+          132
+        ]
+      ],
+      "source": "procedural",
+      "group": "decal"
+    },
+    "fx_explosion": {
+      "w": 128,
+      "h": 128,
+      "ax": 64,
+      "ay": 64,
+      "frames": [
+        [
+          2,
+          2
+        ],
+        [
+          132,
+          2
+        ],
+        [
+          262,
+          2
+        ],
+        [
+          392,
+          2
+        ],
+        [
+          522,
+          2
+        ],
+        [
+          652,
+          2
+        ],
+        [
+          782,
+          2
+        ],
+        [
+          2,
+          132
+        ]
+      ],
+      "source": "procedural",
+      "group": "fx"
+    },
+    "fx_muzzle": {
+      "w": 32,
+      "h": 24,
+      "ax": 16,
+      "ay": 12,
+      "frames": [
+        [
+          850,
+          394
+        ],
+        [
+          884,
+          394
+        ]
+      ],
+      "source": "procedural",
+      "group": "fx"
+    },
+    "fx_particle": {
+      "w": 16,
+      "h": 16,
+      "ax": 8,
+      "ay": 8,
+      "frames": [
+        [
+          974,
+          394
+        ]
+      ],
+      "source": "procedural",
+      "group": "fx"
+    },
+    "fx_ring": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          822,
+          132
+        ]
+      ],
+      "source": "procedural",
+      "group": "fx"
+    },
+    "shadow": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          200,
+          328
+        ]
+      ],
+      "source": "procedural",
+      "group": "fx"
+    }
+  },
+  "sounds": {
+    "shoot_rifle": {
+      "file": "sfx/shoot_rifle.wav",
+      "volume": 0.35,
+      "maxVoices": 6,
+      "durationSec": 0.05,
+      "source": "procedural"
+    },
+    "shoot_shotgun": {
+      "file": "sfx/shoot_shotgun.wav",
+      "volume": 0.5,
+      "maxVoices": 4,
+      "durationSec": 0.265,
+      "source": "procedural"
+    },
+    "shoot_flamer": {
+      "file": "sfx/shoot_flamer.wav",
+      "volume": 0.22,
+      "maxVoices": 3,
+      "durationSec": 0.11,
+      "source": "procedural"
+    },
+    "shoot_plasma": {
+      "file": "sfx/shoot_plasma.wav",
+      "volume": 0.4,
+      "maxVoices": 4,
+      "durationSec": 0.156,
+      "source": "procedural"
+    },
+    "shoot_rocket": {
+      "file": "sfx/shoot_rocket.wav",
+      "volume": 0.45,
+      "maxVoices": 3,
+      "durationSec": 0.296,
+      "source": "procedural"
+    },
+    "explosion": {
+      "file": "sfx/explosion.wav",
+      "volume": 0.6,
+      "maxVoices": 5,
+      "durationSec": 0.89,
+      "source": "procedural"
+    },
+    "reload": {
+      "file": "sfx/reload.wav",
+      "volume": 0.4,
+      "maxVoices": 2,
+      "durationSec": 0.315,
+      "source": "procedural"
+    },
+    "enemy_die_small": {
+      "file": "sfx/enemy_die_small.wav",
+      "volume": 0.3,
+      "maxVoices": 6,
+      "durationSec": 0.077,
+      "source": "procedural"
+    },
+    "enemy_die_big": {
+      "file": "sfx/enemy_die_big.wav",
+      "volume": 0.55,
+      "maxVoices": 3,
+      "durationSec": 0.601,
+      "source": "procedural"
+    },
+    "enemy_bite": {
+      "file": "sfx/enemy_bite.wav",
+      "volume": 0.4,
+      "maxVoices": 3,
+      "durationSec": 0.024,
+      "source": "procedural"
+    },
+    "enemy_spit": {
+      "file": "sfx/enemy_spit.wav",
+      "volume": 0.35,
+      "maxVoices": 3,
+      "durationSec": 0.066,
+      "source": "procedural"
+    },
+    "player_hurt": {
+      "file": "sfx/player_hurt.wav",
+      "volume": 0.45,
+      "maxVoices": 2,
+      "durationSec": 0.064,
+      "source": "procedural"
+    },
+    "player_down": {
+      "file": "sfx/player_down.wav",
+      "volume": 0.55,
+      "maxVoices": 2,
+      "durationSec": 0.771,
+      "source": "procedural"
+    },
+    "revive": {
+      "file": "sfx/revive.wav",
+      "volume": 0.5,
+      "maxVoices": 2,
+      "durationSec": 0.295,
+      "source": "procedural"
+    },
+    "pickup": {
+      "file": "sfx/pickup.wav",
+      "volume": 0.45,
+      "maxVoices": 3,
+      "durationSec": 0.099,
+      "source": "procedural"
+    },
+    "unlock": {
+      "file": "sfx/unlock.wav",
+      "volume": 0.5,
+      "maxVoices": 2,
+      "durationSec": 0.482,
+      "source": "procedural"
+    },
+    "surge": {
+      "file": "sfx/surge.wav",
+      "volume": 0.5,
+      "maxVoices": 1,
+      "durationSec": 1.02,
+      "source": "procedural"
+    },
+    "crate_drop": {
+      "file": "sfx/crate_drop.wav",
+      "volume": 0.45,
+      "maxVoices": 2,
+      "durationSec": 0.177,
+      "source": "procedural"
+    },
+    "ui_click": {
+      "file": "sfx/ui_click.wav",
+      "volume": 0.3,
+      "maxVoices": 2,
+      "durationSec": 0.009,
+      "source": "procedural"
+    }
+  },
+  "music": {
+    "battle": {
+      "file": "music/battle.wav",
+      "volume": 0.35,
+      "loop": true,
+      "durationSec": 25.95,
+      "source": "procedural"
+    },
+    "menu": {
+      "file": "music/menu.wav",
+      "volume": 0.3,
+      "loop": true,
+      "durationSec": 22.86,
+      "source": "procedural"
+    },
+    "gameover": {
+      "file": "music/gameover.wav",
+      "volume": 0.3,
+      "loop": true,
+      "durationSec": 13.71,
+      "source": "procedural"
+    }
+  }
+}
