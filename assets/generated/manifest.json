@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-30T17:53:42.153Z",
+  "generatedAt": "2026-10-30T20:46:20.330Z",
   "atlas": {
     "image": "atlas.png",
     "width": 2048,
@@ -21,28 +21,28 @@
       "ay": 72,
       "frames": [
         [
-          2,
+          1754,
           1756
+        ],
+        [
+          1900,
+          1756
+        ],
+        [
+          2,
+          1902
         ],
         [
           148,
-          1756
+          1902
         ],
         [
           294,
-          1756
+          1902
         ],
         [
           440,
-          1756
-        ],
-        [
-          586,
-          1756
-        ],
-        [
-          732,
-          1756
+          1902
         ]
       ],
       "source": "procedural",
@@ -56,8 +56,8 @@
       "ay": 72,
       "frames": [
         [
-          1900,
-          1610
+          1608,
+          1756
         ]
       ],
       "source": "procedural",
@@ -71,8 +71,8 @@
       "ay": 72,
       "frames": [
         [
-          1754,
-          1610
+          1462,
+          1756
         ]
       ],
       "source": "procedural",
@@ -86,8 +86,8 @@
       "ay": 32,
       "frames": [
         [
-          1806,
-          2406
+          620,
+          2666
         ]
       ],
       "source": "procedural",
@@ -107,28 +107,28 @@
       "ay": 72,
       "frames": [
         [
+          878,
+          1318
+        ],
+        [
+          1024,
+          1318
+        ],
+        [
+          1170,
+          1318
+        ],
+        [
+          1316,
+          1318
+        ],
+        [
           1462,
           1318
         ],
         [
           1608,
           1318
-        ],
-        [
-          1754,
-          1318
-        ],
-        [
-          1900,
-          1318
-        ],
-        [
-          2,
-          1464
-        ],
-        [
-          148,
-          1464
         ]
       ],
       "source": "procedural",
@@ -142,7 +142,7 @@
       "ay": 72,
       "frames": [
         [
-          1316,
+          732,
           1318
         ]
       ],
@@ -157,7 +157,7 @@
       "ay": 72,
       "frames": [
         [
-          1170,
+          586,
           1318
         ]
       ],
@@ -172,8 +172,8 @@
       "ay": 32,
       "frames": [
         [
-          1542,
-          2406
+          224,
+          2666
         ]
       ],
       "source": "procedural",
@@ -193,27 +193,27 @@
       "ay": 72,
       "frames": [
         [
+          2,
+          1464
+        ],
+        [
+          148,
+          1464
+        ],
+        [
+          294,
+          1464
+        ],
+        [
+          440,
+          1464
+        ],
+        [
           586,
           1464
         ],
         [
           732,
-          1464
-        ],
-        [
-          878,
-          1464
-        ],
-        [
-          1024,
-          1464
-        ],
-        [
-          1170,
-          1464
-        ],
-        [
-          1316,
           1464
         ]
       ],
@@ -228,8 +228,8 @@
       "ay": 72,
       "frames": [
         [
-          440,
-          1464
+          1900,
+          1318
         ]
       ],
       "source": "procedural",
@@ -243,8 +243,8 @@
       "ay": 72,
       "frames": [
         [
-          294,
-          1464
+          1754,
+          1318
         ]
       ],
       "source": "procedural",
@@ -258,8 +258,8 @@
       "ay": 32,
       "frames": [
         [
-          1608,
-          2406
+          290,
+          2666
         ]
       ],
       "source": "procedural",
@@ -279,28 +279,28 @@
       "ay": 72,
       "frames": [
         [
+          1170,
+          1464
+        ],
+        [
+          1316,
+          1464
+        ],
+        [
+          1462,
+          1464
+        ],
+        [
+          1608,
+          1464
+        ],
+        [
           1754,
           1464
         ],
         [
           1900,
           1464
-        ],
-        [
-          2,
-          1610
-        ],
-        [
-          148,
-          1610
-        ],
-        [
-          294,
-          1610
-        ],
-        [
-          440,
-          1610
         ]
       ],
       "source": "procedural",
@@ -314,7 +314,7 @@
       "ay": 72,
       "frames": [
         [
-          1608,
+          1024,
           1464
         ]
       ],
@@ -329,7 +329,7 @@
       "ay": 72,
       "frames": [
         [
-          1462,
+          878,
           1464
         ]
       ],
@@ -344,8 +344,8 @@
       "ay": 32,
       "frames": [
         [
-          1674,
-          2406
+          356,
+          2666
         ]
       ],
       "source": "procedural",
@@ -365,28 +365,28 @@
       "ay": 72,
       "frames": [
         [
+          586,
+          1756
+        ],
+        [
+          732,
+          1756
+        ],
+        [
           878,
-          1610
+          1756
         ],
         [
           1024,
-          1610
+          1756
         ],
         [
           1170,
-          1610
+          1756
         ],
         [
           1316,
-          1610
-        ],
-        [
-          1462,
-          1610
-        ],
-        [
-          1608,
-          1610
+          1756
         ]
       ],
       "source": "procedural",
@@ -400,8 +400,8 @@
       "ay": 72,
       "frames": [
         [
-          732,
-          1610
+          440,
+          1756
         ]
       ],
       "source": "procedural",
@@ -415,8 +415,8 @@
       "ay": 72,
       "frames": [
         [
-          586,
-          1610
+          294,
+          1756
         ]
       ],
       "source": "procedural",
@@ -430,8 +430,266 @@
       "ay": 32,
       "frames": [
         [
-          1740,
-          2406
+          554,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "ui"
+    },
+    "marine_salamanders": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          6
+        ]
+      },
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          1462,
+          1610
+        ],
+        [
+          1608,
+          1610
+        ],
+        [
+          1754,
+          1610
+        ],
+        [
+          1900,
+          1610
+        ],
+        [
+          2,
+          1756
+        ],
+        [
+          148,
+          1756
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_salamanders_top": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          1316,
+          1610
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_salamanders_down": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          1170,
+          1610
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "badge_salamanders": {
+      "w": 64,
+      "h": 64,
+      "scale": 2,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          488,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "ui"
+    },
+    "marine_white_scars": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          6
+        ]
+      },
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          878,
+          1902
+        ],
+        [
+          1024,
+          1902
+        ],
+        [
+          1170,
+          1902
+        ],
+        [
+          1316,
+          1902
+        ],
+        [
+          1462,
+          1902
+        ],
+        [
+          1608,
+          1902
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_white_scars_top": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          732,
+          1902
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_white_scars_down": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          586,
+          1902
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "badge_white_scars": {
+      "w": 64,
+      "h": 64,
+      "scale": 2,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          686,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "ui"
+    },
+    "marine_raven_guard": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          6
+        ]
+      },
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          294,
+          1610
+        ],
+        [
+          440,
+          1610
+        ],
+        [
+          586,
+          1610
+        ],
+        [
+          732,
+          1610
+        ],
+        [
+          878,
+          1610
+        ],
+        [
+          1024,
+          1610
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_raven_guard_top": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          148,
+          1610
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_raven_guard_down": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          2,
+          1610
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "badge_raven_guard": {
+      "w": 64,
+      "h": 64,
+      "scale": 2,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          422,
+          2666
         ]
       ],
       "source": "procedural",
@@ -445,23 +703,8 @@
       "ay": 28,
       "frames": [
         [
-          992,
-          2504
-        ]
-      ],
-      "source": "procedural",
-      "group": "icon"
-    },
-    "icon_power_sword": {
-      "w": 128,
-      "h": 56,
-      "scale": 2,
-      "ax": 64,
-      "ay": 28,
-      "frames": [
-        [
-          1772,
-          2504
+          1874,
+          2666
         ]
       ],
       "source": "procedural",
@@ -475,8 +718,8 @@
       "ay": 28,
       "frames": [
         [
-          1382,
-          2504
+          262,
+          2740
         ]
       ],
       "source": "procedural",
@@ -490,8 +733,8 @@
       "ay": 28,
       "frames": [
         [
-          1122,
-          2504
+          2,
+          2740
         ]
       ],
       "source": "procedural",
@@ -505,8 +748,8 @@
       "ay": 28,
       "frames": [
         [
-          1642,
-          2504
+          522,
+          2740
         ]
       ],
       "source": "procedural",
@@ -520,8 +763,8 @@
       "ay": 28,
       "frames": [
         [
-          1512,
-          2504
+          392,
+          2740
         ]
       ],
       "source": "procedural",
@@ -535,14 +778,29 @@
       "ay": 28,
       "frames": [
         [
-          1252,
-          2504
+          132,
+          2740
         ]
       ],
       "source": "procedural",
       "group": "icon"
     },
     "held_bolt_rifle": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          1622,
+          1156
+        ]
+      ],
+      "source": "procedural",
+      "group": "weapon"
+    },
+    "held_heavy_bolter": {
       "w": 144,
       "h": 144,
       "scale": 2,
@@ -557,36 +815,6 @@
       "source": "procedural",
       "group": "weapon"
     },
-    "held_power_sword": {
-      "w": 144,
-      "h": 144,
-      "scale": 2,
-      "ax": 72,
-      "ay": 72,
-      "frames": [
-        [
-          1024,
-          1318
-        ]
-      ],
-      "source": "procedural",
-      "group": "weapon"
-    },
-    "held_heavy_bolter": {
-      "w": 144,
-      "h": 144,
-      "scale": 2,
-      "ax": 72,
-      "ay": 72,
-      "frames": [
-        [
-          586,
-          1318
-        ]
-      ],
-      "source": "procedural",
-      "group": "weapon"
-    },
     "held_flamer": {
       "w": 144,
       "h": 144,
@@ -595,44 +823,14 @@
       "ay": 72,
       "frames": [
         [
-          294,
-          1318
+          1768,
+          1156
         ]
       ],
       "source": "procedural",
       "group": "weapon"
     },
     "held_plasma_gun": {
-      "w": 144,
-      "h": 144,
-      "scale": 2,
-      "ax": 72,
-      "ay": 72,
-      "frames": [
-        [
-          878,
-          1318
-        ]
-      ],
-      "source": "procedural",
-      "group": "weapon"
-    },
-    "held_meltagun": {
-      "w": 144,
-      "h": 144,
-      "scale": 2,
-      "ax": 72,
-      "ay": 72,
-      "frames": [
-        [
-          732,
-          1318
-        ]
-      ],
-      "source": "procedural",
-      "group": "weapon"
-    },
-    "held_frag_grenade": {
       "w": 144,
       "h": 144,
       "scale": 2,
@@ -647,6 +845,36 @@
       "source": "procedural",
       "group": "weapon"
     },
+    "held_meltagun": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          294,
+          1318
+        ]
+      ],
+      "source": "procedural",
+      "group": "weapon"
+    },
+    "held_frag_grenade": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          2,
+          1318
+        ]
+      ],
+      "source": "procedural",
+      "group": "weapon"
+    },
     "crate_bolt_rifle": {
       "w": 96,
       "h": 96,
@@ -655,31 +883,12 @@
       "ay": 48,
       "frames": [
         [
-          116,
-          2292
+          1010,
+          2438
         ],
         [
-          214,
-          2292
-        ]
-      ],
-      "source": "procedural",
-      "group": "pickup"
-    },
-    "crate_power_sword": {
-      "w": 96,
-      "h": 96,
-      "scale": 2,
-      "ax": 48,
-      "ay": 48,
-      "frames": [
-        [
-          1292,
-          2292
-        ],
-        [
-          1390,
-          2292
+          1108,
+          2438
         ]
       ],
       "source": "procedural",
@@ -693,12 +902,12 @@
       "ay": 48,
       "frames": [
         [
-          704,
-          2292
+          1598,
+          2438
         ],
         [
-          802,
-          2292
+          1696,
+          2438
         ]
       ],
       "source": "procedural",
@@ -712,12 +921,12 @@
       "ay": 48,
       "frames": [
         [
-          312,
-          2292
+          1206,
+          2438
         ],
         [
-          410,
-          2292
+          1304,
+          2438
         ]
       ],
       "source": "procedural",
@@ -731,12 +940,12 @@
       "ay": 48,
       "frames": [
         [
-          1096,
-          2292
+          2,
+          2568
         ],
         [
-          1194,
-          2292
+          100,
+          2568
         ]
       ],
       "source": "procedural",
@@ -750,12 +959,12 @@
       "ay": 48,
       "frames": [
         [
-          900,
-          2292
+          1794,
+          2438
         ],
         [
-          998,
-          2292
+          1892,
+          2438
         ]
       ],
       "source": "procedural",
@@ -769,12 +978,12 @@
       "ay": 48,
       "frames": [
         [
-          508,
-          2292
+          1402,
+          2438
         ],
         [
-          606,
-          2292
+          1500,
+          2438
         ]
       ],
       "source": "procedural",
@@ -788,12 +997,12 @@
       "ay": 40,
       "frames": [
         [
-          492,
-          2406
+          1178,
+          2568
         ],
         [
-          574,
-          2406
+          1260,
+          2568
         ]
       ],
       "source": "procedural",
@@ -821,56 +1030,56 @@
       "ay": 64,
       "frames": [
         [
-          1042,
-          1902
-        ],
-        [
-          1172,
-          1902
-        ],
-        [
-          1692,
-          1902
-        ],
-        [
-          1822,
-          1902
-        ],
-        [
           2,
-          2032
+          2178
         ],
         [
           132,
-          2032
-        ],
-        [
-          262,
-          2032
-        ],
-        [
-          392,
-          2032
-        ],
-        [
-          522,
-          2032
+          2178
         ],
         [
           652,
-          2032
+          2178
+        ],
+        [
+          782,
+          2178
+        ],
+        [
+          912,
+          2178
+        ],
+        [
+          1042,
+          2178
+        ],
+        [
+          1172,
+          2178
         ],
         [
           1302,
-          1902
+          2178
         ],
         [
           1432,
-          1902
+          2178
         ],
         [
           1562,
-          1902
+          2178
+        ],
+        [
+          262,
+          2178
+        ],
+        [
+          392,
+          2178
+        ],
+        [
+          522,
+          2178
         ]
       ],
       "source": "procedural",
@@ -898,56 +1107,56 @@
       "ay": 64,
       "frames": [
         [
-          782,
-          2032
-        ],
-        [
-          912,
-          2032
-        ],
-        [
-          1432,
-          2032
-        ],
-        [
-          1562,
-          2032
-        ],
-        [
           1692,
-          2032
+          2178
         ],
         [
           1822,
-          2032
-        ],
-        [
-          2,
-          2162
-        ],
-        [
-          132,
-          2162
-        ],
-        [
-          262,
-          2162
+          2178
         ],
         [
           392,
-          2162
+          2308
+        ],
+        [
+          522,
+          2308
+        ],
+        [
+          652,
+          2308
+        ],
+        [
+          782,
+          2308
+        ],
+        [
+          912,
+          2308
         ],
         [
           1042,
-          2032
+          2308
         ],
         [
           1172,
-          2032
+          2308
         ],
         [
           1302,
-          2032
+          2308
+        ],
+        [
+          2,
+          2308
+        ],
+        [
+          132,
+          2308
+        ],
+        [
+          262,
+          2308
         ]
       ],
       "source": "procedural",
@@ -975,40 +1184,40 @@
       "ay": 36,
       "frames": [
         [
-          802,
-          2406
+          1488,
+          2568
         ],
         [
-          876,
-          2406
+          1562,
+          2568
         ],
         [
-          950,
-          2406
+          1636,
+          2568
         ],
         [
-          1024,
-          2406
+          1710,
+          2568
         ],
         [
-          1098,
-          2406
+          1784,
+          2568
         ],
         [
-          1172,
-          2406
+          1858,
+          2568
         ],
         [
-          1246,
-          2406
+          1932,
+          2568
         ],
         [
-          1320,
-          2406
+          2,
+          2666
         ],
         [
-          1394,
-          2406
+          76,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1036,56 +1245,56 @@
       "ay": 64,
       "frames": [
         [
-          1282,
-          1756
+          260,
+          2048
         ],
         [
-          1412,
-          1756
+          390,
+          2048
         ],
         [
-          2,
-          1902
+          910,
+          2048
         ],
         [
-          132,
-          1902
+          1040,
+          2048
         ],
         [
-          262,
-          1902
+          1170,
+          2048
         ],
         [
-          392,
-          1902
+          1300,
+          2048
         ],
         [
-          522,
-          1902
+          1430,
+          2048
         ],
         [
-          652,
-          1902
+          1560,
+          2048
         ],
         [
-          782,
-          1902
+          1690,
+          2048
         ],
         [
-          912,
-          1902
+          1820,
+          2048
         ],
         [
-          1542,
-          1756
+          520,
+          2048
         ],
         [
-          1672,
-          1756
+          650,
+          2048
         ],
         [
-          1802,
-          1756
+          780,
+          2048
         ]
       ],
       "source": "procedural",
@@ -1332,32 +1541,32 @@
       "ay": 48,
       "frames": [
         [
-          1586,
-          2292
+          296,
+          2568
         ],
         [
-          1684,
-          2292
+          394,
+          2568
         ],
         [
-          1782,
-          2292
+          492,
+          2568
         ],
         [
-          1880,
-          2292
+          590,
+          2568
         ],
         [
-          2,
-          2406
+          688,
+          2568
         ],
         [
-          100,
-          2406
+          786,
+          2568
         ],
         [
-          198,
-          2406
+          884,
+          2568
         ]
       ],
       "source": "procedural",
@@ -1452,23 +1661,8 @@
       "ay": 10,
       "frames": [
         [
-          460,
-          2570
-        ]
-      ],
-      "source": "procedural",
-      "group": "projectile"
-    },
-    "proj_slash": {
-      "w": 40,
-      "h": 40,
-      "scale": 2,
-      "ax": 20,
-      "ay": 20,
-      "frames": [
-        [
-          72,
-          2570
+          1158,
+          2740
         ]
       ],
       "source": "procedural",
@@ -1482,8 +1676,8 @@
       "ay": 12,
       "frames": [
         [
-          330,
-          2570
+          1028,
+          2740
         ]
       ],
       "source": "procedural",
@@ -1497,8 +1691,8 @@
       "ay": 36,
       "frames": [
         [
-          1468,
-          2406
+          150,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1512,8 +1706,8 @@
       "ay": 20,
       "frames": [
         [
-          2,
-          2570
+          742,
+          2740
         ]
       ],
       "source": "procedural",
@@ -1527,8 +1721,8 @@
       "ay": 28,
       "frames": [
         [
-          1902,
-          2504
+          652,
+          2740
         ]
       ],
       "source": "procedural",
@@ -1542,8 +1736,8 @@
       "ay": 18,
       "frames": [
         [
-          114,
-          2570
+          812,
+          2740
         ]
       ],
       "source": "procedural",
@@ -1557,8 +1751,8 @@
       "ay": 16,
       "frames": [
         [
-          258,
-          2570
+          956,
+          2740
         ]
       ],
       "source": "procedural",
@@ -1572,8 +1766,8 @@
       "ay": 14,
       "frames": [
         [
-          292,
-          2570
+          990,
+          2740
         ]
       ],
       "source": "procedural",
@@ -1587,8 +1781,8 @@
       "ay": 16,
       "frames": [
         [
-          212,
-          2570
+          910,
+          2740
         ]
       ],
       "source": "procedural",
@@ -1602,8 +1796,8 @@
       "ay": 32,
       "frames": [
         [
-          398,
-          2504
+          1280,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1616,8 +1810,8 @@
       "ay": 32,
       "frames": [
         [
-          68,
-          2504
+          950,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1630,8 +1824,8 @@
       "ay": 32,
       "frames": [
         [
-          134,
-          2504
+          1016,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1644,8 +1838,8 @@
       "ay": 32,
       "frames": [
         [
-          200,
-          2504
+          1082,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1658,8 +1852,8 @@
       "ay": 32,
       "frames": [
         [
-          1872,
-          2406
+          752,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1672,8 +1866,8 @@
       "ay": 32,
       "frames": [
         [
-          1938,
-          2406
+          818,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1686,8 +1880,8 @@
       "ay": 32,
       "frames": [
         [
-          2,
-          2504
+          884,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1700,8 +1894,8 @@
       "ay": 48,
       "frames": [
         [
-          1488,
-          2292
+          198,
+          2568
         ]
       ],
       "source": "procedural",
@@ -1714,8 +1908,8 @@
       "ay": 32,
       "frames": [
         [
-          266,
-          2504
+          1148,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1728,36 +1922,36 @@
       "ay": 64,
       "frames": [
         [
-          522,
-          2162
-        ],
-        [
-          652,
-          2162
-        ],
-        [
-          782,
-          2162
-        ],
-        [
-          912,
-          2162
-        ],
-        [
-          1042,
-          2162
-        ],
-        [
-          1172,
-          2162
-        ],
-        [
-          1302,
-          2162
-        ],
-        [
           1432,
-          2162
+          2308
+        ],
+        [
+          1562,
+          2308
+        ],
+        [
+          1692,
+          2308
+        ],
+        [
+          1822,
+          2308
+        ],
+        [
+          2,
+          2438
+        ],
+        [
+          132,
+          2438
+        ],
+        [
+          262,
+          2438
+        ],
+        [
+          392,
+          2438
         ]
       ],
       "source": "procedural",
@@ -1770,12 +1964,12 @@
       "ay": 12,
       "frames": [
         [
-          392,
-          2570
+          1090,
+          2740
         ],
         [
-          426,
-          2570
+          1124,
+          2740
         ]
       ],
       "source": "procedural",
@@ -1788,8 +1982,8 @@
       "ay": 8,
       "frames": [
         [
-          510,
-          2570
+          1208,
+          2740
         ]
       ],
       "source": "procedural",
@@ -1802,8 +1996,8 @@
       "ay": 3,
       "frames": [
         [
-          528,
-          2570
+          1226,
+          2740
         ]
       ],
       "source": "procedural",
@@ -1816,31 +2010,8 @@
       "ay": 32,
       "frames": [
         [
-          332,
-          2504
-        ]
-      ],
-      "source": "procedural",
-      "group": "fx"
-    },
-    "fx_slash": {
-      "w": 144,
-      "h": 144,
-      "scale": 1.5,
-      "ax": 72,
-      "ay": 72,
-      "frames": [
-        [
-          1622,
-          1156
-        ],
-        [
-          1768,
-          1156
-        ],
-        [
-          2,
-          1318
+          1214,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1854,12 +2025,12 @@
       "ay": 48,
       "frames": [
         [
-          296,
-          2406
+          982,
+          2568
         ],
         [
-          394,
-          2406
+          1080,
+          2568
         ]
       ],
       "source": "procedural",
@@ -1872,8 +2043,8 @@
       "ay": 64,
       "frames": [
         [
-          1562,
-          2162
+          522,
+          2438
         ]
       ],
       "source": "procedural",
@@ -1886,8 +2057,8 @@
       "ay": 32,
       "frames": [
         [
-          464,
-          2504
+          1346,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1900,8 +2071,8 @@
       "ay": 32,
       "frames": [
         [
-          530,
-          2504
+          1412,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1914,8 +2085,8 @@
       "ay": 32,
       "frames": [
         [
-          596,
-          2504
+          1478,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1928,8 +2099,8 @@
       "ay": 32,
       "frames": [
         [
-          662,
-          2504
+          1544,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1942,8 +2113,8 @@
       "ay": 32,
       "frames": [
         [
-          728,
-          2504
+          1610,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1956,8 +2127,8 @@
       "ay": 32,
       "frames": [
         [
-          794,
-          2504
+          1676,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1970,8 +2141,8 @@
       "ay": 32,
       "frames": [
         [
-          860,
-          2504
+          1742,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1984,8 +2155,8 @@
       "ay": 32,
       "frames": [
         [
-          926,
-          2504
+          1808,
+          2666
         ]
       ],
       "source": "procedural",
@@ -1999,8 +2170,8 @@
       "ay": 60,
       "frames": [
         [
-          1692,
-          2162
+          652,
+          2438
         ]
       ],
       "source": "procedural",
@@ -2014,8 +2185,8 @@
       "ay": 60,
       "frames": [
         [
-          1814,
-          2162
+          774,
+          2438
         ]
       ],
       "source": "procedural",
@@ -2029,8 +2200,8 @@
       "ay": 72,
       "frames": [
         [
-          878,
-          1756
+          1754,
+          1902
         ]
       ],
       "source": "procedural",
@@ -2044,8 +2215,8 @@
       "ay": 56,
       "frames": [
         [
-          2,
-          2292
+          896,
+          2438
         ]
       ],
       "source": "procedural",
@@ -2059,8 +2230,8 @@
       "ay": 36,
       "frames": [
         [
-          656,
-          2406
+          1342,
+          2568
         ]
       ],
       "source": "procedural",
@@ -2116,8 +2287,8 @@
       "ay": 64,
       "frames": [
         [
-          1024,
-          1756
+          2,
+          2048
         ]
       ],
       "source": "procedural",
@@ -2204,9 +2375,9 @@
         "sfx/shoot_plasma_2.wav",
         "sfx/shoot_plasma_3.wav"
       ],
-      "volume": 0.58,
+      "volume": 0.6,
       "maxVoices": 5,
-      "durationSec": 0.869,
+      "durationSec": 0.603,
       "source": "procedural",
       "bus": "weapons",
       "priority": 7
@@ -2218,13 +2389,13 @@
         "sfx/shoot_plasma_super_1.wav",
         "sfx/shoot_plasma_super_2.wav"
       ],
-      "volume": 0.7,
+      "volume": 0.72,
       "maxVoices": 3,
-      "durationSec": 1.696,
+      "durationSec": 1.329,
       "source": "procedural",
       "bus": "weapons",
       "priority": 8,
-      "duck": 0.2
+      "duck": 0.25
     },
     "plasma_whine": {
       "file": "sfx/plasma_whine_0.wav",
@@ -2248,7 +2419,7 @@
       ],
       "volume": 0.6,
       "maxVoices": 2,
-      "durationSec": 1.196,
+      "durationSec": 1.206,
       "source": "procedural",
       "bus": "weapons",
       "priority": 7
@@ -2260,9 +2431,9 @@
         "sfx/plasma_impact_1.wav",
         "sfx/plasma_impact_2.wav"
       ],
-      "volume": 0.4,
+      "volume": 0.42,
       "maxVoices": 4,
-      "durationSec": 0.188,
+      "durationSec": 0.304,
       "source": "procedural",
       "bus": "weapons",
       "priority": 3
@@ -2295,50 +2466,6 @@
       "source": "procedural",
       "bus": "weapons",
       "priority": 4
-    },
-    "swing_power_sword": {
-      "file": "sfx/swing_power_sword_0.wav",
-      "variants": [
-        "sfx/swing_power_sword_0.wav",
-        "sfx/swing_power_sword_1.wav",
-        "sfx/swing_power_sword_2.wav",
-        "sfx/swing_power_sword_3.wav"
-      ],
-      "volume": 0.6,
-      "maxVoices": 4,
-      "durationSec": 0.593,
-      "source": "procedural",
-      "bus": "weapons",
-      "priority": 6
-    },
-    "sword_impact": {
-      "file": "sfx/sword_impact_0.wav",
-      "variants": [
-        "sfx/sword_impact_0.wav",
-        "sfx/sword_impact_1.wav",
-        "sfx/sword_impact_2.wav",
-        "sfx/sword_impact_3.wav"
-      ],
-      "volume": 0.55,
-      "maxVoices": 4,
-      "durationSec": 0.162,
-      "source": "procedural",
-      "bus": "weapons",
-      "priority": 5
-    },
-    "power_field": {
-      "file": "sfx/power_field_0.wav",
-      "variants": [
-        "sfx/power_field_0.wav",
-        "sfx/power_field_1.wav",
-        "sfx/power_field_2.wav"
-      ],
-      "volume": 0.5,
-      "maxVoices": 2,
-      "durationSec": 1.037,
-      "source": "procedural",
-      "bus": "weapons",
-      "priority": 3
     },
     "throw_grenade": {
       "file": "sfx/throw_grenade_0.wav",
@@ -2383,6 +2510,20 @@
       "source": "procedural",
       "bus": "weapons",
       "priority": 3
+    },
+    "brace_heavy": {
+      "file": "sfx/brace_heavy_0.wav",
+      "variants": [
+        "sfx/brace_heavy_0.wav",
+        "sfx/brace_heavy_1.wav",
+        "sfx/brace_heavy_2.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 2,
+      "durationSec": 0.668,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 5
     },
     "heavy_bolt_impact": {
       "file": "sfx/heavy_bolt_impact_0.wav",
@@ -2579,6 +2720,18 @@
       "bus": "ui",
       "priority": 6
     },
+    "wave_cleared": {
+      "file": "sfx/wave_cleared_0.wav",
+      "variants": [
+        "sfx/wave_cleared_0.wav"
+      ],
+      "volume": 0.6,
+      "maxVoices": 1,
+      "durationSec": 3.252,
+      "source": "procedural",
+      "bus": "ui",
+      "priority": 7
+    },
     "surge": {
       "file": "sfx/surge_0.wav",
       "variants": [
@@ -2627,7 +2780,7 @@
       ],
       "volume": 0.5,
       "maxVoices": 6,
-      "durationSec": 0.531,
+      "durationSec": 0.615,
       "source": "procedural",
       "bus": "enemies",
       "priority": 3
@@ -2642,7 +2795,7 @@
       ],
       "volume": 0.55,
       "maxVoices": 4,
-      "durationSec": 0.577,
+      "durationSec": 0.739,
       "source": "procedural",
       "bus": "enemies",
       "priority": 4
@@ -2656,7 +2809,7 @@
       ],
       "volume": 0.65,
       "maxVoices": 3,
-      "durationSec": 1.491,
+      "durationSec": 1.364,
       "source": "procedural",
       "bus": "enemies",
       "priority": 6
@@ -2669,7 +2822,7 @@
       ],
       "volume": 0.85,
       "maxVoices": 1,
-      "durationSec": 2.705,
+      "durationSec": 2.785,
       "source": "procedural",
       "bus": "enemies",
       "priority": 9,
@@ -2685,7 +2838,7 @@
       ],
       "volume": 0.42,
       "maxVoices": 5,
-      "durationSec": 0.089,
+      "durationSec": 0.468,
       "source": "procedural",
       "bus": "enemies",
       "priority": 2
@@ -2700,7 +2853,7 @@
       ],
       "volume": 0.5,
       "maxVoices": 5,
-      "durationSec": 0.515,
+      "durationSec": 0.604,
       "source": "procedural",
       "bus": "enemies",
       "priority": 5
@@ -2714,7 +2867,7 @@
       ],
       "volume": 0.52,
       "maxVoices": 4,
-      "durationSec": 0.434,
+      "durationSec": 0.689,
       "source": "procedural",
       "bus": "enemies",
       "priority": 5
@@ -2728,7 +2881,7 @@
       ],
       "volume": 0.32,
       "maxVoices": 4,
-      "durationSec": 0.344,
+      "durationSec": 0.745,
       "source": "procedural",
       "bus": "enemies",
       "priority": 2
@@ -2743,7 +2896,7 @@
       ],
       "volume": 0.45,
       "maxVoices": 5,
-      "durationSec": 0.497,
+      "durationSec": 0.61,
       "source": "procedural",
       "bus": "enemies",
       "priority": 4
@@ -2757,7 +2910,7 @@
       ],
       "volume": 0.4,
       "maxVoices": 4,
-      "durationSec": 0.292,
+      "durationSec": 0.538,
       "source": "procedural",
       "bus": "enemies",
       "priority": 3
@@ -2772,7 +2925,7 @@
       ],
       "volume": 0.35,
       "maxVoices": 3,
-      "durationSec": 0.442,
+      "durationSec": 0.67,
       "source": "procedural",
       "bus": "enemies",
       "priority": 2
@@ -2787,7 +2940,7 @@
       ],
       "volume": 0.5,
       "maxVoices": 4,
-      "durationSec": 0.633,
+      "durationSec": 0.726,
       "source": "procedural",
       "bus": "enemies",
       "priority": 6
@@ -2802,7 +2955,7 @@
       ],
       "volume": 0.5,
       "maxVoices": 4,
-      "durationSec": 0.614,
+      "durationSec": 0.64,
       "source": "procedural",
       "bus": "enemies",
       "priority": 6
@@ -2815,7 +2968,7 @@
       ],
       "volume": 0.6,
       "maxVoices": 2,
-      "durationSec": 1.662,
+      "durationSec": 1.663,
       "source": "procedural",
       "bus": "enemies",
       "priority": 7,
@@ -2829,7 +2982,7 @@
       ],
       "volume": 0.7,
       "maxVoices": 2,
-      "durationSec": 1.733,
+      "durationSec": 1.562,
       "source": "procedural",
       "bus": "enemies",
       "priority": 7
@@ -2843,7 +2996,7 @@
       ],
       "volume": 0.45,
       "maxVoices": 3,
-      "durationSec": 0.674,
+      "durationSec": 0.749,
       "source": "procedural",
       "bus": "enemies",
       "priority": 3
@@ -2857,7 +3010,7 @@
       ],
       "volume": 0.6,
       "maxVoices": 3,
-      "durationSec": 1.036,
+      "durationSec": 1.165,
       "source": "procedural",
       "bus": "enemies",
       "priority": 6
@@ -2871,7 +3024,7 @@
       ],
       "volume": 0.55,
       "maxVoices": 3,
-      "durationSec": 0.536,
+      "durationSec": 0.589,
       "source": "procedural",
       "bus": "enemies",
       "priority": 5
@@ -2885,7 +3038,7 @@
       ],
       "volume": 0.7,
       "maxVoices": 2,
-      "durationSec": 0.589,
+      "durationSec": 0.649,
       "source": "procedural",
       "bus": "enemies",
       "priority": 8
@@ -2898,7 +3051,7 @@
       ],
       "volume": 0.85,
       "maxVoices": 2,
-      "durationSec": 2.02,
+      "durationSec": 2.485,
       "source": "procedural",
       "bus": "enemies",
       "priority": 9,
@@ -2912,7 +3065,7 @@
       ],
       "volume": 0.8,
       "maxVoices": 2,
-      "durationSec": 1.835,
+      "durationSec": 1.876,
       "source": "procedural",
       "bus": "enemies",
       "priority": 8,
@@ -2928,7 +3081,7 @@
       ],
       "volume": 0.55,
       "maxVoices": 3,
-      "durationSec": 0.569,
+      "durationSec": 0.553,
       "source": "procedural",
       "bus": "enemies",
       "priority": 4
@@ -2942,10 +3095,38 @@
       ],
       "volume": 0.35,
       "maxVoices": 4,
-      "durationSec": 0.095,
+      "durationSec": 0.104,
       "source": "procedural",
       "bus": "enemies",
       "priority": 2
+    },
+    "breach_telegraph": {
+      "file": "sfx/breach_telegraph_0.wav",
+      "variants": [
+        "sfx/breach_telegraph_0.wav",
+        "sfx/breach_telegraph_1.wav",
+        "sfx/breach_telegraph_2.wav"
+      ],
+      "volume": 0.6,
+      "maxVoices": 3,
+      "durationSec": 1.8,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 7
+    },
+    "breach_burst": {
+      "file": "sfx/breach_burst_0.wav",
+      "variants": [
+        "sfx/breach_burst_0.wav",
+        "sfx/breach_burst_1.wav",
+        "sfx/breach_burst_2.wav"
+      ],
+      "volume": 0.6,
+      "maxVoices": 3,
+      "durationSec": 1.178,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 6
     },
     "synapse_drone": {
       "file": "sfx/synapse_drone_0.wav",
@@ -2988,25 +3169,40 @@
     }
   },
   "music": {
-    "battle": {
-      "file": "music/battle.wav",
-      "volume": 0.35,
-      "loop": true,
-      "durationSec": 30.48,
-      "source": "procedural"
-    },
     "menu": {
       "file": "music/menu.wav",
+      "volume": 0.32,
+      "loop": true,
+      "durationSec": 60,
+      "source": "procedural"
+    },
+    "combat": {
+      "file": "music/combat.wav",
       "volume": 0.3,
       "loop": true,
-      "durationSec": 29.09,
+      "durationSec": 60,
+      "source": "procedural"
+    },
+    "combat_drive": {
+      "file": "music/combat_drive.wav",
+      "volume": 0.34,
+      "loop": true,
+      "durationSec": 60,
+      "source": "procedural",
+      "layerOf": "combat"
+    },
+    "boss": {
+      "file": "music/boss.wav",
+      "volume": 0.36,
+      "loop": true,
+      "durationSec": 48,
       "source": "procedural"
     },
     "gameover": {
       "file": "music/gameover.wav",
       "volume": 0.3,
       "loop": true,
-      "durationSec": 13.71,
+      "durationSec": 32,
       "source": "procedural"
     }
   }
