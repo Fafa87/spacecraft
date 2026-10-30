@@ -148,6 +148,7 @@ export class App {
           error,
           serverStatus: this.serverStatus(),
           dedicated: config.useDedicatedHost,
+          mixer: this.audio.mixerControls(),
         },
       ),
     );

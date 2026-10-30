@@ -14,7 +14,7 @@ and wargear unlocks as you survive. **Survival time is the only score.** Each te
 own table, and each game version (major.minor) has its own leaderboard.
 
 **Play it:** https://fafa87.github.io/spacecraft/ (latest). Frozen older builds:
-https://fafa87.github.io/spacecraft/v0.1.0/ and the menu's **Previous versions** link. It is a
+https://fafa87.github.io/spacecraft/v0.1.0/, https://fafa87.github.io/spacecraft/v0.2.0/ and the menu's **Previous versions** link. It is a
 static GitHub Pages build: a global leaderboard in Firestore with a local fallback, and P2P co-op
 through the public PeerJS broker.
 
@@ -23,6 +23,15 @@ through the public PeerJS broker.
 | Menu (chapter picker)     | Units (procedural sprites)      | Phone (touch twin-stick)      |
 | ------------------------- | ------------------------------- | ----------------------------- |
 | ![menu](docs/wh-menu.png) | ![sprites](docs/wh-sprites.png) | ![mobile](docs/wh-mobile.png) |
+
+**Sound and the leap telegraph (v0.3).** Every sound is layered procedural DSP in a 40k register
+(boom, sub thump, noise body, mechanical rattle, corridor reverb, saturation): listen to the
+32-second scripted mix in [docs/audio-preview.mp3](docs/audio-preview.mp3) (lossless:
+[docs/audio-preview.wav](docs/audio-preview.wav)). Leapers no longer draw a red lane: you see the
+creature gather itself. The Hormagaunt crouches, pulls back, trembles and its eyes flare; the
+Carnifex rears up, paws the deck and roars before it charges.
+
+![Hormagaunt crouched mid wind-up (right) and a rearing Carnifex (left)](docs/leap-windup.png)
 
 ## The forces
 
@@ -108,7 +117,8 @@ ways. The PC controls are unchanged.
 - **Left mouse button:** fire.
 - **R:** reload.
 - **1-9, mouse wheel or Q/E:** switch weapon.
-- **M:** mute.
+- **M:** mute. Per-bus volumes (master, weapons, Tyranids, ambience, interface, music) are in
+  the menu under **SOUND MIX** and are remembered in this browser.
 - **Revive:** stand next to a downed teammate for 3 seconds.
 
 **Phone / tablet (standard twin-stick)**
@@ -173,6 +183,7 @@ public PeerJS cloud, so it needs nothing extra.
 | `npm run check:firestore`             | Live smoke test against the configured Firebase project: create, read, query, duplicate and invalid writes.                                    |
 | `npm run sim -- --bot=kite --seeds=6` | Headless balance simulation: bot survival statistics per team size.                                                                            |
 | `npm run contact-sheet -w @sms/tools` | Renders the labelled unit sheet `docs/wh-sprites.png` from the generated atlas.                                                                |
+| `npm run audio-preview -w @sms/tools` | Renders the 32 s scripted sound showcase to `docs/audio-preview.wav` and `.mp3` (ffmpeg).                                                      |
 | `npm run deploy:pages [-- --push]`    | Versioned GitHub Pages deploy: latest at `/`, frozen `/vX.Y.Z/`, updated `versions.json`; a normal commit on `gh-pages`, never forced.         |
 
 ### Server configuration (env vars)
@@ -205,8 +216,9 @@ The site is served from the **`gh-pages` branch** (Pages source "Deploy from a b
 ```
 /spacecraft/                 latest release (built with BASE_PATH=/spacecraft/)
 /spacecraft/v0.1.0/          frozen v0.1.0 (BASE_PATH=/spacecraft/v0.1.0/)
-/spacecraft/v0.2.0/          frozen v0.2.0 …
-/spacecraft/versions.json    {"latest":"0.2.0","versions":[{"version","date","title","path"}…]} (newest first)
+/spacecraft/v0.2.0/          frozen v0.2.0
+/spacecraft/v0.3.0/          frozen v0.3.0 …
+/spacecraft/versions.json    {"latest":"0.3.0","versions":[{"version","date","title","path"}…]} (newest first)
 ```
 
 The menu's **Previous versions** link reads `versions.json` from the site root (a frozen build
@@ -223,8 +235,8 @@ loaded. Each version keeps its own localStorage highscore table and its own Fire
    changed). Then commit and push `master` (never force).
 3. Tag and release, targeting the exact commit:
    ```bash
-   git tag -a v0.2.0 -m "v0.2.0: Hive Siege" && git push origin v0.2.0
-   gh release create v0.2.0 --target "$(git rev-parse HEAD)" --title "v0.2.0 · Hive Siege" --notes-file notes.md
+   git tag -a v0.3.0 -m "v0.3.0: Hive Siege — sound and leap telegraph" && git push origin v0.3.0
+   gh release create v0.3.0 --target "$(git rev-parse HEAD)" --title "v0.3.0 · Hive Siege" --notes-file notes.md
    ```
 4. Deploy: `npm run deploy:pages` builds the current checkout twice (into `/` and
    `/v<GAME_VERSION>/`) and adds a worktree of `origin/gh-pages`. In it, it replaces only the root
@@ -236,7 +248,7 @@ loaded. Each version keeps its own localStorage highscore table and its own Fire
      (`git worktree add /tmp/v010 v0.1.0 && cd /tmp/v010 && npm ci && BASE_PATH=/spacecraft/v0.1.0/ npm run build:pages`),
      then installed with `--add 0.1.0=/tmp/v010/packages/client/dist`.
 5. Check it live: `npx tsx scripts/pages-check.ts https://fafa87.github.io/spacecraft/` (also run
-   it on `/v0.1.0/` and `/v0.2.0/`). It checks the menu, assets under the base path, local scores,
+   it on `/v0.1.0/`, `/v0.2.0/` and `/v0.3.0/`). It checks the menu, assets under the base path, local scores,
    a P2P room, a solo run and the console.
 
 CI option: a `pages.yml` workflow that runs the same steps on `v*` tags
@@ -262,7 +274,7 @@ packages/
     src/assets/      asset manifest format + referencedAssetKeys(content)
   server/   @sms/server: Fastify highscore API, highscore repositories, PeerJS server, WS game host
   client/   @sms/client: Vite + Canvas2D (app/, game/, net/, render/, audio/, ui/, highscores/)
-tools/      @sms/tools: procedural sprites → atlas, sfxr-style SFX, chiptune music, manifest, preview
+tools/      @sms/tools: procedural sprites → atlas, layered DSP SFX recipes, music, manifest, preview
 scripts/    smoke.ts, browser-smoke.ts, mobile-check.ts, balance-sim.ts, deploy-pages.ts, Firestore helpers
 docs/       ARCHITECTURE.md, ADDING_CONTENT.md, ART_PIPELINE.md, screenshots
 ```
@@ -455,9 +467,20 @@ real fix).
   shoulder badges.
 - `ui/emblem.png` and `ui/parchment.png`: our own skull-and-wings emblem and a parchment texture
   for the gothic UI.
-- `sfx/*.wav`: 38 heavier sound effects from a seeded synthesizer: bolt cracks and impacts, the
-  heavy bolter, flamer roar, plasma whine and overheat vent, chitin screeches, the Carnifex roar
-  and a boss horn.
+- `sfx/*.wav`: 61 sounds rendered as 177 WAV files (44.1 kHz, 16-bit mono) from data-driven
+  recipes (`tools/src/audio/recipes.ts`) on a small DSP toolkit (`dsp.ts`: oscillators, coloured
+  noise, biquads, waveshaping, compression, reverb). One-shots get 2–4 random variants each, and
+  the client picks one per play without immediate repeats. They cover every weapon (bolt rifle
+  boom/whoosh/impact, heavy bolter with belt rattle, flamer ignition → seamless loop → tail,
+  plasma charge whine/discharge/vent plus a heat-following whine, meltagun "fwoomp", power sword
+  hum/crackle/chop, frag blast with debris), reloads, armour hits and pain grunts, and the
+  Tyranids: swarm and hive ambience beds, hisses, leap shrieks and wind-ups, Genestealer
+  skitter, Carnifex roar/steps/charge, the Warrior synapse drone, Biovore "thoomp", spore pops
+  and the Ravener burrow rumble. `npm run audio-preview -w @sms/tools` renders the scripted
+  showcase mix to `docs/audio-preview.wav` / `.mp3`.
+- **Mixer** (client): buses for weapons, Tyranids, ambience, interface and music, a bus
+  compressor, a 32-voice limit with priority stealing, distance attenuation and stereo pan from
+  the listener, music ducking on big explosions and roars, and persisted per-bus sliders.
 - `music/*.wav`: 3 procedural gothic tracks (`menu`, `battle`, `gameover`) with an additive pipe
   organ, a formant "aah" choir, bells and war drums. They are seeded, deterministic and loop
   seamlessly.
@@ -473,20 +496,24 @@ runs in a unit test.
 
 ## Testing
 
-- `npm test`: 134 unit/integration tests (vitest).
+- `npm test`: 149 unit/integration tests (vitest).
   - Shared: rng, movement, swept projectile collision, determinism, director escalation,
     revive and game over, content and highscore validation, and a full HostSession over local
     links with a ManualScheduler. `tyranids.test.ts` covers the Hive Siege content: weapon
     unlock order, the roster and boss, chapters and naming presets, plasma supercharge and
     overheat self-damage, ravener burrow and emerge, the warrior synapse buff, the carnifex
-    wind-up and charge, spore-mine bursts, boss waves, snapshot fields, and lobby chapter
+    wind-up and charge (windup flag → `leap` event → dash), spore-mine bursts, boss waves, snapshot fields, and lobby chapter
     selection (unique, honoured, switchable).
   - Server: API via `app.inject` (201/200/400/413/429, ordering, separate tables, CORS) and
     json/sqlite persistence across restarts.
   - Client: Predictor, SnapshotBuffer, Local/Fallback highscore stores, the joystick/deadzone
     math, touch intents and input merging, and join-URL building and parsing with a QR encode →
     decode round trip, and the versioned-site root (`versions.ts`).
-  - Tools: asset coverage, packer overlap, WAV round-trip and song length.
+  - Client (audio): mixer volumes sanitising, distance gain and pan, voice stealing, variant
+    picking and the swarm-ambience level (`mixer.test.ts`).
+  - Tools: asset coverage, packer overlap, WAV round-trip, song length, and the sound recipes
+    (render bounded, non-silent and deterministic at 44.1 kHz, variants differ, loops wrap
+    without a click, the signature 40k / Tyranid sound set exists).
 - `npm run test:rules`: 42 Firestore security-rules tests against the emulator (needs Java), covering
   the per-version boards and the legacy v0.1 collection.
 - `npm run smoke`: headless, starts its own in-memory server on a random port.
@@ -498,6 +525,8 @@ runs in a unit test.
 - `npx tsx scripts/wh-shots.ts [clientUrl]`: needs `npm run dev`. It regenerates the README
   screenshots `docs/wh-menu.png`, `docs/wh-gameplay.png` (`?demo=hive`) and `docs/wh-mobile.png`,
   always with `?firestore=0`. `npm run contact-sheet -w @sms/tools` writes `docs/wh-sprites.png`.
+- `npx tsx scripts/leap-shot.ts [clientUrl]`: needs `npm run dev`. It stages a Hormagaunt and a
+  Carnifex held in their charge wind-up (`?demo=hive&firestore=0`) and writes `docs/leap-windup.png`.
 - `npm run check:mobile [clientUrl]`: headless mobile emulation (iPhone 14 and Pixel 5
   landscape, touch, via CDP multi-touch) against a running client (default
   `http://localhost:5173/`). It checks the responsive menu and the lobby QR (decoded with jsQR,

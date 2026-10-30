@@ -105,4 +105,32 @@ export class Assets {
     ctx.restore();
     return true;
   }
+
+  /**
+   * Like draw(), but with a non-uniform scale in the sprite's own frame (sx along the facing,
+   * sy across it): squash / stretch for crouches, leaps and rearing.
+   */
+  drawXform(
+    ctx: CanvasRenderingContext2D,
+    key: string,
+    frame: number,
+    x: number,
+    y: number,
+    angle: number,
+    sx: number,
+    sy: number,
+  ): boolean {
+    const s = this.manifest?.sprites[key];
+    if (!s || !this.atlas) return false;
+    const [fx, fy] =
+      s.frames[((Math.floor(frame) % s.frames.length) + s.frames.length) % s.frames.length];
+    const k = 1 / (s.scale ?? 1);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.scale(sx, sy);
+    ctx.drawImage(this.atlas, fx, fy, s.w, s.h, -s.ax * k, -s.ay * k, s.w * k, s.h * k);
+    ctx.restore();
+    return true;
+  }
 }

@@ -7,6 +7,7 @@ import { createChapterPicker } from '../chapters.js';
 import { escapeHtml } from '../format.js';
 import { prefs } from '../prefs.js';
 import { createVersionsLink } from '../versions.js';
+import { createMixerPanel, type MixerControls } from '../mixerPanel.js';
 
 export interface MenuActions {
   solo(name: string): void;
@@ -23,6 +24,8 @@ export interface MenuOptions {
   error?: string;
   serverStatus: Promise<string>;
   dedicated: boolean;
+  /** Per-bus volume sliders; omitted when audio is unavailable. */
+  mixer?: MixerControls;
 }
 
 const NAME_KEY = 'sms.name';
@@ -55,6 +58,7 @@ export function createMenuScreen(actions: MenuActions, opts: MenuOptions): HTMLE
           <span class="touch-only"><b>Left thumb</b> move · <b>Right thumb</b> aim &amp; auto-fire · <b>tap a weapon</b> to switch · <b>⟳</b> reload · <b>⛶</b> fullscreen<br></span>
           Stand next to a downed battle-brother to revive them. Wargear unlocks over time; supply crates drop on the map. Plasma runs hot: past the line shots are supercharged, at the top it vents and burns you.
         </div>
+        <div id="mixer"></div>
         <div class="muted small" id="meta">v${GAME_VERSION} · <span id="status">checking highscore server…</span>${opts.dedicated ? ' · dedicated host mode' : ' · P2P (browser-hosted)'}</div>
       </div>
       <div class="card scores"><h2>HONOURED DEAD · v${GAME_VERSION.split('.').slice(0, 2).join('.')} BOARD</h2></div>
@@ -65,6 +69,7 @@ export function createMenuScreen(actions: MenuActions, opts: MenuOptions): HTMLE
     createChapterPicker(opts.content, prefs.chapter(), (id) => prefs.setChapter(id)).el,
   );
   $(el, '#meta').append(createVersionsLink());
+  if (opts.mixer) $(el, '#mixer').append(createMixerPanel(opts.mixer));
   const name = $<HTMLInputElement>(el, '#name');
   const code = $<HTMLInputElement>(el, '#code');
   const err = $(el, '#err');

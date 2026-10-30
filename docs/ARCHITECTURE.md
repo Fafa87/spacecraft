@@ -51,7 +51,11 @@
                        joystick.ts (pure stick/deadzone math). Sim and protocol are unchanged:
                        intents become the same PlayerInput {mx, my, aim, fire, …}.
   render/              Renderer (Canvas2D, atlas sprites), camera, HUD, particles, visuals mapping
-  audio/               AudioEngine (WebAudio, voice limits, music crossfades)
+  audio/               AudioEngine (WebAudio graph: buses → compressor → master, music ducking,
+                       variants, sustained loops) and mixer.ts (pure: volumes, spatialize,
+                       voice stealing, variant picking)
+  game/enemyAudio.ts   snapshot-driven creature sound: swarm bed by nearby count, Carnifex
+                       steps, skitter/burrow, synapse drone, hisses, landings, plasma heat whine
   highscores/          HighscoreStore interface: Http + Local (localStorage) + Fallback composition
   ui/                  DOM screens (menu, lobby with join QR, quick-join for ?join=CODE), leaderboard
                        tables, qr.ts (client-side QR via `qrcode`), styles (responsive + safe areas)
@@ -60,7 +64,9 @@
 @sms/tools
   sprites/             SpriteDef { key, w, h, frames, prompt, draw(ctx, frame, rng) }
   atlas/pack.ts        shelf packer
-  audio/sfxr.ts        sfxr-style synth; sfxPresets.ts (layered presets); music.ts (sequencer)
+  audio/dsp.ts         DSP toolkit (oscillators, noise, biquads, shaping, compressor, reverb)
+  audio/synth.ts       renders a Recipe's layers + post chain into variants / seamless loops
+  audio/recipes.ts     every SFX as data; music.ts (sequencer); audioPreview.ts (showcase mix)
   generate.ts          builds atlas + wavs + manifest + preview, applies overrides, checks coverage
 ```
 
@@ -138,14 +144,18 @@ composite index serves every board.
   at `max` the weapon overheats: it vents (`Player.venting`), the marine takes self-damage and
   the `overheat` event fires. Snapshots carry `ht` and `vt` for the HUD heat bar.
 - **Enemy traits.** These are composable on any behaviour in `sim/systems/enemies.ts`:
-  - `charge`: an idle → wind-up → dash state machine, with the `charge` event.
+  - `charge`: an idle → wind-up → dash state machine. The `charge` event fires when the
+    wind-up starts and `leap` when the dash starts.
   - `burrow`: spawns underground and untargetable, moves faster, and erupts within
     `emergeDistance` with the `emerge` event.
   - `synapse`: each tick, buffs the speed and damage of non-synapse Tyranids in its radius.
   - `explode`: fuse and death bursts, for spore mines.
 
   Each state is a bit in `EnemySnap[6]` (`ENEMY_FLAG`), so the client can animate wind-ups,
-  dust trails and synapse halos without extra messages.
+  dust trails and synapse halos without extra messages. The leap telegraph is drawn on the body
+  (`Renderer.windupPose`): the Hormagaunt crouches, pulls back, trembles and kicks dust with
+  glowing eyes; the Carnifex rears up, sways, paws the deck and roars. The dash stretches the
+  sprite with ghost trails, and landing throws dust (and plays `dust_land` / a step).
 
 - **Boss waves.** `director.bosses` spawns the boss on surge `firstSurge` and every `everySurge`
   after it. The count depends on team size and grows by `extraPerAppearance`. The `boss` event drives

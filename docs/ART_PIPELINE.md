@@ -5,14 +5,14 @@ synthesises every sound and the music. No image or audio generation service is i
 repository holds no third-party artwork. `npm run assets` (it also runs before `dev` and `build`)
 writes the following to `packages/client/public/assets/generated/`:
 
-| Output                | What                                                                                     |
-| --------------------- | ---------------------------------------------------------------------------------------- |
-| `atlas.png`           | One shelf-packed sprite atlas (every frame of every sprite)                              |
-| `manifest.json`       | Frame rects, anchors, render scale, animation ranges, and `source: procedural/override`  |
-| `sfx/*.wav`, `music/` | Procedural SFX (bolt cracks, chitin screeches, the Carnifex roar) plus choir/organ music |
-| `ui/emblem.png`       | Our own skull-and-wings emblem (menu, HUD watermark)                                     |
-| `ui/parchment.png`    | Parchment texture behind the menu flavour text                                           |
-| `preview.html`        | Browsable contact sheet of everything above                                              |
+| Output                | What                                                                                    |
+| --------------------- | --------------------------------------------------------------------------------------- |
+| `atlas.png`           | One shelf-packed sprite atlas (every frame of every sprite)                             |
+| `manifest.json`       | Frame rects, anchors, render scale, animation ranges, and `source: procedural/override` |
+| `sfx/*.wav`, `music/` | Layered DSP SFX with variants (see "Sound") plus choir/organ music                      |
+| `ui/emblem.png`       | Our own skull-and-wings emblem (menu, HUD watermark)                                    |
+| `ui/parchment.png`    | Parchment texture behind the menu flavour text                                          |
+| `preview.html`        | Browsable contact sheet of everything above                                             |
 
 `npm run contact-sheet -w @sms/tools` renders the labelled unit sheet at `docs/wh-sprites.png`.
 
@@ -40,8 +40,8 @@ Animation ranges are `[firstFrame, count]` within the sprite's horizontal strip.
 
 The client picks the frame from the enemy's state flags in the snapshot. `attacking` plays
 `attack`. A death spawns a corpse that plays `death` once and then becomes a decal. Charge
-wind-up, burrowed and synapse states are extra draw effects (dust plume, synapse halo, shake),
-so they need no frames of their own.
+wind-up (crouch / rear-up pose, eye glow, dust), dash (stretch, ghost trails), burrowed and synapse
+states are extra draw effects, so they need no frames of their own.
 
 ## Dropping in your own art (override)
 
@@ -54,8 +54,8 @@ so they need no frames of their own.
      transparent background.
 3. Run `npm run assets`. The manifest then shows `source: "override"` for that key, and the
    generator log counts overrides.
-4. Audio works the same way: `tools/assets-src/overrides/sfx/<key>.wav` or `.../music/<key>.wav`
-   is copied as-is.
+4. Audio works the same way: `tools/assets-src/overrides/sfx/<key>.wav` (or variants
+   `<key>_0.wav`, `<key>_1.wav`, …) or `.../music/<key>.wav` is copied as-is.
 
 Each `SpriteDef` in `tools/src/sprites/` has a `prompt` field that describes the intended look,
 so an artist can work from it. Only use art you made or have the rights to. Do **not** drop in
@@ -68,3 +68,29 @@ Add a `SpriteDef` (`key, w, h, frames, anims?, anchor?, scale?, draw(ctx, frame,
 relevant file in `tools/src/sprites/`, and reference the key from content data
 (`shared/src/data/*.ts`). The generator fails on any content key that has no asset (the
 "coverage" check), and `tools/test/assets.test.ts` checks the frame counts and animation ranges.
+
+## Sound
+
+Every SFX is a **recipe** in `tools/src/audio/recipes.ts`, rendered by `synth.ts` with the DSP
+toolkit in `dsp.ts` at **44.1 kHz, 16-bit**. The design language follows the 40k games (Space
+Marine 2, Dawn of War):
+
+- **Guns** stack a transient crack, a sub thump sweeping through 40–120 Hz, a filtered noise
+  body, a mechanical rattle (bolt, belt, magazine) and a short corridor reverb, then saturate and
+  compress the sum.
+- **Tyranids** use formant-filtered throats (hisses, shrieks, roars), FM screeches and granular
+  chitin (skitter, crunches, debris).
+- **Loops** (flamer jet, plasma whine, synapse drone, swarm and hive beds) are rendered with a
+  cross-faded seam and tested for clicks.
+
+One-shots get 2–4 **variants** with pitch/time jitter, written as `sfx/<key>_<n>.wav` and listed
+under `variants` in the manifest. The client loads variant 0 of every sound first and the rest
+lazily. The full list with descriptions is in `preview.html` (each recipe has a `description`).
+
+The client mixer routes each sound by its recipe `bus` (weapons, enemies, ambience, ui; music has
+its own) through a compressor, limits the total to 32 voices by `priority`, attenuates and pans
+by distance from the listener, and ducks the music on big blasts.
+
+`npm run audio-preview -w @sms/tools` renders a 32-second scripted battle mix (bolters, heavy
+bolter, flamer, plasma with overheat, melta, sword, frags, a Hormagaunt pack leaping, a Carnifex
+charge, the swarm bed) to `docs/audio-preview.wav` and `docs/audio-preview.mp3` (needs ffmpeg).

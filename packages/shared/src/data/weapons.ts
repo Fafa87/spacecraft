@@ -30,7 +30,7 @@ export const WEAPONS: WeaponDef[] = [
     },
     unlockAtSec: 0,
     crateWeight: 0,
-    sfx: { fire: 'shoot_bolt_rifle', reload: 'reload_bolter' },
+    sfx: { fire: 'shoot_bolt_rifle', reload: 'reload_bolter', impact: 'bolt_impact' },
     sprites: { icon: 'icon_bolt_rifle', pickup: 'crate_bolt_rifle', held: 'held_bolt_rifle' },
   },
   {
@@ -58,7 +58,7 @@ export const WEAPONS: WeaponDef[] = [
     },
     unlockAtSec: 45,
     crateWeight: 6,
-    sfx: { fire: 'swing_power_sword', reload: 'power_field' },
+    sfx: { fire: 'swing_power_sword', reload: 'power_field', impact: 'sword_impact' },
     sprites: { icon: 'icon_power_sword', pickup: 'crate_power_sword', held: 'held_power_sword' },
   },
   {
@@ -85,7 +85,7 @@ export const WEAPONS: WeaponDef[] = [
     },
     unlockAtSec: 90,
     crateWeight: 10,
-    sfx: { fire: 'shoot_heavy_bolter', reload: 'reload_heavy' },
+    sfx: { fire: 'shoot_heavy_bolter', reload: 'reload_heavy', impact: 'heavy_bolt_impact' },
     sprites: { icon: 'icon_heavy_bolter', pickup: 'crate_heavy_bolter', held: 'held_heavy_bolter' },
   },
   {
@@ -114,7 +114,12 @@ export const WEAPONS: WeaponDef[] = [
     },
     unlockAtSec: 150,
     crateWeight: 8,
-    sfx: { fire: 'shoot_flamer', reload: 'reload_heavy' },
+    sfx: {
+      fire: 'flamer_ignite',
+      loop: 'flamer_loop',
+      end: 'flamer_tail',
+      reload: 'reload_flamer',
+    },
     sprites: { icon: 'icon_flamer', pickup: 'crate_flamer', held: 'held_flamer' },
   },
   {
@@ -151,7 +156,13 @@ export const WEAPONS: WeaponDef[] = [
     },
     unlockAtSec: 240,
     crateWeight: 6,
-    sfx: { fire: 'shoot_plasma', reload: 'reload_plasma' },
+    sfx: {
+      fire: 'shoot_plasma',
+      superFire: 'shoot_plasma_super',
+      reload: 'reload_plasma',
+      impact: 'plasma_impact',
+      heatLoop: 'plasma_whine',
+    },
     sprites: { icon: 'icon_plasma_gun', pickup: 'crate_plasma_gun', held: 'held_plasma_gun' },
   },
   {
@@ -178,7 +189,7 @@ export const WEAPONS: WeaponDef[] = [
     },
     unlockAtSec: 330,
     crateWeight: 5,
-    sfx: { fire: 'shoot_melta', reload: 'reload_heavy' },
+    sfx: { fire: 'shoot_melta', reload: 'reload_melta', impact: 'melta_impact' },
     sprites: { icon: 'icon_meltagun', pickup: 'crate_meltagun', held: 'held_meltagun' },
   },
   {

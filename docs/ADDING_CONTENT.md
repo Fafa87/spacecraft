@@ -48,9 +48,11 @@ After any change, run: `npm run assets && npm test && npm run dev`.
    `icons.ts` / `fx.ts`. Each one is a `SpriteDef` with a `draw(ctx, frame, rng)` using
    the helpers in `sprites/draw.ts`. Copying an existing icon, crate and projectile is the
    fastest route. Fill in `prompt` as well (an art brief for later).
-3. **Sound:** add an `SfxDef` with key `shoot_autocannon` to `tools/src/audio/sfxPresets.ts`.
-   Layer sfxr params (wave, baseFreq, freqRamp, envelope, …) and tweak them while listening in
-   `preview.html`.
+3. **Sound:** add a recipe with key `shoot_autocannon` to `tools/src/audio/recipes.ts`
+   (bus `'weapons'`). The quickest route is to copy the heavy bolter recipe and change the
+   building blocks (`crack`, `sub`, `body`, `rattle`, …) and the `post` chain, then listen in
+   `preview.html`. Optional extra keys in the weapon's `sfx`: `impact` (hit on a Tyranid),
+   `superFire`, `loop`/`end` (held-trigger loop such as the flamer) and `heatLoop`.
 4. **Client visuals (optional):** `packages/client/src/render/visuals.ts` has
    `PROJECTILE_VISUALS` keyed by projectile kind (colour, glow, trail) and `WEAPON_VISUALS` keyed by
    weapon id (muzzle flash size, recoil, casings, screen shake). Unknown ids use the defaults.
@@ -78,6 +80,8 @@ After any change, run: `npm run assets && npm test && npm run dev`.
      medkitDropChance: 0.08,
      sprite: 'enemy_lictor',
      sfx: { death: 'nid_die_big', attack: 'nid_slash', roar: 'nid_shriek' },
+     // optional: windup (charge telegraph), leap (dash start), step + stepEvery (footsteps
+     // by px walked), move + moveEvery (skitter / burrow rumble), aura (looping drone)
      decal: 'blood',              // 'blood' | 'acid'
    },
    ```
@@ -110,13 +114,27 @@ Measure with `npm run sim -- --bot=kite --seeds=8 --sizes=1,2,4`.
 
 ## Add or replace a sound or music track
 
-- **Procedural SFX:** add an `SfxDef` to `tools/src/audio/sfxPresets.ts`. Game-event sounds the
-  client always uses are listed in `CORE_SOUNDS` (`shared/src/assets/keys.ts`).
+- **Procedural SFX:** add a `Recipe` to `tools/src/audio/recipes.ts`:
+  `{ key, description, bus, volume, maxVoices, priority, variants?, vary?, duck?, loop?, layers, post? }`.
+  - `layers` are rendered and summed. The kinds are `tone` (oscillator with a pitch contour; a
+    `Range` is a number, `[from, to]` or a multi-point contour), `noise` (white/pink/brown through
+    a swept biquad), `click` (transient), `metal` (inharmonic partials: clanks, rattles),
+    `grains` (granular chitin and debris), `formant` (vowel throats: hisses, roars, grunts) and
+    `crackle` (electric sparks).
+  - `post` masters the sum: EQ, saturation, compression and a short reverb.
+  - `variants` (default 3) are re-rolled with `vary` pitch/time jitter. `loop: { length, xf }`
+    renders a seamless loop (a single variant). `duck` lowers the music when it plays.
+  - `bus` (`weapons` | `enemies` | `ambience` | `ui`) picks the mixer slider. `priority` 0–10 decides
+    who survives the 32-voice limit.
+  - Game-event sounds the client always uses are listed in `CORE_SOUNDS` (`shared/src/assets/keys.ts`).
+  - Audition: `npm run assets`, then `/assets/generated/preview.html`, or add the key to the
+    scripted mix in `tools/src/audioPreview.ts` and run `npm run audio-preview -w @sms/tools`.
 - **Procedural music:** add a `SongSpec` to `tools/src/audio/music.ts`:
   `{ key, style: 'battle'|'menu'|'tension', bpm, bars, root, scale, progression, seed, volume }`.
   Tracks the client plays are listed in `CORE_MUSIC`.
-- **Hand-made or AI-made audio:** drop `tools/assets-src/overrides/sfx/<key>.wav` or
-  `.../music/<key>.wav`. It is copied as-is, and the manifest marks it `source: "override"`.
+- **Hand-made or AI-made audio:** drop `tools/assets-src/overrides/sfx/<key>.wav` (one take) or
+  `<key>_0.wav`, `<key>_1.wav`, … (variants), or `.../music/<key>.wav`. They are copied as-is, and
+  the manifest marks them `source: "override"`.
 
 ## Replace a sprite with real art
 

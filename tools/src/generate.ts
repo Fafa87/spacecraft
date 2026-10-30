@@ -6,7 +6,7 @@
  * named after an asset key replaces the procedural version:
  *   sprites/<key>.png  — a horizontal strip of `frames` frames (any size; scaled to frame size,
  *                        frame order = the sprite's `anims` layout, see docs/ART_PIPELINE.md)
- *   sfx/<key>.wav      — copied as-is
+ *   sfx/<key>.wav      — copied as-is (single take), or sfx/<key>_0.wav, <key>_1.wav… (variants)
  *   music/<key>.wav    — copied as-is
  * This is the hook for AI-generated or hand-painted assets.
  *
@@ -19,7 +19,9 @@ import { createCanvas, loadImage } from '@napi-rs/canvas';
 import { defaultContent, referencedAssetKeys, Rng, type AssetManifest } from '@sms/shared';
 import { packShelves } from './atlas/pack.js';
 import { SONGS, renderSong } from './audio/music.js';
-import { SFX, renderSfx } from './audio/sfxPresets.js';
+import { RECIPES } from './audio/recipes.js';
+import { renderRecipe, variantCount } from './audio/synth.js';
+import { SR } from './audio/dsp.js';
 import { decodeWav, encodeWav } from './audio/wav.js';
 import { OUT_DIR, OVERRIDES_DIR } from './paths.js';
 import { SPRITES, UI_IMAGES, type SpriteDef } from './sprites/index.js';
@@ -122,27 +124,53 @@ async function writeUiImages(): Promise<void> {
 
 function buildAudio(manifest: AssetManifest): void {
   const t0 = Date.now();
-  fs.mkdirSync(path.join(OUT_DIR, 'sfx'), { recursive: true });
+  const sfxDir = path.join(OUT_DIR, 'sfx');
+  fs.mkdirSync(sfxDir, { recursive: true });
   fs.mkdirSync(path.join(OUT_DIR, 'music'), { recursive: true });
+  // stale renders of removed / renamed sounds would otherwise ship forever
+  for (const f of fs.readdirSync(sfxDir)) if (f.endsWith('.wav')) fs.rmSync(path.join(sfxDir, f));
   let overrides = 0;
-  for (const def of SFX) {
-    const file = `sfx/${def.key}.wav`;
-    const ov = path.join(OVERRIDES_DIR, 'sfx', `${def.key}.wav`);
-    let buf: Buffer;
+  let files = 0;
+  for (const r of RECIPES) {
+    // overrides: sfx/<key>.wav (single take) or sfx/<key>_0.wav, <key>_1.wav ... (variants)
+    const ovDir = path.join(OVERRIDES_DIR, 'sfx');
+    const ovSingle = path.join(ovDir, `${r.key}.wav`);
+    const ovVariants = fs.existsSync(ovDir)
+      ? fs
+          .readdirSync(ovDir)
+          .filter((f) => new RegExp(`^${r.key}_\\d+\\.wav$`).test(f))
+          .sort()
+          .map((f) => path.join(ovDir, f))
+      : [];
+    const takes: Buffer[] = [];
     let source: 'override' | 'procedural' = 'procedural';
-    if (fs.existsSync(ov)) {
-      buf = fs.readFileSync(ov);
+    if (fs.existsSync(ovSingle) || ovVariants.length) {
+      for (const f of fs.existsSync(ovSingle) ? [ovSingle] : ovVariants)
+        takes.push(fs.readFileSync(f));
       source = 'override';
       overrides++;
-    } else buf = encodeWav(renderSfx(def), 44100);
-    fs.writeFileSync(path.join(OUT_DIR, file), buf);
-    const wav = decodeWav(buf);
-    manifest.sounds[def.key] = {
-      file,
-      volume: def.volume,
-      maxVoices: def.maxVoices,
-      durationSec: +(wav.samples.length / wav.channels / wav.sampleRate).toFixed(3),
+    } else for (let v = 0; v < variantCount(r); v++) takes.push(encodeWav(renderRecipe(r, v), SR));
+    const variants: string[] = [];
+    let dur = 0;
+    takes.forEach((buf, i) => {
+      const file = `sfx/${r.key}_${i}.wav`;
+      fs.writeFileSync(path.join(OUT_DIR, file), buf);
+      variants.push(file);
+      const wav = decodeWav(buf);
+      dur = Math.max(dur, wav.samples.length / wav.channels / wav.sampleRate);
+      files++;
+    });
+    manifest.sounds[r.key] = {
+      file: variants[0],
+      variants,
+      volume: r.volume,
+      maxVoices: r.maxVoices,
+      durationSec: +dur.toFixed(3),
       source,
+      bus: r.bus,
+      priority: r.priority,
+      ...(r.loop ? { loop: true } : {}),
+      ...(r.duck ? { duck: r.duck } : {}),
     };
   }
   for (const song of SONGS) {
@@ -166,7 +194,7 @@ function buildAudio(manifest: AssetManifest): void {
     };
   }
   console.log(
-    `  audio: ${SFX.length} sfx + ${SONGS.length} music tracks (${overrides} overrides) in ${Date.now() - t0} ms`,
+    `  audio: ${RECIPES.length} sfx (${files} variant files) + ${SONGS.length} music tracks (${overrides} overrides) in ${Date.now() - t0} ms`,
   );
 }
 

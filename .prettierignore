@@ -2,3 +2,4 @@ node_modules
 dist
 packages/client/public/assets/generated
 package-lock.json
+.deploy

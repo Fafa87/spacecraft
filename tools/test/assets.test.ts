@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { defaultContent, referencedAssetKeys, CORE_MUSIC } from '@sms/shared';
 import { packShelves } from '../src/atlas/pack.js';
 import { renderSong, SONGS } from '../src/audio/music.js';
-import { renderSfx, SFX } from '../src/audio/sfxPresets.js';
+import { RECIPES } from '../src/audio/recipes.js';
+import { renderRecipe, variantCount } from '../src/audio/synth.js';
+import { SR, Biquad, Rng, makeLoop } from '../src/audio/dsp.js';
 import { decodeWav, encodeWav, normalize } from '../src/audio/wav.js';
 import { SPRITES } from '../src/sprites/index.js';
 import { animAt, animLayout } from '../src/sprites/types.js';
@@ -14,8 +16,8 @@ describe('asset coverage', () => {
     const have = new Set(SPRITES.map((s) => s.key));
     expect(refs.sprites.filter((k) => !have.has(k))).toEqual([]);
   });
-  it('every referenced sound has a preset', () => {
-    const have = new Set(SFX.map((s) => s.key));
+  it('every referenced sound has a recipe', () => {
+    const have = new Set(RECIPES.map((s) => s.key));
     expect(refs.sounds.filter((k) => !have.has(k))).toEqual([]);
   });
   it('every core music track has a song spec', () => {
@@ -68,14 +70,66 @@ describe('audio', () => {
     const n = normalize(new Float32Array([0.1, -0.2, 0.05]), 0.9);
     expect(Math.max(...[...n].map(Math.abs))).toBeCloseTo(0.9, 5);
   });
-  it('sfx render non-silent, bounded and deterministic', () => {
-    for (const def of SFX.slice(0, 6)) {
-      const a = renderSfx(def, 22050);
-      expect(a.length).toBeGreaterThan(100);
-      expect(Math.max(...[...a].map(Math.abs))).toBeGreaterThan(0.01);
-      expect([...a].every((v) => Number.isFinite(v) && Math.abs(v) <= 1.0001)).toBe(true);
-      expect(renderSfx(def, 22050)).toEqual(a);
+  const pick = [
+    'shoot_bolt_rifle',
+    'flamer_loop',
+    'horma_shriek',
+    'carnifex_roar',
+    'ui_click',
+    'amb_swarm',
+  ];
+  const byKey = new Map(RECIPES.map((r) => [r.key, r]));
+  it('recipes render non-silent, bounded and deterministic at 44.1 kHz', () => {
+    expect(SR).toBe(44100);
+    for (const k of pick) {
+      const r = byKey.get(k)!;
+      const a = renderRecipe(r, 0);
+      expect(a.length, k).toBeGreaterThan(SR * 0.02);
+      let pk = 0;
+      let finite = true;
+      for (const v of a) {
+        if (!Number.isFinite(v)) finite = false;
+        pk = Math.max(pk, Math.abs(v));
+      }
+      expect(finite, k).toBe(true);
+      expect(pk, k).toBeGreaterThan(0.05);
+      expect(pk, k).toBeLessThanOrEqual(1);
+      expect(renderRecipe(r, 0)).toEqual(a);
     }
+  });
+  it('variants differ from each other; loops are single-take', () => {
+    const r = byKey.get('shoot_bolt_rifle')!;
+    expect(variantCount(r)).toBeGreaterThanOrEqual(3);
+    expect(renderRecipe(r, 1)).not.toEqual(renderRecipe(r, 0));
+    expect(variantCount(byKey.get('flamer_loop')!)).toBe(1);
+  });
+  it('loops wrap without a click', () => {
+    for (const r of RECIPES.filter((x) => x.loop)) {
+      const a = renderRecipe(r, 0);
+      const jump = Math.abs(a[0] - a[a.length - 1]);
+      let avg = 0;
+      for (let i = 1; i < a.length; i++) avg += Math.abs(a[i] - a[i - 1]);
+      avg /= a.length;
+      expect(jump, r.key).toBeLessThan(Math.max(0.05, avg * 12));
+    }
+  });
+  it('makeLoop shortens by the crossfade length', () => {
+    const rng = new Rng(3);
+    const src = Float32Array.from({ length: 5000 }, () => rng.bi());
+    expect(makeLoop(src, 1000 / SR).length).toBe(4000);
+  });
+  it('biquad low-pass attenuates high frequencies', () => {
+    const lp = new Biquad('lp', 500, 0.707);
+    let hi = 0;
+    for (let i = 0; i < 4410; i++) {
+      const y = lp.process(Math.sin((2 * Math.PI * 8000 * i) / SR));
+      if (i > 400) hi = Math.max(hi, Math.abs(y));
+    }
+    expect(hi).toBeLessThan(0.02);
+  });
+  it('recipe keys are unique and described', () => {
+    expect(new Set(RECIPES.map((r) => r.key)).size).toBe(RECIPES.length);
+    for (const r of RECIPES) expect(r.description.length, r.key).toBeGreaterThan(5);
   });
   it('songs have the length implied by bpm and bars', () => {
     const spec = SONGS[0];
@@ -125,10 +179,15 @@ describe('hive siege sprites', () => {
     expect(animAt(anims, 12)).toEqual(['death', 3, 4]);
   });
   it('the hive siege sound set has the signature sounds', () => {
-    const keys = new Set(SFX.map((s) => s.key));
+    const keys = new Set(RECIPES.map((s) => s.key));
     for (const k of [
       'shoot_heavy_bolter',
-      'shoot_flamer',
+      'flamer_loop',
+      'shoot_melta',
+      'horma_shriek',
+      'carnifex_roar',
+      'synapse_drone',
+      'amb_swarm',
       'shoot_plasma',
       'nid_shriek',
       'nid_chitter',

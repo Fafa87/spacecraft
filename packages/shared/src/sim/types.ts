@@ -151,7 +151,10 @@ export type GameEvent =
   | { e: 'bite'; p: number; t?: string }
   | { e: 'overheat'; p: number }
   | { e: 'emerge'; x: number; y: number; t: string }
+  /** Charge / leap wind-up started (telegraph). */
   | { e: 'charge'; x: number; y: number; t: string }
+  /** Wind-up finished: the dash / leap begins. */
+  | { e: 'leap'; x: number; y: number; t: string }
   | { e: 'boss'; t: string; n: number }
   | { e: 'hurt'; p: number; d: number }
   | { e: 'down'; p: number }

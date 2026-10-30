@@ -179,6 +179,24 @@ describe('Tyranid behaviours', () => {
     expect(evs.some((e) => e.e === 'charge' && e.t === 'carnifex')).toBe(true);
   });
 
+  it('signals the leap: windup flag first, then a leap event and the dashing flag', () => {
+    const w = quietWorld();
+    const p = w.players[0];
+    spawnEnemy(w, 'carnifex', p.x + 300, p.y);
+    const c = w.enemies[0];
+    c.chargeCooldown = 0;
+    const seq: string[] = [];
+    for (let i = 0; i < 120 && !seq.includes('leap'); i++) {
+      for (const ev of run(w, 1)) if (ev.e === 'charge' || ev.e === 'leap') seq.push(ev.e);
+      const f = enemyFlags(c);
+      if (f & ENEMY_FLAG.windup && !seq.includes('windup')) seq.push('windup');
+      if (f & ENEMY_FLAG.dashing && !seq.includes('dashing')) seq.push('dashing');
+    }
+    expect(seq.slice(0, 2)).toEqual(['charge', 'windup']);
+    expect(seq).toContain('leap');
+    expect(seq.indexOf('leap')).toBeGreaterThan(seq.indexOf('windup'));
+  });
+
   it('spore mines burst and hurt nearby marines', () => {
     const w = quietWorld();
     const p = w.players[0];

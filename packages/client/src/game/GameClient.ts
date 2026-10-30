@@ -15,6 +15,7 @@ import type { Assets } from '../render/assets.js';
 import { InputManager, resolveSlot } from '../input/index.js';
 import { Hud, type Insets, type Notice } from '../render/hud.js';
 import { Renderer } from '../render/Renderer.js';
+import { EnemyAudio } from './enemyAudio.js';
 import { isImmediate, playEvent, type FxContext, type NoticeKind } from './fx.js';
 import { SnapshotBuffer } from './interpolation.js';
 import { Predictor } from './prediction.js';
@@ -31,6 +32,7 @@ export class GameClient extends Emitter<GameClientEvents> {
   readonly renderer: Renderer;
   private readonly hud: Hud;
   private readonly input: InputManager;
+  private readonly enemyAudio: EnemyAudio;
   /** World point the camera leans towards (mouse cursor / aim direction); null = none. */
   private lookPoint: { x: number; y: number } | null = null;
   private readonly buffer = new SnapshotBuffer();
@@ -59,6 +61,7 @@ export class GameClient extends Emitter<GameClientEvents> {
     super();
     this.renderer = new Renderer(canvas, assets, content);
     this.hud = new Hud(assets, content);
+    this.enemyAudio = new EnemyAudio(audio, content);
     this.input = new InputManager(canvas, {
       hitSlot: (x, y) => this.hud.slotAt(x, y),
       onButton: (act) => act === 'mute' && this.toggleMute(),
@@ -73,6 +76,7 @@ export class GameClient extends Emitter<GameClientEvents> {
       s.on('snapshot', (snap) => this.onSnapshot(snap)),
       s.on('over', (o) => {
         this.over = true;
+        this.enemyAudio.stop();
         this.audio.playMusic('gameover');
         this.emit('over', o);
       }),
@@ -100,6 +104,7 @@ export class GameClient extends Emitter<GameClientEvents> {
     cancelAnimationFrame(this.raf);
     this.input.dispose();
     for (const u of this.unsubs) u();
+    this.enemyAudio.stop();
     this.canvas.classList.remove('playing');
     this.clear();
   }
@@ -228,6 +233,7 @@ export class GameClient extends Emitter<GameClientEvents> {
       this.cameraInit = true;
     }
     this.audio.listener = { x: r.camera.x, y: r.camera.y };
+    this.audio.spatial.halfWidth = Math.max(320, r.camera.width / 2 / (r.camera.zoom || 1));
 
     r.render({
       a: sample.a,
@@ -238,6 +244,8 @@ export class GameClient extends Emitter<GameClientEvents> {
       nowMs: now,
       dt,
     });
+    if (!this.over) this.enemyAudio.update(sample.b, this.audio.listener, dt, meLatest, r.landings);
+    this.audio.update();
     this.hurt = Math.max(0, this.hurt - dt * 1.2);
     r.ctx.setTransform(1, 0, 0, 1, 0, 0);
     r.damageOverlay(this.hurt);

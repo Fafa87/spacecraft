@@ -202,6 +202,45 @@ button.primary:hover:not(:disabled) {
 .help b {
   color: var(--text);
 }
+.mixer {
+  margin-top: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  font-size: 12px;
+}
+.mixer summary {
+  cursor: pointer;
+  color: var(--accent2);
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+.mixer .sliders {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+}
+.mixer .slider {
+  display: grid;
+  grid-template-columns: 78px 1fr 30px;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.mixer input[type='range'] {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
+  background: none;
+  border: none;
+}
+.mixer output {
+  text-align: right;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
 .muted {
   color: var(--muted);
 }

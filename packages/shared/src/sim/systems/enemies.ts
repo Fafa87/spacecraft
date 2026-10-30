@@ -57,8 +57,7 @@ function updateCharge(
     if (e.chargeCooldown > 0 || d > c.triggerDistance || d < c.minDistance) return false;
     e.chargePhase = 1;
     e.chargeTimer = c.windup;
-    if (def.sfx.roar)
-      world.events.push({ e: 'charge', x: Math.round(e.x), y: Math.round(e.y), t: e.type });
+    world.events.push({ e: 'charge', x: Math.round(e.x), y: Math.round(e.y), t: e.type });
   }
   e.chargeTimer -= dt;
   if (e.chargePhase === 1) {
@@ -70,6 +69,7 @@ function updateCharge(
     if (e.chargeTimer <= 0) {
       e.chargePhase = 2;
       e.chargeTimer = c.duration;
+      world.events.push({ e: 'leap', x: Math.round(e.x), y: Math.round(e.y), t: e.type });
     }
     return true;
   }

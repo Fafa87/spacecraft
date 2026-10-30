@@ -25,12 +25,27 @@ export interface SpriteEntry {
   group: string;
 }
 
+/** Mixer buses the client routes sounds through (each has a persisted volume slider). */
+export const SOUND_BUSES = ['weapons', 'enemies', 'ambience', 'ui'] as const;
+export type SoundBus = (typeof SOUND_BUSES)[number];
+
 export interface SoundEntry {
+  /** First variant (kept for older clients / tools). */
   file: string;
+  /** All recorded variants; the client picks one at random per play. Defaults to `[file]`. */
+  variants?: string[];
   volume: number;
   maxVoices: number;
   durationSec: number;
   source: AssetSource;
+  /** Mixer bus (default 'ui'). */
+  bus?: SoundBus;
+  /** Voice-stealing priority 0..10; higher survives when the global voice limit is hit. */
+  priority?: number;
+  /** Seamless loop (flamer roar, swarm ambience, synapse drone). */
+  loop?: boolean;
+  /** Duck the music bus by this fraction (0..1) when the sound plays (big explosions, roars). */
+  duck?: number;
 }
 
 export interface MusicEntry {

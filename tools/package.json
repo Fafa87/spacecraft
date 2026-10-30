@@ -1,15 +1,16 @@
 {
   "name": "@sms/tools",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "Procedural asset pipeline: sprites + atlas, sfxr-style SFX, chiptune music, asset manifest.",
+  "description": "Procedural asset pipeline: sprites + atlas, layered DSP SFX recipes, chiptune music, asset manifest.",
   "scripts": {
     "contact-sheet": "tsx src/contactSheet.ts",
     "generate": "tsx src/generate.ts",
     "generate:sprites": "tsx src/generate.ts --only=sprites",
     "generate:audio": "tsx src/generate.ts --only=audio",
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p .",
+    "audio-preview": "tsx src/audioPreview.ts"
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.56"

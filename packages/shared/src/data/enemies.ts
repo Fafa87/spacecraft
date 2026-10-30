@@ -21,7 +21,8 @@ export const ENEMIES: EnemyDef[] = [
     charge: {
       triggerDistance: 150,
       minDistance: 50,
-      windup: 0.18,
+      // long enough to read the crouch now that there is no telegraph line
+      windup: 0.32,
       duration: 0.26,
       speedMul: 2.4,
       cooldown: 2.6,
@@ -30,7 +31,12 @@ export const ENEMIES: EnemyDef[] = [
     threat: 1,
     medkitDropChance: 0.006,
     sprite: 'enemy_hormagaunt',
-    sfx: { death: 'nid_die_small', attack: 'nid_slash' },
+    sfx: {
+      death: 'nid_die_small',
+      attack: 'nid_slash',
+      windup: 'horma_windup',
+      leap: 'horma_shriek',
+    },
     decal: 'blood',
   },
   {
@@ -103,7 +109,12 @@ export const ENEMIES: EnemyDef[] = [
     threat: 3.2,
     medkitDropChance: 0.03,
     sprite: 'enemy_genestealer',
-    sfx: { death: 'nid_die_mid', attack: 'nid_slash' },
+    sfx: {
+      death: 'nid_die_mid',
+      attack: 'stealer_rend',
+      move: 'stealer_skitter',
+      moveEvery: 0.32,
+    },
     decal: 'blood',
   },
   {
@@ -138,7 +149,7 @@ export const ENEMIES: EnemyDef[] = [
     threat: 9,
     medkitDropChance: 0.15,
     sprite: 'enemy_warrior',
-    sfx: { death: 'nid_die_big', attack: 'nid_spit', roar: 'nid_shriek' },
+    sfx: { death: 'nid_die_big', attack: 'nid_spit', roar: 'nid_shriek', aura: 'synapse_drone' },
     decal: 'blood',
   },
   {
@@ -159,7 +170,13 @@ export const ENEMIES: EnemyDef[] = [
     threat: 7,
     medkitDropChance: 0.1,
     sprite: 'enemy_ravener',
-    sfx: { death: 'nid_die_big', attack: 'nid_slash', roar: 'nid_emerge' },
+    sfx: {
+      death: 'nid_die_big',
+      attack: 'nid_slash',
+      roar: 'nid_emerge',
+      move: 'ravener_burrow',
+      moveEvery: 0.5,
+    },
     decal: 'blood',
   },
   {
@@ -195,7 +212,7 @@ export const ENEMIES: EnemyDef[] = [
     threat: 5,
     medkitDropChance: 0.08,
     sprite: 'enemy_biovore',
-    sfx: { death: 'nid_die_mid', attack: 'nid_spore' },
+    sfx: { death: 'nid_die_mid', attack: 'biovore_thoomp' },
     decal: 'acid',
   },
   {
@@ -243,7 +260,8 @@ export const ENEMIES: EnemyDef[] = [
     charge: {
       triggerDistance: 430,
       minDistance: 120,
-      windup: 0.9,
+      // rear up, paw the deck, roar — then charge (readable without a telegraph line)
+      windup: 1.1,
       duration: 1.0,
       speedMul: 4.2,
       cooldown: 5.5,
@@ -254,7 +272,15 @@ export const ENEMIES: EnemyDef[] = [
     threat: 30,
     medkitDropChance: 1,
     sprite: 'enemy_carnifex',
-    sfx: { death: 'nid_die_huge', attack: 'nid_crush', roar: 'carnifex_roar' },
+    sfx: {
+      death: 'nid_die_huge',
+      attack: 'nid_crush',
+      roar: 'carnifex_roar',
+      windup: 'carnifex_roar',
+      leap: 'carnifex_charge',
+      step: 'carnifex_step',
+      stepEvery: 46,
+    },
     decal: 'blood',
   },
 ];

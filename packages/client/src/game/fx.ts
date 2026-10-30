@@ -32,8 +32,30 @@ export const isImmediate = (ev: GameEvent, myId: number): boolean =>
     ev.e === 'overheat') &&
   ev.p === myId;
 
-/** Throttle for the mass-reactive "crack" so a heavy bolter stream doesn't saturate audio. */
-let lastImpactSfx = 0;
+/** Per-sound throttle so a heavy bolter stream / flamer wash doesn't saturate the mixer. */
+const lastSfx = new Map<string, number>();
+function throttled(key: string, ms: number): boolean {
+  const now = performance.now();
+  if (now - (lastSfx.get(key) ?? -1e9) < ms) return true;
+  lastSfx.set(key, now);
+  return false;
+}
+
+/** Projectile kind → impact sound, derived from weapon data (`sfx.impact`). */
+let impactByKind: Map<string, string> | null = null;
+let impactFor: ContentRegistry | null = null;
+function impactSound(content: ContentRegistry, kind: string): string | undefined {
+  if (impactFor !== content || !impactByKind) {
+    impactFor = content;
+    impactByKind = new Map();
+    for (const w of content.weapons.values())
+      if (w.sfx.impact) {
+        impactByKind.set(w.projectile.kind, w.sfx.impact);
+        impactByKind.set(`${w.projectile.kind}_super`, w.sfx.impact);
+      }
+  }
+  return impactByKind.get(kind);
+}
 
 const decal = (prefix: string) => `decal_${prefix}_${Math.floor(Math.random() * DECAL_VARIANTS)}`;
 
@@ -46,7 +68,22 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
       const w = content.weapons.get(ev.w);
       const vis = WEAPON_VISUALS[ev.w] ?? DEFAULT_WEAPON_VISUAL;
       const mine = ev.p === fx.myId;
-      if (w) audio.play(w.sfx.fire, { x: ev.x, y: ev.y, volume: mine ? 1 : 0.6 });
+      if (w?.sfx.loop)
+        // held weapons (flamer): ignition → seamless roar while firing → tail on release
+        audio.sustain(
+          `held:${ev.p}`,
+          { start: w.sfx.fire, loop: w.sfx.loop, end: w.sfx.end },
+          ev.x,
+          ev.y,
+          mine ? 1 : 0.6,
+        );
+      else if (w)
+        audio.play(ev.s && w.sfx.superFire ? w.sfx.superFire : w.sfx.fire, {
+          x: ev.x,
+          y: ev.y,
+          volume: mine ? 1 : 0.6,
+          priority: mine ? 8 : undefined,
+        });
       r.kick(ev.p, vis.recoil * (ev.s ? 1.6 : 1));
       // ev.x/ev.y is the muzzle position
       const mx = ev.x;
@@ -151,12 +188,10 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
           color: '#ffb050',
           angle: Math.random() * 6,
         });
-        const now = performance.now();
-        if (now - lastImpactSfx > 45) {
-          lastImpactSfx = now;
-          audio.play('bolt_impact', { x: ev.x, y: ev.y, volume: 0.45 });
-        }
       }
+      const imp = impactSound(content, k);
+      if (imp && !throttled(imp, k === 'slash' ? 70 : 45))
+        audio.play(imp, { x: ev.x, y: ev.y, volume: k === 'slash' ? 0.8 : 0.5 });
       const color =
         k === 'deathspitter' || k === 'spore'
           ? '#9cff3a'
@@ -207,7 +242,9 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
       break;
     }
     case 'boom': {
-      audio.play('explosion', { x: ev.x, y: ev.y, volume: ev.r < 60 ? 0.6 : 1 });
+      // bolt shells (r≈30) already have their impact crack; spore bursts squelch; frags boom
+      if (ev.r >= 110) audio.play('explosion', { x: ev.x, y: ev.y });
+      else if (ev.r >= 60) audio.play('nid_spore_burst', { x: ev.x, y: ev.y });
       const scale = ev.r / 64;
       P.spawn({
         x: ev.x,
@@ -325,9 +362,32 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
     }
     case 'charge': {
       const def = content.enemies.get(ev.t);
-      audio.play(def?.sfx.roar ?? 'carnifex_roar', { x: ev.x, y: ev.y });
-      const d = Math.hypot(ev.x - r.camera.x, ev.y - r.camera.y);
-      r.camera.addShake(Math.max(0, 7 - d / 120));
+      // wind-up starts: crouch hiss (gaunts) / rearing roar (Carnifex)
+      const key = def?.sfx.windup ?? def?.sfx.roar;
+      if (key) audio.play(key, { x: ev.x, y: ev.y, priority: 8 });
+      if ((def?.radius ?? 0) > 24) {
+        const d = Math.hypot(ev.x - r.camera.x, ev.y - r.camera.y);
+        r.camera.addShake(Math.max(0, 5 - d / 140));
+      }
+      break;
+    }
+    case 'leap': {
+      const def = content.enemies.get(ev.t);
+      if (def?.sfx.leap) audio.play(def.sfx.leap, { x: ev.x, y: ev.y, priority: 7 });
+      const big = (def?.radius ?? 0) > 24;
+      P.burst(ev.x, ev.y, big ? 16 : 7, {
+        speed: big ? 150 : 90,
+        color: '#5a4a38',
+        maxLife: 0.6,
+        size: big ? 7 : 4,
+        grow: 2,
+        shape: 'smoke',
+        drag: 3,
+      });
+      if (big) {
+        const d = Math.hypot(ev.x - r.camera.x, ev.y - r.camera.y);
+        r.camera.addShake(Math.max(0, 7 - d / 120));
+      }
       break;
     }
     case 'boss': {
@@ -341,8 +401,10 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
       const p = fx.players(ev.p);
       if (!p) break;
       P.burst(p.x, p.y, 6, { speed: 150, color: '#c01818', maxLife: 0.4, size: 2.5 });
+      if (!throttled(`armour:${ev.p}`, 90))
+        audio.play('armour_hit', { x: p.x, y: p.y, volume: ev.p === fx.myId ? 0.9 : 0.5 });
       if (ev.p === fx.myId) {
-        audio.play('player_hurt', { volume: 0.8 });
+        if (!throttled('player_hurt', 380) && ev.d >= 3) audio.play('player_hurt', { volume: 0.8 });
         fx.hurtFlash(Math.min(0.35, ev.d / 60));
         r.camera.addShake(Math.min(8, ev.d / 3));
       }

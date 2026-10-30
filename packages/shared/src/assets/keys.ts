@@ -15,6 +15,11 @@ export const CORE_SOUNDS = [
   'bolt_impact',
   'overheat',
   'boss_horn',
+  'armour_hit',
+  'amb_swarm',
+  'amb_hive',
+  'dust_land',
+  'nid_hiss',
 ] as const;
 
 /** Terrain / prop / FX sprites the renderer uses regardless of content. */
@@ -72,15 +77,12 @@ export function referencedAssetKeys(content: ContentRegistry): ReferencedAssetKe
     sprites.add(w.sprites.icon);
     sprites.add(w.sprites.pickup);
     sprites.add(w.sprites.held);
-    sounds.add(w.sfx.fire);
-    sounds.add(w.sfx.reload);
+    for (const v of Object.values(w.sfx)) if (typeof v === 'string') sounds.add(v);
   }
   for (const k of content.projectileKinds) sprites.add(`proj_${k}`);
   for (const e of content.enemies.values()) {
     sprites.add(e.sprite);
-    sounds.add(e.sfx.death);
-    if (e.sfx.attack) sounds.add(e.sfx.attack);
-    if (e.sfx.roar) sounds.add(e.sfx.roar);
+    for (const v of Object.values(e.sfx)) if (typeof v === 'string') sounds.add(v);
     if (e.decal) for (let i = 0; i < DECAL_VARIANTS; i++) sprites.add(`decal_${e.decal}_${i}`);
   }
   return { sprites: [...sprites].sort(), sounds: [...sounds].sort() };

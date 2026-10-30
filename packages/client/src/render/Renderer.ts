@@ -49,7 +49,24 @@ interface EnemyTrack {
   /** Time the current attack animation started, or -1. */
   atk0: number;
   burrowed: boolean;
+  /** Time the current charge wind-up started, or -1. */
+  wind0: number;
+  /** Time the current dash started, or -1. */
+  dash0: number;
+  /** Next paw-the-ground dust puff (Carnifex wind-up). */
+  nextPaw: number;
 }
+
+/** Leap / charge landing (dash ended), drained by the client for the thud + dust sound. */
+export interface Landing {
+  x: number;
+  y: number;
+  r: number;
+  t: string;
+}
+
+const easeOut = (p: number) => 1 - (1 - p) * (1 - p);
+const easeInOut = (p: number) => (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2);
 
 interface Corpse {
   key: string;
@@ -89,6 +106,8 @@ export class Renderer {
   private trailAcc = new Map<number, number>();
   private vignette: CanvasGradient | null = null;
   private tracks = new Map<number, EnemyTrack>();
+  /** Dash landings since the last drain (see GameClient enemy audio). */
+  readonly landings: Landing[] = [];
   private corpses: Corpse[] = [];
   private recoil = new Map<number, number>();
   private props: Prop[] = [];
@@ -392,6 +411,146 @@ export class Renderer {
     c.restore();
   }
 
+  /**
+   * Wind-up telegraph on the creature itself. Gaunts: crouch (squashed along the facing,
+   * splayed wide), pull back, tremble harder as the spring loads, eyes flare red, feet kick up
+   * dust. Carnifex: rears up (grows, lifts off its shadow, leans back), sways, paws the deck
+   * with dust bursts at the front feet.
+   */
+  private windupPose(
+    pose: { dx: number; dy: number; sx: number; sy: number; rot: number; glow: number },
+    tr: EnemyTrack,
+    id: number,
+    p: number,
+    big: boolean,
+    time: number,
+    dt: number,
+  ): void {
+    const c = Math.cos(tr.ang);
+    const s = Math.sin(tr.ang);
+    const r = tr.r;
+    if (big) {
+      const e = easeInOut(Math.min(1, p / 0.7));
+      const lift = r * 0.32 * e;
+      pose.sx = 1 + 0.1 * e;
+      pose.sy = 1 + 0.18 * e;
+      pose.dx = -c * r * 0.22 * e;
+      pose.dy = -s * r * 0.22 * e - lift;
+      pose.rot = Math.sin(time * 9 + id) * 0.06 * e;
+      pose.glow = 0.4 + 0.6 * e;
+      if (time >= tr.nextPaw && p > 0.15) {
+        // paw the ground: alternating front feet
+        tr.nextPaw = time + 0.28;
+        const side = Math.floor(time / 0.28) % 2 ? 1 : -1;
+        const fx = tr.x + c * r * 0.75 - s * r * 0.45 * side;
+        const fy = tr.y + s * r * 0.75 + c * r * 0.45 * side;
+        this.particles.burst(fx, fy, 6, {
+          speed: 90,
+          color: '#5a4a38',
+          maxLife: 0.7,
+          size: 6,
+          grow: 2.5,
+          shape: 'smoke',
+          drag: 3,
+        });
+        this.particles.burst(fx, fy, 3, {
+          speed: 160,
+          color: '#3a3026',
+          maxLife: 0.4,
+          size: 2,
+          drag: 4,
+        });
+      }
+    } else {
+      const e = easeOut(p);
+      pose.sx = 1 - 0.24 * e;
+      pose.sy = 1 + 0.16 * e;
+      const tremble = (0.8 + 1.8 * p) * Math.sin(time * 75 + id * 1.7);
+      pose.dx = -c * r * 0.4 * e - s * tremble;
+      pose.dy = -s * r * 0.4 * e + c * tremble;
+      pose.glow = 0.3 + 0.7 * e;
+      if (Math.random() < dt * 22)
+        this.particles.spawn({
+          x: tr.x - c * r * 0.6 + (Math.random() - 0.5) * r,
+          y: tr.y - s * r * 0.6 + (Math.random() - 0.5) * r,
+          vx: -c * 60 + (Math.random() - 0.5) * 30,
+          vy: -s * 60 + (Math.random() - 0.5) * 30,
+          maxLife: 0.45,
+          size: 3,
+          grow: 2.5,
+          color: '#5a4a38',
+          shape: 'smoke',
+          additive: false,
+        });
+    }
+  }
+
+  /** Red menace glow under the body (before) and flaring eyes (after the sprite). */
+  private menaceGlow(
+    x: number,
+    y: number,
+    ang: number,
+    r: number,
+    k: number,
+    time: number,
+    id: number,
+    eyes: boolean,
+  ): void {
+    const { ctx } = this;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const flick = 0.85 + 0.15 * Math.sin(time * 40 + id);
+    if (!eyes) {
+      const g = ctx.createRadialGradient(x, y, r * 0.3, x, y, r * 1.6);
+      g.addColorStop(0, `rgba(255,40,20,${0.32 * k * flick})`);
+      g.addColorStop(1, 'rgba(255,40,20,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - r * 1.6, y - r * 1.6, r * 3.2, r * 3.2);
+    } else {
+      const c = Math.cos(ang);
+      const s = Math.sin(ang);
+      const hx = x + c * r * 0.55;
+      const hy = y + s * r * 0.55;
+      const er = Math.max(2, r * 0.13) * (0.8 + 0.5 * k);
+      for (const side of [-1, 1]) {
+        const ex = hx - s * r * 0.17 * side;
+        const ey = hy + c * r * 0.17 * side;
+        const g = ctx.createRadialGradient(ex, ey, 0, ex, ey, er * 2.4);
+        g.addColorStop(0, `rgba(255,230,200,${0.9 * k * flick})`);
+        g.addColorStop(0.35, `rgba(255,60,30,${0.75 * k * flick})`);
+        g.addColorStop(1, 'rgba(255,30,10,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(ex - er * 2.4, ey - er * 2.4, er * 4.8, er * 4.8);
+      }
+    }
+    ctx.restore();
+  }
+
+  /** Dust ring + grit where a leap / charge lands. */
+  private landingDust(x: number, y: number, ang: number, r: number): void {
+    const big = r > 24;
+    this.particles.burst(x, y, big ? 22 : 9, {
+      speed: big ? 170 : 100,
+      color: '#5a4a38',
+      maxLife: big ? 0.9 : 0.55,
+      size: big ? 8 : 4,
+      grow: 2.5,
+      shape: 'smoke',
+      drag: 4,
+    });
+    this.particles.burst(x + Math.cos(ang) * r * 0.5, y + Math.sin(ang) * r * 0.5, big ? 10 : 4, {
+      speed: big ? 240 : 150,
+      color: '#3a3026',
+      maxLife: 0.4,
+      size: 2,
+      drag: 5,
+    });
+    if (big) {
+      const d = Math.hypot(x - this.camera.x, y - this.camera.y);
+      this.camera.addShake(Math.max(0, 6 - d / 110));
+    }
+  }
+
   private drawEnemies(f: RenderFrame): void {
     const { ctx } = this;
     const prev = new Map(f.a.enemies.map((e) => [e[0], e]));
@@ -416,7 +575,20 @@ export class Renderer {
       const key = def?.sprite ?? '';
       let tr = this.tracks.get(id);
       if (!tr) {
-        tr = { x, y, ang, dist: (id * 37) % 50, key, vis, r, atk0: -1, burrowed: false };
+        tr = {
+          x,
+          y,
+          ang,
+          dist: (id * 37) % 50,
+          key,
+          vis,
+          r,
+          atk0: -1,
+          burrowed: false,
+          wind0: -1,
+          dash0: -1,
+          nextPaw: 0,
+        };
         this.tracks.set(id, tr);
       }
       tr.dist += Math.hypot(x - tr.x, y - tr.y);
@@ -428,6 +600,17 @@ export class Renderer {
       const attacking = (flags & ENEMY_FLAG.attacking) !== 0;
       if (attacking && tr.atk0 < 0) tr.atk0 = time;
       else if (!attacking) tr.atk0 = -1;
+      const windup = (flags & ENEMY_FLAG.windup) !== 0;
+      const dashing = (flags & ENEMY_FLAG.dashing) !== 0;
+      if (windup && tr.wind0 < 0) tr.wind0 = time;
+      else if (!windup) tr.wind0 = -1;
+      if (dashing && tr.dash0 < 0) tr.dash0 = time;
+      else if (!dashing && tr.dash0 >= 0) {
+        tr.dash0 = -1;
+        this.landings.push({ x, y, r, t: typeId });
+        if (this.landings.length > 16) this.landings.shift();
+        this.landingDust(x, y, ang, r);
+      }
       if (x < v.x0 || x > v.x1 || y < v.y0 || y > v.y1) continue;
 
       if (burrowed) {
@@ -464,7 +647,6 @@ export class Renderer {
         ctx.stroke();
       }
       const fuse = (flags & ENEMY_FLAG.fuse) !== 0;
-      const windup = (flags & ENEMY_FLAG.windup) !== 0;
       const pulse = fuse ? 1 + Math.sin(time * 30) * 0.08 : 1;
       if (fuse) {
         const g = ctx.createRadialGradient(x, y, 2, x, y, r * 2.4);
@@ -473,20 +655,6 @@ export class Renderer {
         ctx.fillStyle = g;
         ctx.fillRect(x - r * 2.4, y - r * 2.4, r * 4.8, r * 4.8);
       }
-      if (windup) {
-        // charge telegraph: pulsing red lane in the facing direction
-        const len = 320;
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(ang);
-        const g = ctx.createLinearGradient(r, 0, len, 0);
-        const al = 0.25 + 0.2 * Math.sin(time * 20);
-        g.addColorStop(0, `rgba(255,40,20,${al})`);
-        g.addColorStop(1, 'rgba(255,40,20,0)');
-        ctx.fillStyle = g;
-        ctx.fillRect(r, -r * 0.7, len, r * 1.4);
-        ctx.restore();
-      }
       let frame: number;
       if (tr.atk0 >= 0) frame = this.assets.animFrame(key, 'attack', time - tr.atk0, vis.attackFps);
       else if (windup) frame = this.assets.animFrame(key, 'attack', 0, 1, false);
@@ -494,40 +662,64 @@ export class Renderer {
         const a = this.assets.anim(key, 'walk');
         frame = a ? a[0] + (Math.floor(tr.dist / vis.stride) % a[1]) : Math.floor(time * 8 + id);
       }
-      if (flags & ENEMY_FLAG.dashing) {
-        ctx.globalAlpha = 0.25;
-        for (let k = 1; k <= 2; k++)
-          this.assets.draw(
+      // ---- body pose: wind-up crouch / rear, dash stretch (replaces the old red lane)
+      const big = r > 24;
+      const pose = { dx: 0, dy: 0, sx: pulse, sy: pulse, rot: 0, glow: 0 };
+      if (windup && def?.charge) {
+        const p = Math.min(1, (time - tr.wind0) / Math.max(0.05, def.charge.windup));
+        this.windupPose(pose, tr, id, p, big, time, f.dt);
+      } else if (dashing) {
+        // lunging: stretched along the facing, scythes forward
+        const k = Math.min(1, (time - tr.dash0) / 0.08);
+        pose.sx = 1 + 0.28 * k;
+        pose.sy = 1 - 0.14 * k;
+        pose.glow = 0.5;
+      }
+      const cx = x + pose.dx;
+      const cy = y + pose.dy;
+      const da = ang + pose.rot;
+      if (dashing) {
+        ctx.globalAlpha = 0.22;
+        for (let k = 1; k <= 3; k++)
+          this.assets.drawXform(
             ctx,
             key,
             frame,
-            x - Math.cos(ang) * 14 * k,
-            y - Math.sin(ang) * 14 * k,
-            ang,
+            cx - Math.cos(ang) * 13 * k,
+            cy - Math.sin(ang) * 13 * k,
+            da,
+            pose.sx,
+            pose.sy,
           );
         ctx.globalAlpha = 1;
       }
-      if (!this.assets.draw(ctx, key, frame, x, y, ang, pulse)) {
+      if (pose.glow > 0) this.menaceGlow(cx, cy, da, r, pose.glow, time, id, false);
+      const drawn =
+        pose.sx === pose.sy && pose.rot === 0
+          ? this.assets.draw(ctx, key, frame, cx, cy, da, pose.sx)
+          : this.assets.drawXform(ctx, key, frame, cx, cy, da, pose.sx, pose.sy);
+      if (!drawn) {
         ctx.fillStyle = vis.color;
         ctx.beginPath();
-        ctx.arc(x, y, r * pulse, 0, Math.PI * 2);
+        ctx.arc(cx, cy, r * pulse, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#000';
         ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + Math.cos(ang) * r, y + Math.sin(ang) * r);
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(da) * r, cy + Math.sin(da) * r);
         ctx.stroke();
       }
+      if (pose.glow > 0) this.menaceGlow(cx, cy, da, r, pose.glow, time, id, true);
       const flash = this.hitFlash.get(id) ?? 0;
       if (flash > 0) {
         this.hitFlash.set(id, flash - f.dt);
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
         ctx.globalAlpha = 0.55;
-        if (!this.assets.draw(ctx, key, frame, x, y, ang, pulse)) {
+        if (!this.assets.drawXform(ctx, key, frame, cx, cy, da, pose.sx, pose.sy)) {
           ctx.fillStyle = '#fff';
           ctx.beginPath();
-          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
           ctx.fill();
         }
         ctx.restore();

@@ -73,8 +73,20 @@ export interface WeaponDef {
   unlockAtSec: number | null;
   /** Relative weight when a weapon crate rolls its contents. 0 = never in crates. */
   crateWeight: number;
-  /** Sound keys (see tools/src/audio/sfxPresets.ts). */
-  sfx: { fire: string; reload: string };
+  /** Sound keys (recipes in tools/src/audio/recipes.ts). */
+  sfx: {
+    fire: string;
+    reload: string;
+    /** Supercharged shot (heat weapons). */
+    superFire?: string;
+    /** Held-trigger loop (flamer): `fire` is the ignition, `loop` roars while held, `end` is the tail. */
+    loop?: string;
+    end?: string;
+    /** Projectile impact on a Tyranid. */
+    impact?: string;
+    /** Loop whose level follows the local player's heat (plasma whine). */
+    heatLoop?: string;
+  };
   /** Sprite keys (see tools/src/sprites). */
   /** icon = HUD, pickup = crate, held = weapon + gauntlets overlay drawn on the marine. */
   sprites: { icon: string; pickup: string; held: string };
@@ -156,7 +168,24 @@ export interface EnemyDef {
   medkitDropChance: number;
   sprite: string;
   /** death/attack + optional roar (charge / emerge / boss arrival). */
-  sfx: { death: string; attack?: string; roar?: string };
+  sfx: {
+    death: string;
+    attack?: string;
+    /** Emerge / boss roar. */
+    roar?: string;
+    /** Charge wind-up cue (played when the leap / charge telegraph starts). */
+    windup?: string;
+    /** Dash / leap start. */
+    leap?: string;
+    /** Footstep, played every `stepEvery` px moved (heavy beasts). */
+    step?: string;
+    stepEvery?: number;
+    /** One-shot repeated while moving (skittering) or burrowed (rumble). */
+    move?: string;
+    moveEvery?: number;
+    /** Looping drone while alive (synapse creatures); level follows distance. */
+    aura?: string;
+  };
   decal: 'blood' | 'acid';
 }
 
