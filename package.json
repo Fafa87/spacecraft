@@ -1,0 +1,47 @@
+{
+  "name": "space-marine-survival",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Top-down co-op (1-4 players) swarm survival game for the web.",
+  "workspaces": [
+    "packages/shared",
+    "packages/server",
+    "packages/client",
+    "tools"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n server,client -c cyan,magenta \"npm run dev -w @sms/server\" \"npm run dev -w @sms/client\"",
+    "dev:server": "npm run dev -w @sms/server",
+    "dev:client": "npm run dev -w @sms/client",
+    "assets": "npm run generate -w @sms/tools",
+    "build": "npm run typecheck && npm run build -w @sms/server && npm run build -w @sms/client",
+    "start": "npm run start -w @sms/server",
+    "preview": "npm run preview -w @sms/client",
+    "typecheck": "tsc -p packages/shared && tsc -p packages/server && tsc -p packages/client && tsc -p tools",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "smoke": "tsx scripts/smoke.ts",
+    "smoke:browser": "tsx scripts/browser-smoke.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.12.0",
+    "@types/node": "^20.14.0",
+    "concurrently": "^9.0.1",
+    "eslint": "^9.12.0",
+    "eslint-config-prettier": "^9.1.0",
+    "globals": "^15.11.0",
+    "prettier": "^3.3.3",
+    "puppeteer-core": "^23.5.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.8.1",
+    "vitest": "^2.1.3"
+  }
+}

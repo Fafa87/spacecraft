@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+coverage/
+/data/
+packages/server/data/
+.env
+.env.local
+# generated assets are committed? No: regenerate with `npm run assets`.
+packages/client/public/assets/generated/

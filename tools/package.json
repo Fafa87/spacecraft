@@ -1,0 +1,21 @@
+{
+  "name": "@sms/tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Procedural asset pipeline: sprites + atlas, sfxr-style SFX, chiptune music, asset manifest.",
+  "scripts": {
+    "generate": "tsx src/generate.ts",
+    "generate:sprites": "tsx src/generate.ts --only=sprites",
+    "generate:audio": "tsx src/generate.ts --only=audio",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1.56"
+  },
+  "devDependencies": {
+    "@sms/shared": "*",
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.0"
+  }
+}

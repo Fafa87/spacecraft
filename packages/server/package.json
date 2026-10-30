@@ -1,0 +1,29 @@
+{
+  "name": "@sms/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Highscore HTTP API (+ optional PeerJS signaling and dedicated WebSocket game host).",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.0",
+    "fastify": "^5.0.0",
+    "peer": "^1.0.2",
+    "sql.js": "^1.11.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@sms/shared": "*",
+    "@types/node": "^20.14.0",
+    "@types/sql.js": "^1.4.9",
+    "@types/ws": "^8.5.12",
+    "tsup": "^8.3.0",
+    "tsx": "^4.19.0"
+  }
+}
