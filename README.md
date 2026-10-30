@@ -265,8 +265,9 @@ The site is served from the **`gh-pages` branch** (Pages source "Deploy from a b
 /spacecraft/v0.1.0/          frozen v0.1.0 (BASE_PATH=/spacecraft/v0.1.0/)
 /spacecraft/v0.2.0/          frozen v0.2.0
 /spacecraft/v0.3.0/          frozen v0.3.0
-/spacecraft/v0.4.0/          frozen v0.4.0 …
-/spacecraft/versions.json    {"latest":"0.4.0","versions":[{"version","date","title","path"}…]} (newest first)
+/spacecraft/v0.4.0/          frozen v0.4.0
+/spacecraft/v0.4.1/          frozen v0.4.1 …
+/spacecraft/versions.json    {"latest":"0.4.1","versions":[{"version","date","title","path"}…]} (newest first)
 ```
 
 The menu's **Previous versions** link reads `versions.json` from the site root (a frozen build
@@ -283,8 +284,8 @@ loaded. Each version keeps its own localStorage highscore table and its own Fire
    changed). Then commit and push `master` (never force).
 3. Tag and release, targeting the exact commit:
    ```bash
-   git tag -a v0.4.0 -m "v0.4.0: Hive Siege — finite waves, 8 marines, scoring" && git push origin v0.4.0
-   gh release create v0.4.0 --target "$(git rev-parse HEAD)" --title "v0.4.0 · Hive Siege" --notes-file notes.md
+   git tag -a v0.4.1 -m "v0.4.1: Hive Siege — phones play in landscape" && git push origin v0.4.1
+   gh release create v0.4.1 --target "$(git rev-parse HEAD)" --title "v0.4.1 · Hive Siege" --notes-file notes.md
    ```
 4. Deploy: `npm run deploy:pages` builds the current checkout twice (into `/` and
    `/v<GAME_VERSION>/`) and adds a worktree of `origin/gh-pages`. In it, it replaces only the root
@@ -296,7 +297,7 @@ loaded. Each version keeps its own localStorage highscore table and its own Fire
      (`git worktree add /tmp/v010 v0.1.0 && cd /tmp/v010 && npm ci && BASE_PATH=/spacecraft/v0.1.0/ npm run build:pages`),
      then installed with `--add 0.1.0=/tmp/v010/packages/client/dist`.
 5. Check it live: `npx tsx scripts/pages-check.ts https://fafa87.github.io/spacecraft/` (also run
-   it on `/v0.1.0/`, `/v0.2.0/`, `/v0.3.0/` and `/v0.4.0/`). It checks the menu, assets under the base path, local scores,
+   it on `/v0.1.0/`, `/v0.2.0/`, `/v0.3.0/`, `/v0.4.0/` and `/v0.4.1/`). It checks the menu, assets under the base path, local scores,
    a P2P room, a solo run and the console.
 
 CI option: a `pages.yml` workflow that runs the same steps on `v*` tags
