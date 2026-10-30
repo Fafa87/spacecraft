@@ -1,6 +1,6 @@
 /**
- * Message encoding for wire transports. JSON for now; swap for a binary codec
- * (e.g. msgpack / hand-rolled DataView) without touching session code.
+ * Stateless JSON message encoding (protocol v4 wire format). Transports use the stateful
+ * per-link `createWireCodec()` (wire.ts) since v5; this stays for tools and tests.
  */
 export const codec = {
   encode(msg: unknown): string {

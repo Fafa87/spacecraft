@@ -1,4 +1,4 @@
-import type { ClientSession, ContentRegistry, LobbyInfo } from '@sms/shared';
+import { MAX_PLAYERS, type ClientSession, type ContentRegistry, type LobbyInfo } from '@sms/shared';
 import { chapterBadgeSvg, createChapterPicker } from '../chapters.js';
 import { prefs } from '../prefs.js';
 import { escapeHtml } from '../format.js';
@@ -37,7 +37,7 @@ export function createRoomScreen(
           <div class="row"><input id="link" readonly value="${escapeHtml(link)}"><button id="copy">COPY LINK</button></div>
         </div>
       </div>
-      <p class="muted small">Up to 4 battle-brothers, one chapter each. Each squad size has its own leaderboard.</p>
+      <p class="muted small">Up to ${MAX_PLAYERS} battle-brothers, one chapter each. Each squad size has its own leaderboard.</p>
       <ul class="players" id="players"></ul>
       <label>YOUR CHAPTER</label>
       <div id="chapters"></div>

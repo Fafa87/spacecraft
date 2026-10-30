@@ -11,9 +11,10 @@ export class SnapshotBuffer {
   private snaps: Snapshot[] = [];
   private offset: number | null = null;
   delayMs: number;
+  private readonly baseDelayMs: number;
 
   constructor(delayMs = 2.5 * TICK_MS) {
-    this.delayMs = delayMs;
+    this.delayMs = this.baseDelayMs = delayMs;
   }
 
   get latest(): Snapshot | undefined {
@@ -28,6 +29,9 @@ export class SnapshotBuffer {
   push(s: Snapshot, nowMs: number): void {
     const last = this.latest;
     if (last && s.tick <= last.tick) return;
+    // Multiplayer hosts send a snapshot every NET.snapshotEvery ticks: keep the render
+    // delay at one snapshot interval + 1.5 ticks of jitter margin (solo: every tick).
+    if (last) this.delayMs = Math.max(this.baseDelayMs, (s.tick - last.tick + 1.5) * TICK_MS);
     this.snaps.push(s);
     if (this.snaps.length > 40) this.snaps.shift();
     const target = s.tick * TICK_MS - nowMs;

@@ -4,7 +4,7 @@ export type RunMode = 'local' | 'p2p' | 'dedicated';
 export interface RunResult {
   /** Unique id; resubmitting the same runId is idempotent. */
   runId: string;
-  /** 1..4 — each team size has its own leaderboard. */
+  /** 1..MAX_PLAYERS (8) — each team size has its own leaderboard. */
   teamSize: number;
   players: string[];
   survivalMs: number;

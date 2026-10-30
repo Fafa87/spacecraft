@@ -1,12 +1,16 @@
-import { BaseLink, codec } from '@sms/shared';
+import { BaseLink, createWireCodec } from '@sms/shared';
 
 /** Browser WebSocket link to the (experimental) dedicated host. */
 export class BrowserWsLink extends BaseLink {
+  /** Per-link wire state (protocol v5: binary delta snapshots). */
+  private readonly codec = createWireCodec();
+
   constructor(private readonly ws: WebSocket) {
     super('ws');
+    ws.binaryType = 'arraybuffer';
     ws.addEventListener('message', (ev) => {
       try {
-        this.deliver(codec.decode(ev.data));
+        this.deliver(this.codec.decode(ev.data));
       } catch {
         /* ignore malformed */
       }
@@ -16,7 +20,7 @@ export class BrowserWsLink extends BaseLink {
   }
 
   send(msg: unknown): void {
-    if (this.open && this.ws.readyState === WebSocket.OPEN) this.ws.send(codec.encode(msg));
+    if (this.open && this.ws.readyState === WebSocket.OPEN) this.ws.send(this.codec.encode(msg));
   }
 
   protected doClose(): void {

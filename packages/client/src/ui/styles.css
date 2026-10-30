@@ -349,6 +349,10 @@ tr.hl td {
   list-style: none;
   padding: 0;
   margin: 14px 0;
+  /* 8 slots: two columns so a full squad fits without scrolling */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  column-gap: 6px;
 }
 .players li {
   padding: 10px 12px;

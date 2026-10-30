@@ -2,6 +2,7 @@ import {
   GAME_VERSION,
   MAX_CATCHUP_TICKS,
   MAX_PLAYERS,
+  NET,
   PLAYER,
   PROTOCOL_VERSION,
   TICK_DT,
@@ -23,7 +24,7 @@ import { applyInput, stepWorld } from '../sim/simulation.js';
 import { buildSnapshot } from '../sim/snapshot.js';
 import { stepPlayerMovement, playerMoveSpeed } from '../sim/systems/movement.js';
 import { trackStillness } from '../sim/systems/players.js';
-import type { PlayerInput, World } from '../sim/types.js';
+import type { GameEvent, PlayerInput, World } from '../sim/types.js';
 import { createWorld } from '../sim/world.js';
 import { makeRunId } from '../util/ids.js';
 import { realScheduler, type Scheduler } from './scheduler.js';
@@ -39,6 +40,8 @@ export interface HostSessionOptions {
   /** Called when the session has no members left (dedicated servers clean up rooms). */
   onEmpty?: () => void;
   seed?: () => number;
+  /** Ticks per snapshot for network sessions (default NET.snapshotEvery; tools/tests). */
+  snapshotEvery?: number;
   log?: (...args: unknown[]) => void;
 }
 
@@ -71,6 +74,7 @@ export class HostSession {
   private lastTime = 0;
   private acc = 0;
   private closed = false;
+  private pendingEvents: GameEvent[] = [];
 
   constructor(opts: HostSessionOptions) {
     this.opts = opts;
@@ -251,6 +255,7 @@ export class HostSession {
     const seed = (this.opts.seed ?? randomSeed)();
     const players = this.lobbyPlayers();
     this.world = createWorld(players, seed, this.content);
+    this.pendingEvents = [];
     for (const m of this.members.values()) m.inputs = [];
     this.phase = 'playing';
     this.broadcast({ t: 'start', seed, players });
@@ -323,7 +328,16 @@ export class HostSession {
       }
     }
     stepWorld(world, TICK_DT);
-    this.broadcast({ t: 'snap', s: buildSnapshot(world, PLAYER.bleedOutTime) });
+    // Network hosts snapshot every NET.snapshotEvery ticks (events of skipped ticks ride
+    // along); solo keeps every tick. The last snapshot of a run always goes out.
+    for (const ev of world.events) this.pendingEvents.push(ev);
+    const every = this.opts.mode === 'local' ? 1 : (this.opts.snapshotEvery ?? NET.snapshotEvery);
+    if (world.tick % every === 0 || world.over) {
+      const snap = buildSnapshot(world, PLAYER.bleedOutTime);
+      snap.events = this.pendingEvents;
+      this.pendingEvents = [];
+      this.broadcast({ t: 'snap', s: snap });
+    }
     if (world.over) this.finish();
   }
 

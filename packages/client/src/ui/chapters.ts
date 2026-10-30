@@ -3,7 +3,7 @@ import { escapeHtml } from './format.js';
 
 /**
  * Small inline-SVG shoulder badges for the DOM screens. Plain geometry of our own design
- * (chevron, drop, blade, tower, fang); they deliberately do not replicate any chapter logo.
+ * (chevron, drop, blade, tower, fang, flame, bolt, feather); they deliberately do not replicate any chapter logo.
  */
 const ICON_PATHS: Record<ChapterDef['icon'], string> = {
   chevron: 'M4 7 L12 15 L20 7 L20 11 L12 19 L4 11 Z',
@@ -11,6 +11,10 @@ const ICON_PATHS: Record<ChapterDef['icon'], string> = {
   blade: 'M11 2 L13 2 L13.5 15 L17 15 L17 17 L13 17 L13 22 L11 22 L11 17 L7 17 L7 15 L10.5 15 Z',
   tower: 'M5 21 L5 6 L8 6 L8 9 L10.5 9 L10.5 6 L13.5 6 L13.5 9 L16 9 L16 6 L19 6 L19 21 Z',
   fang: 'M5 4 L19 4 L16 9 L13 20 L12 21 L11 20 L8 9 Z',
+  flame:
+    'M12 2 C14 7 18 9 18 15 A6 6 0 0 1 6 15 C6 11 9 10 9 6 C11 8 11 10 12 11 C13 8 13 5 12 2 Z',
+  bolt: 'M14 2 L6 13 L11 13 L9 22 L18 10 L13 10 L15 2 Z',
+  feather: 'M18 3 C10 5 6 11 6 17 L4 21 L6 21 L8 18 C14 18 18 12 18 3 Z',
 };
 
 /** Round shoulder-pad badge: armour colour, trim ring, detail-coloured icon. */

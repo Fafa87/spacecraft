@@ -421,32 +421,31 @@ export class AudioEngine {
     const def = key ? manifest.music[key] : undefined;
     if (!key || !def) return;
     const stems = Object.entries(manifest.music).filter(([, m]) => m.layerOf === key);
-    void Promise.all([
-      this.buffer(def.file),
-      ...stems.map(([, m]) => this.buffer(m.file)),
-    ]).then(([buf, ...stemBufs]) => {
-      if (!buf || !this.ctx || this.wantedMusic !== key || this.music) return;
-      const ctx = this.ctx;
-      const at = ctx.currentTime + 0.05;
-      const start = (b: AudioBuffer, level: number) => {
-        const src = ctx.createBufferSource();
-        src.buffer = b;
-        src.loop = def.loop;
-        const gain = ctx.createGain();
-        gain.gain.value = 0;
-        gain.gain.setTargetAtTime(level, at, 0.6);
-        src.connect(gain).connect(musicBus);
-        src.start(at);
-        return { src, gain };
-      };
-      const base = start(buf, def.volume);
-      const layers = stems.flatMap(([, m], i) => {
-        const b = stemBufs[i];
-        if (!b) return [];
-        return [{ ...start(b, m.volume * this.musicIntensity), volume: m.volume }];
-      });
-      this.music = { key, ...base, layers };
-    });
+    void Promise.all([this.buffer(def.file), ...stems.map(([, m]) => this.buffer(m.file))]).then(
+      ([buf, ...stemBufs]) => {
+        if (!buf || !this.ctx || this.wantedMusic !== key || this.music) return;
+        const ctx = this.ctx;
+        const at = ctx.currentTime + 0.05;
+        const start = (b: AudioBuffer, level: number) => {
+          const src = ctx.createBufferSource();
+          src.buffer = b;
+          src.loop = def.loop;
+          const gain = ctx.createGain();
+          gain.gain.value = 0;
+          gain.gain.setTargetAtTime(level, at, 0.6);
+          src.connect(gain).connect(musicBus);
+          src.start(at);
+          return { src, gain };
+        };
+        const base = start(buf, def.volume);
+        const layers = stems.flatMap(([, m], i) => {
+          const b = stemBufs[i];
+          if (!b) return [];
+          return [{ ...start(b, m.volume * this.musicIntensity), volume: m.volume }];
+        });
+        this.music = { key, ...base, layers };
+      },
+    );
   }
 }
 

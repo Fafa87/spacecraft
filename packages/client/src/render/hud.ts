@@ -266,7 +266,11 @@ export class Hud {
     ctx.fillText(`✠ WAVE ${s.snap.wave} CLEARED ✠`, w / 2, y - 2);
     ctx.font = F(600, 13);
     ctx.fillStyle = HUD.parchment;
-    ctx.fillText(`Wave ${s.snap.wave + 1} in ${Math.ceil(wv.nx ?? 0)}s — resupply, regroup`, w / 2, y + 20);
+    ctx.fillText(
+      `Wave ${s.snap.wave + 1} in ${Math.ceil(wv.nx ?? 0)}s — resupply, regroup`,
+      w / 2,
+      y + 20,
+    );
   }
 
   /**
@@ -320,30 +324,34 @@ export class Hud {
   private team(ctx: CanvasRenderingContext2D, s: HudState, top: number): void {
     const players = s.snap.players;
     if (players.length < 2) return;
-    this.panel(ctx, 10, top, 200, 14 + players.length * 26);
+    // Up to 4 marines get roomy rows; a 5..8 squad packs into compact rows.
+    const compact = players.length > 4;
+    const rowH = compact ? 19 : 26;
+    const badge = compact ? 0.42 : 0.55;
+    this.panel(ctx, 10, top, 200, 14 + players.length * rowH);
     ctx.textAlign = 'left';
     players.forEach((p, i) => {
-      const y = top + 12 + i * 26;
+      const y = top + (compact ? 9 : 12) + i * rowH;
       const ch = this.content.chapter(p.c);
-      if (!this.assets.draw(ctx, `badge_${ch.id}`, 0, 23, y + 9, 0, 0.55)) {
+      if (!this.assets.draw(ctx, `badge_${ch.id}`, 0, 23, y + (compact ? 7 : 9), 0, badge)) {
         ctx.fillStyle = this.chapterColor(p.c);
-        ctx.fillRect(20, y, 6, 18);
+        ctx.fillRect(20, y, 6, compact ? 14 : 18);
       }
-      ctx.font = F(600, 12);
+      ctx.font = F(600, compact ? 11 : 12);
       ctx.fillStyle = p.st === 'dead' ? '#6a6050' : HUD.parchment;
-      ctx.fillText(`${p.name}${p.id === s.me?.id ? ' (you)' : ''}`, 34, y + 10);
+      ctx.fillText(`${p.name}${p.id === s.me?.id ? ' (you)' : ''}`, 34, y + (compact ? 9 : 10));
       const label = p.st === 'alive' ? '' : p.st === 'downed' ? `DOWN ${Math.ceil(p.bo)}s` : 'KIA';
       ctx.fillStyle = p.st === 'downed' ? '#ff6a50' : HUD.dim;
       ctx.textAlign = 'right';
       if (!label) ctx.font = F(600, 10, true);
-      ctx.fillText(label || `${p.sc ?? 0} pts`, 200, y + 10);
+      ctx.fillText(label || `${p.sc ?? 0} pts`, 200, y + (compact ? 9 : 10));
       ctx.textAlign = 'left';
       this.bar(
         ctx,
         34,
-        y + 14,
+        y + (compact ? 12 : 14),
         160,
-        3,
+        compact ? 2 : 3,
         p.st === 'alive' ? p.hp / p.mhp : p.bo / PLAYER.bleedOutTime,
         p.st === 'alive' ? HUD.gold : HUD.red,
       );
@@ -378,12 +386,7 @@ export class Hud {
   }
 
   /** Edge arrows towards telegraphing / active spawn points that are off screen. */
-  private breachArrows(
-    ctx: CanvasRenderingContext2D,
-    cw: number,
-    ch: number,
-    s: HudState,
-  ): void {
+  private breachArrows(ctx: CanvasRenderingContext2D, cw: number, ch: number, s: HudState): void {
     const cam = s.camera;
     const sp = s.snap.sp;
     if (!cam || !sp) return;

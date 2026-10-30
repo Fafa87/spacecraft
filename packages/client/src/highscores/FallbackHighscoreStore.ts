@@ -79,9 +79,7 @@ export class FallbackHighscoreStore implements HighscoreStore {
       const res = await this.remote.topPlayers(teamSize, limit);
       this.online = true;
       // Still-pending local runs show alongside the server rows.
-      const pending = this.local
-        .pending()
-        .filter((e) => teamSize === 0 || e.teamSize === teamSize);
+      const pending = this.local.pending().filter((e) => teamSize === 0 || e.teamSize === teamSize);
       return { entries: mergePlayerScores(pending, res.entries, limit), source: 'server' };
     } catch {
       this.online = false;

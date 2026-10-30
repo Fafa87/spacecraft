@@ -17,8 +17,7 @@ export const maxPlausibleScore = (survivalMs: number) =>
   (survivalMs / 1000) * HIGHSCORE_LIMITS.maxPointsPerSecondPerPlayer + HIGHSCORE_LIMITS.pointsSlack;
 
 /** Max kills one marine can make in a survival time. */
-export const maxPlausiblePlayerKills = (survivalMs: number) =>
-  maxPlausibleKills(survivalMs, 1);
+export const maxPlausiblePlayerKills = (survivalMs: number) => maxPlausibleKills(survivalMs, 1);
 
 /** Highest wave reachable in a survival time (the director's surge schedule + slack). */
 /**

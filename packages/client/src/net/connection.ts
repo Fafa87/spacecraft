@@ -138,7 +138,7 @@ export async function joinPeerGame(rawCode: string, name: string): Promise<GameC
   const code = normalizeRoomCode(rawCode);
   if (code.length < 4) throw new Error('Enter a valid room code.');
   const peer = await openPeer(undefined, await peerOptions());
-  const conn = peer.connect(peerIdFor(code), { reliable: true, serialization: 'json' });
+  const conn = peer.connect(peerIdFor(code), { reliable: true, serialization: 'raw' });
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`Room ${code} not found (timed out).`)), 10000);
     conn.on('open', () => {

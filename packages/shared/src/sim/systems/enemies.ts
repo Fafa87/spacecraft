@@ -94,7 +94,8 @@ export function updateEnemies(world: World, hash: SpatialHash<Enemy>, dt: number
     e.attackAnim = Math.max(0, e.attackAnim - dt);
     const target = nearestAlivePlayer(world, e.x, e.y);
     // End-of-wave hunt: the stragglers close in faster (no hiding from the last xenos).
-    const speed = def.speed * e.synSpeed * (e.hunt ? world.content.director.waves.reveal.speedMul : 1);
+    const speed =
+      def.speed * e.synSpeed * (e.hunt ? world.content.director.waves.reveal.speedMul : 1);
 
     let desiredX = 0;
     let desiredY = 0;

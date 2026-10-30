@@ -101,7 +101,12 @@ describe('heavy bolter brace', () => {
       }
       p.ammo.heavy_bolter = 90; // ignore reloads
     }
-    return { shots, braced, still: isBraced(p, heavy), snapBraced: buildSnapshot(w, 1).players[0].br };
+    return {
+      shots,
+      braced,
+      still: isBraced(p, heavy),
+      snapBraced: buildSnapshot(w, 1).players[0].br,
+    };
   };
 
   it('fires ~70% faster after standing still for braceDelay, and not while moving', () => {
@@ -233,7 +238,9 @@ describe('hive breaches (spawn points)', () => {
     const out = w.enemies.filter((e) => !content.enemy(e.type).burrow);
     expect(out.length).toBeGreaterThan(0);
     for (const e of out)
-      expect(Math.min(...swarmed.map((j) => Math.hypot(e.x - sp[j].x, e.y - sp[j].y)))).toBeLessThan(150);
+      expect(
+        Math.min(...swarmed.map((j) => Math.hypot(e.x - sp[j].x, e.y - sp[j].y))),
+      ).toBeLessThan(150);
     expect(buildSnapshot(w, 1).sp[i]).toBe(BREACH_STATE.active);
   });
 
@@ -245,9 +252,7 @@ describe('hive breaches (spawn points)', () => {
     const angles = picks.map((i) => Math.atan2(sp[i].y - p.y, sp[i].x - p.x));
     const minSep = Math.min(
       ...angles.flatMap((a, j) =>
-        angles
-          .slice(j + 1)
-          .map((b) => Math.abs(((a - b + Math.PI * 3) % (Math.PI * 2)) - Math.PI)),
+        angles.slice(j + 1).map((b) => Math.abs(((a - b + Math.PI * 3) % (Math.PI * 2)) - Math.PI)),
       ),
     );
     expect(minSep).toBeGreaterThan(Math.PI / 4);

@@ -50,9 +50,10 @@ export async function highscoreRoutes(
       if (req.query.teamSize !== undefined) {
         const ts = parseTeamSize(req.query.teamSize);
         if (ts === null)
-          return reply
-            .code(400)
-            .send({ error: 'invalid_team_size', message: 'teamSize must be 1-4' });
+          return reply.code(400).send({
+            error: 'invalid_team_size',
+            message: `teamSize must be 1-${HIGHSCORE_LIMITS.maxTeamSize}`,
+          });
         return topFor(ts, limit);
       }
       const tables: Record<string, unknown> = {};
@@ -68,9 +69,10 @@ export async function highscoreRoutes(
     async (req, reply) => {
       const ts = parseTeamSize(req.params.teamSize);
       if (ts === null)
-        return reply
-          .code(400)
-          .send({ error: 'invalid_team_size', message: 'teamSize must be 1-4' });
+        return reply.code(400).send({
+          error: 'invalid_team_size',
+          message: `teamSize must be 1-${HIGHSCORE_LIMITS.maxTeamSize}`,
+        });
       return topFor(ts, clampLimit(req.query.limit));
     },
   );

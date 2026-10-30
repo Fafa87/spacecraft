@@ -55,7 +55,8 @@ export function createWorld(
   const cy = ARENA.height / 2;
   players.forEach((setup, i) => {
     const a = (i / Math.max(1, players.length)) * Math.PI * 2;
-    const offset = players.length > 1 ? 50 : 0;
+    // ring grows with the squad so up to MAX_PLAYERS (8) marines start apart, not overlapping
+    const offset = players.length > 1 ? Math.max(50, players.length * 16) : 0;
     world.players.push(
       createPlayer(
         content,

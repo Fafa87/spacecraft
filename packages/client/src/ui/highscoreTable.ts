@@ -23,7 +23,7 @@ export function highscoreRows(
     .join('');
 }
 
-/** Tabbed highscore widget: one table per team size (1..4). */
+/** Tabbed highscore widget: one table per team size (1..MAX_PLAYERS). */
 export function createHighscorePanel(
   store: HighscoreStore,
   opts: { teamSize?: number; highlightRunId?: string; limit?: number } = {},

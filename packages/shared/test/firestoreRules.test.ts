@@ -10,7 +10,10 @@ describe('firestore.rules', () => {
   });
 
   it('firestore.indexes.json lists the leaderboard indexes (run `npm run rules`)', () => {
-    const file = readFileSync(resolve(import.meta.dirname, '../../../firestore.indexes.json'), 'utf8');
+    const file = readFileSync(
+      resolve(import.meta.dirname, '../../../firestore.indexes.json'),
+      'utf8',
+    );
     expect(JSON.parse(file)).toEqual(FIRESTORE_INDEXES);
   });
 });

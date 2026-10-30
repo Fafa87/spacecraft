@@ -30,7 +30,8 @@ export function wavePace(cfg: DirectorConfig, wave: number, teamSize: number): n
 }
 
 export function maxAlive(cfg: DirectorConfig, wave: number, teamSize: number): number {
-  const raw = (cfg.maxAlive.base + cfg.maxAlive.perWave * Math.max(0, wave - 1)) * teamScale(cfg, teamSize);
+  const raw =
+    (cfg.maxAlive.base + cfg.maxAlive.perWave * Math.max(0, wave - 1)) * teamScale(cfg, teamSize);
   return Math.min(cfg.maxAlive.cap, Math.floor(raw));
 }
 
@@ -38,7 +39,10 @@ export const enemyHpScale = (cfg: DirectorConfig, wave: number): number =>
   1 + cfg.waves.hpScalePerWave * Math.max(0, wave - 1);
 
 /** Per-wave drop caps for a squad. */
-export function dropCaps(cfg: DirectorConfig, teamSize: number): { medkits: number; crates: number } {
+export function dropCaps(
+  cfg: DirectorConfig,
+  teamSize: number,
+): { medkits: number; crates: number } {
   const n = clamp(teamSize, 1, MAX_PLAYERS) - 1;
   const d = cfg.drops;
   return {
@@ -58,7 +62,9 @@ export function buildRoster(world: World, wave: number): RosterGroup[] {
   const cfg = world.content.director;
   const roster: RosterGroup[] = [];
   if (isBossWave(cfg, wave)) {
-    const n = perTeam(cfg.bosses.count, world.teamSize) + cfg.bosses.extraPerAppearance * world.director.bossWaves;
+    const n =
+      perTeam(cfg.bosses.count, world.teamSize) +
+      cfg.bosses.extraPerAppearance * world.director.bossWaves;
     roster.push({ type: cfg.bosses.enemy, n, boss: true });
   }
   const entry = waveEntryFor(cfg, wave);
@@ -113,13 +119,19 @@ export function startWave(world: World, forced = false): void {
   st.huntAt = -1;
   for (const e of world.enemies) e.hunt = false;
   st.waveChildren = 0;
-  const carried = world.enemies.filter((e) => !e.dead).length + st.queue.reduce((s, q) => s + q.n, 0);
+  const carried =
+    world.enemies.filter((e) => !e.dead).length + st.queue.reduce((s, q) => s + q.n, 0);
   st.waveTotal = carried + st.roster.reduce((s, g) => s + g.n, 0);
   st.drops = { medkits: 0, crates: 0 };
   st.nextCrateAt = world.time + cfg.crates.firstAfter;
   const [pMin, pMax] = cfg.waves.flankPoints;
   st.surgePoints = pickFlankingBreaches(world, world.rng.int(pMin, pMax));
-  world.events.push({ e: 'surge', n: st.wave, total: st.waveTotal, ...(forced ? { f: 1 as const } : {}) });
+  world.events.push({
+    e: 'surge',
+    n: st.wave,
+    total: st.waveTotal,
+    ...(forced ? { f: 1 as const } : {}),
+  });
   const boss = st.roster[0]?.boss ? st.roster[0] : undefined;
   if (boss) world.events.push({ e: 'boss', t: boss.type, n: boss.n });
 }
@@ -249,9 +261,12 @@ export function queueGroup(
   const st = world.director;
   // Most groups pour out of the wave's flanking breaches; some use any usable breach.
   const flank = st.surgePoints.filter(
-    (i) => nearestMarine(world, cfg.spawnPoints[i].x, cfg.spawnPoints[i].y) >= cfg.spawn.pointMinDistance,
+    (i) =>
+      nearestMarine(world, cfg.spawnPoints[i].x, cfg.spawnPoints[i].y) >=
+      cfg.spawn.pointMinDistance,
   );
-  const point = flank.length && !boss && world.rng.chance(0.7) ? world.rng.pick(flank) : pickBreach(world);
+  const point =
+    flank.length && !boss && world.rng.chance(0.7) ? world.rng.pick(flank) : pickBreach(world);
   const pending = st.queue.find((q) => q.point === point && q.at > world.time);
   const delay = boss ? cfg.spawn.bossTelegraph : cfg.spawn.telegraph;
   const at = pending && !boss ? pending.at : world.time + delay;
@@ -319,7 +334,11 @@ export function pickFlankingBreaches(world: World, k: number): number[] {
   const cx = alive.reduce((s, p) => s + p.x, 0) / alive.length;
   const cy = alive.reduce((s, p) => s + p.y, 0) / alive.length;
   const usable = cfg.spawnPoints
-    .map((sp, i) => ({ i, a: Math.atan2(sp.y - cy, sp.x - cx), d: nearestMarine(world, sp.x, sp.y) }))
+    .map((sp, i) => ({
+      i,
+      a: Math.atan2(sp.y - cy, sp.x - cx),
+      d: nearestMarine(world, sp.x, sp.y),
+    }))
     .filter((c) => c.d >= cfg.spawn.pointMinDistance);
   if (usable.length === 0) return [pickBreach(world)];
   const chosen = [usable.splice(world.rng.int(0, usable.length - 1), 1)[0]];

@@ -2,7 +2,7 @@
 
 export const GAME_VERSION = '0.4.0-dev';
 /** Bump whenever the wire protocol or data tables change incompatibly. */
-export const PROTOCOL_VERSION = 4;
+export const PROTOCOL_VERSION = 5;
 
 export const TICK_RATE = 30;
 export const TICK_DT = 1 / TICK_RATE;
@@ -12,6 +12,17 @@ export const MAX_CATCHUP_TICKS = 5;
 /** Marines per squad / session (lobby, spawn ring, chapters, highscore boards 1..MAX_PLAYERS). */
 export const MAX_PLAYERS = 8;
 export const MIN_TEAM_SIZE = 1;
+
+/**
+ * Network tuning (see net/wire.ts). Snapshots go out as per-link delta-encoded binary;
+ * enemies/projectiles outside a client's interest box (well beyond any screen) are only
+ * refreshed every `farEvery`-th snapshot. `snapshotEvery` = sim ticks per snapshot for
+ * network sessions (2 = 15 Hz at the 30 Hz sim; solo play snapshots every tick).
+ */
+export const NET = {
+  snapshotEvery: 2,
+  interest: { halfWidth: 1700, halfHeight: 1100, farEvery: 4 },
+} as const;
 
 export const ARENA = { width: 3200, height: 2200 } as const;
 

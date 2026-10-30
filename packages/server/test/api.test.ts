@@ -90,7 +90,7 @@ describe('highscore API', () => {
     const one = (await a.inject({ method: 'GET', url: '/api/highscores/1' })).json();
     expect(one.entries.map((e: { players: string[] }) => e.players[0])).toEqual(['Fast', 'Slow']);
     const all = (await a.inject({ method: 'GET', url: '/api/highscores?limit=1' })).json();
-    expect(Object.keys(all.tables)).toEqual(['1', '2', '3', '4']);
+    expect(Object.keys(all.tables)).toEqual(['1', '2', '3', '4', '5', '6', '7', '8']);
     expect(all.tables['1']).toHaveLength(1);
     expect(all.tables['2']).toHaveLength(0);
     expect(all.tables['3'][0].players).toEqual(['A', 'B', 'C']);

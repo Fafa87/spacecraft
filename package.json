@@ -31,6 +31,7 @@
     "predev": "npm run assets --silent",
     "prebuild": "npm run assets --silent",
     "sim": "tsx scripts/balance-sim.ts",
+    "net:load": "tsx scripts/net-load.ts",
     "rules": "tsx scripts/firestore-rules.ts",
     "test:rules": "firebase emulators:exec --only firestore --project demo-sms \"vitest run --config vitest.rules.config.ts\"",
     "check:firestore": "tsx scripts/check-firestore.ts",

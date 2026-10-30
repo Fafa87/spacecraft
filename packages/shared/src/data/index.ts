@@ -144,6 +144,10 @@ export class ContentRegistry {
       if (e.spawner && this.enemies.get(e.spawner.enemy)?.spawner)
         errors.push(`enemy ${e.id} spawner child must not spawn children itself`);
     }
+    if (this.chapters.length < MAX_PLAYERS)
+      errors.push(
+        `need ${MAX_PLAYERS} chapters so every marine in a full squad has their own colours`,
+      );
     const d = this.director;
     for (const [name, arr] of [
       ['teamScale', d.teamScale],
@@ -160,7 +164,8 @@ export class ContentRegistry {
         if (!this.enemies.has(id)) errors.push(`waveTable references unknown enemy '${id}'`);
       }
     }
-    if (this.director.waveTable[0]?.fromWave !== 1) errors.push('waveTable must start at fromWave 1');
+    if (this.director.waveTable[0]?.fromWave !== 1)
+      errors.push('waveTable must start at fromWave 1');
     return errors;
   }
 }

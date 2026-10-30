@@ -484,7 +484,12 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
       // telegraph: the breach pulses (renderer reads snapshot `sp`) + a wet rumbling warning
       const sp = content.director.spawnPoints[ev.i];
       if (!sp) break;
-      audio.play('breach_telegraph', { x: sp.x, y: sp.y, volume: ev.b ? 1.2 : 0.9, minVolume: 0.35 });
+      audio.play('breach_telegraph', {
+        x: sp.x,
+        y: sp.y,
+        volume: ev.b ? 1.2 : 0.9,
+        minVolume: 0.35,
+      });
       P.burst(sp.x, sp.y, ev.b ? 26 : 14, {
         speed: 70,
         color: '#c0306a',
@@ -514,7 +519,8 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
       const w = content.weapons.get(ev.w);
       if (w?.sfx.brace)
         audio.play(w.sfx.brace, p ? { x: p.x, y: p.y, volume: ev.p === fx.myId ? 0.9 : 0.4 } : {});
-      if (p) P.burst(p.x, p.y + 10, 8, { speed: 60, color: '#8a8070', maxLife: 0.5, size: 3, drag: 4 });
+      if (p)
+        P.burst(p.x, p.y + 10, 8, { speed: 60, color: '#8a8070', maxLife: 0.5, size: 3, drag: 4 });
       break;
     }
   }

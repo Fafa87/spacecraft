@@ -77,16 +77,19 @@ describe('40k content data', () => {
     expect(content.director.bosses.enemy).toBe('carnifex');
   });
 
-  it('has five chapters with distinct colours; chapter() wraps', () => {
+  it('has a chapter per squad slot (8) with distinct colours; chapter() wraps', () => {
     expect(content.chapters.map((c) => c.id)).toEqual([
       'ultramarines',
       'blood_angels',
       'dark_angels',
       'imperial_fists',
       'space_wolves',
+      'salamanders',
+      'white_scars',
+      'raven_guard',
     ]);
-    expect(new Set(content.chapters.map((c) => c.primary)).size).toBe(5);
-    expect(content.chapter(5).id).toBe('ultramarines');
+    expect(new Set(content.chapters.map((c) => c.primary)).size).toBe(8);
+    expect(content.chapter(8).id).toBe('ultramarines');
     expect(content.chapterIndex('space_wolves')).toBe(4);
     expect(content.chapterIndex('nope')).toBe(-1);
   });

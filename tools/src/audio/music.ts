@@ -375,7 +375,7 @@ export function renderSong(spec: SongSpec, sampleRate = 22050): Float32Array {
         drone(st, rng, t0, bar, spec.root - 12, 0.16);
         if (sec >= 1)
           for (const nn of ch)
-            choir(st, rng, t0, bar * 0.95, nn + 12, 0.10, { vowel: vw, vowelTo: 'o' });
+            choir(st, rng, t0, bar * 0.95, nn + 12, 0.1, { vowel: vw, vowelTo: 'o' });
         if (sec >= 2) {
           // plainchant line: one note per beat-and-a-half, low male voices
           for (let h = 0; h < 2; h++) {
@@ -479,7 +479,7 @@ export function renderSong(spec: SongSpec, sampleRate = 22050): Float32Array {
         organ(st, t0, bar * 0.98, ch[0]! - 12, 0.25, 0.04);
         drone(st, rng, t0, bar, spec.root - 12, 0.14);
         for (const nn of ch)
-          choir(st, rng, t0, bar * 0.95, nn + 12, 0.10, { vowel: 'u', vowelTo: 'o' });
+          choir(st, rng, t0, bar * 0.95, nn + 12, 0.1, { vowel: 'u', vowelTo: 'o' });
         bell(st, t0, ch[0]! + 24, 0.35, 6);
         timpani(st, rng, t0, midiToFreq(spec.root), 0.28, 2.5);
         timpani(st, rng, t0 + beat * 2.5, midiToFreq(spec.root), 0.17, 2);

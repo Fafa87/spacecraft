@@ -319,7 +319,7 @@ export interface ChapterDef {
   /** Eye-lens glow colour. */
   lens: string;
   /** Simple geometric shoulder icon (own design, not a chapter logo replica). */
-  icon: 'chevron' | 'drop' | 'blade' | 'tower' | 'fang';
+  icon: 'chevron' | 'drop' | 'blade' | 'tower' | 'fang' | 'flame' | 'bolt' | 'feather';
   /** Our own flavour line shown in the lobby picker. */
   motto: string;
 }

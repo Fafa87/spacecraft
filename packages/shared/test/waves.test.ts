@@ -94,7 +94,11 @@ describe('finite waves', () => {
   it('a stalled wave is forced on after the timeout', () => {
     const w = world();
     const keep = { id: -1 };
-    const evs = run(w, ticks(cfg.waves.firstDelay + cfg.waves.forceNextAfter + 1), killAllBut(keep));
+    const evs = run(
+      w,
+      ticks(cfg.waves.firstDelay + cfg.waves.forceNextAfter + 1),
+      killAllBut(keep),
+    );
     expect(evs.filter((e) => e.e === 'surge')).toEqual([
       expect.objectContaining({ n: 1 }),
       expect.objectContaining({ n: 2, f: 1 }),
@@ -127,7 +131,11 @@ describe('finite waves', () => {
   it('supply crates per wave are capped even in a long wave', () => {
     const w = world(2);
     const keep = { id: -1 };
-    const evs = run(w, ticks(cfg.waves.firstDelay + cfg.waves.forceNextAfter - 5), killAllBut(keep));
+    const evs = run(
+      w,
+      ticks(cfg.waves.firstDelay + cfg.waves.forceNextAfter - 5),
+      killAllBut(keep),
+    );
     expect(w.director.wave).toBe(1);
     expect(evs.filter((e) => e.e === 'crate').length).toBe(dropCaps(cfg, 2).crates);
   });
