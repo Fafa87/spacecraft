@@ -25,7 +25,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "smoke": "tsx scripts/smoke.ts",
-    "smoke:browser": "tsx scripts/browser-smoke.ts"
+    "smoke:browser": "tsx scripts/browser-smoke.ts",
+    "predev": "npm run assets --silent",
+    "prebuild": "npm run assets --silent"
   },
   "engines": {
     "node": ">=20"
