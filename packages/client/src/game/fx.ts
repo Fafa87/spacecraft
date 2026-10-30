@@ -454,8 +454,21 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
       break;
     case 'surge':
       audio.play('surge');
-      fx.notify(`⚠ SURGE ${ev.n} — the swarm descends!`, 'warn');
+      fx.notify(
+        ev.f
+          ? `⚠ WAVE ${ev.n} — the Hive will not wait! The swarm descends!`
+          : `⚠ WAVE ${ev.n}${ev.total ? ` — ${ev.total} xenos` : ''} — the swarm descends!`,
+        'warn',
+      );
       r.camera.addShake(6);
+      break;
+    case 'cleared':
+      audio.play('wave_cleared');
+      fx.notify(`✠ WAVE ${ev.n} CLEARED — next wave in ${Math.ceil(ev.next)}s`, 'info');
+      break;
+    case 'hunt':
+      audio.play('nid_shriek', { volume: 0.7 });
+      fx.notify(`☠ The last ${ev.n} xenos are revealed — they hunt you!`, 'warn');
       break;
     case 'reload': {
       const p = fx.players(ev.p);
@@ -467,5 +480,42 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
     case 'switch':
       if (ev.p === fx.myId) audio.play('ui_click', { volume: 0.5 });
       break;
+    case 'breach': {
+      // telegraph: the breach pulses (renderer reads snapshot `sp`) + a wet rumbling warning
+      const sp = content.director.spawnPoints[ev.i];
+      if (!sp) break;
+      audio.play('breach_telegraph', { x: sp.x, y: sp.y, volume: ev.b ? 1.2 : 0.9, minVolume: 0.35 });
+      P.burst(sp.x, sp.y, ev.b ? 26 : 14, {
+        speed: 70,
+        color: '#c0306a',
+        maxLife: 1.1,
+        size: 4,
+        drag: 2,
+      });
+      r.camera.addShake(ev.b ? 5 : 1.5);
+      break;
+    }
+    case 'swarm': {
+      const sp = content.director.spawnPoints[ev.i];
+      if (!sp) break;
+      audio.play('breach_burst', { x: sp.x, y: sp.y, volume: Math.min(1.2, 0.6 + ev.n * 0.05) });
+      P.burst(sp.x, sp.y, 18 + Math.min(30, ev.n * 2), {
+        speed: 200,
+        color: '#6a4a3a',
+        maxLife: 0.9,
+        size: 4,
+        drag: 3,
+      });
+      r.addDecal(decal('acid'), sp.x, sp.y, 1.4);
+      break;
+    }
+    case 'brace': {
+      const p = fx.players(ev.p);
+      const w = content.weapons.get(ev.w);
+      if (w?.sfx.brace)
+        audio.play(w.sfx.brace, p ? { x: p.x, y: p.y, volume: ev.p === fx.myId ? 0.9 : 0.4 } : {});
+      if (p) P.burst(p.x, p.y + 10, 8, { speed: 60, color: '#8a8070', maxLife: 0.5, size: 3, drag: 4 });
+      break;
+    }
   }
 }

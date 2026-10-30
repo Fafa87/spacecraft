@@ -35,6 +35,8 @@ export interface PlayOpts {
   y?: number;
   volume?: number;
   rate?: number;
+  /** Floor for distance attenuation (offscreen warnings such as breach telegraphs stay audible). */
+  minVolume?: number;
   /** Overrides the manifest priority for voice stealing. */
   priority?: number;
 }
@@ -64,7 +66,15 @@ export class AudioEngine {
   private loops = new Map<string, LoopVoice>();
   private lastVariant = new Map<string, number>();
   private duckUntil = 0;
-  private music: { key: string; src: AudioBufferSourceNode; gain: GainNode } | null = null;
+  private music: {
+    key: string;
+    src: AudioBufferSourceNode;
+    gain: GainNode;
+    /** Adaptive stems (manifest `layerOf` this track), sample-locked to `src`. */
+    layers: Array<{ src: AudioBufferSourceNode; gain: GainNode; volume: number }>;
+  } | null = null;
+  /** 0..1 combat intensity: level of the adaptive stems. */
+  private musicIntensity = 0;
   private wantedMusic: string | null = null;
   muted = storage.get('sms.muted', false);
   volumes: MixVolumes = loadVolumes(storage.get<unknown>(VOL_KEY, null));
@@ -221,6 +231,7 @@ export class AudioEngine {
     if (!def || !this.running) return;
     const ctx = this.ctx!;
     const sp = this.place(opts.x, opts.y);
+    if (opts.minVolume !== undefined) sp.gain = Math.max(sp.gain, opts.minVolume);
     const vol = def.volume * (opts.volume ?? 1) * sp.gain;
     if (vol < 0.008) return;
     const buf = this.pickBuffer(key, def);
@@ -380,6 +391,17 @@ export class AudioEngine {
     return this.voices.filter((v) => v.ends > now).length + this.loops.size;
   }
 
+  /**
+   * Adaptive music: 0 = base track only, 1 = every `layerOf` stem at full level. The stems
+   * start on the same audio clock tick as the base, so they stay sample-locked across loops.
+   */
+  setMusicIntensity(v: number): void {
+    this.musicIntensity = Math.max(0, Math.min(1, v));
+    if (!this.ctx || !this.music) return;
+    for (const l of this.music.layers)
+      l.gain.gain.setTargetAtTime(l.volume * this.musicIntensity, this.ctx.currentTime, 0.8);
+  }
+
   /** Crossfades to a looping music track (no-op if already playing). */
   playMusic(key: string | null): void {
     this.wantedMusic = key;
@@ -390,22 +412,40 @@ export class AudioEngine {
     this.music = null;
     if (fadeOut) {
       const t = this.ctx.currentTime;
-      fadeOut.gain.gain.setTargetAtTime(0, t, 0.4);
-      fadeOut.src.stop(t + 2);
+      for (const n of [fadeOut, ...fadeOut.layers]) {
+        n.gain.gain.setTargetAtTime(0, t, 0.4);
+        n.src.stop(t + 2);
+      }
     }
-    const def = key ? this.manifest.music[key] : undefined;
+    const manifest = this.manifest;
+    const def = key ? manifest.music[key] : undefined;
     if (!key || !def) return;
-    void this.buffer(def.file).then((buf) => {
+    const stems = Object.entries(manifest.music).filter(([, m]) => m.layerOf === key);
+    void Promise.all([
+      this.buffer(def.file),
+      ...stems.map(([, m]) => this.buffer(m.file)),
+    ]).then(([buf, ...stemBufs]) => {
       if (!buf || !this.ctx || this.wantedMusic !== key || this.music) return;
-      const src = this.ctx.createBufferSource();
-      src.buffer = buf;
-      src.loop = def.loop;
-      const gain = this.ctx.createGain();
-      gain.gain.value = 0;
-      gain.gain.setTargetAtTime(def.volume, this.ctx.currentTime, 0.6);
-      src.connect(gain).connect(musicBus);
-      src.start();
-      this.music = { key, src, gain };
+      const ctx = this.ctx;
+      const at = ctx.currentTime + 0.05;
+      const start = (b: AudioBuffer, level: number) => {
+        const src = ctx.createBufferSource();
+        src.buffer = b;
+        src.loop = def.loop;
+        const gain = ctx.createGain();
+        gain.gain.value = 0;
+        gain.gain.setTargetAtTime(level, at, 0.6);
+        src.connect(gain).connect(musicBus);
+        src.start(at);
+        return { src, gain };
+      };
+      const base = start(buf, def.volume);
+      const layers = stems.flatMap(([, m], i) => {
+        const b = stemBufs[i];
+        if (!b) return [];
+        return [{ ...start(b, m.volume * this.musicIntensity), volume: m.volume }];
+      });
+      this.music = { key, ...base, layers };
     });
   }
 }

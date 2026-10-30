@@ -39,9 +39,7 @@ function run(w: World, n: number, input?: Partial<ReturnType<typeof emptyInput>>
 
 function quietWorld(seed = 7): World {
   const w = createWorld([{ id: 1, name: 'A' }], seed);
-  w.director.nextSurgeAt = Infinity;
-  w.director.nextCrateAt = Infinity;
-  w.director.budget = -1e9;
+  w.director.idle = true;
   return w;
 }
 
@@ -219,9 +217,9 @@ describe('hive breaches (spawn points)', () => {
 
   it('telegraphs, then the group emerges from the breach', () => {
     const w = createWorld([{ id: 1, name: 'A' }], 5);
-    w.director.nextSurgeAt = Infinity;
-    w.director.nextCrateAt = Infinity;
-    w.director.budget = 12;
+    // A wave in progress whose roster is one group of gaunts (so it goes to a breach at once).
+    Object.assign(w.director, { phase: 'active', waveStartedAt: 0, wave: 1, dispatch: 100 });
+    w.director.roster = [{ type: 'hormagaunt', n: 4 }];
     const first = run(w, 1);
     const breach = first.find((e) => e.e === 'breach');
     expect(breach).toBeDefined();
@@ -229,7 +227,6 @@ describe('hive breaches (spawn points)', () => {
     const nonBurrow = w.enemies.filter((e) => !content.enemy(e.type).burrow);
     expect(nonBurrow).toHaveLength(0); // nothing yet: telegraphing
     expect(buildSnapshot(w, 1).sp[i]).toBe(BREACH_STATE.telegraph);
-    w.director.budget = -1e9;
     const evs = run(w, ticks(content.director.spawn.telegraph + 0.1));
     const swarmed = evs.flatMap((e) => (e.e === 'swarm' ? [e.i] : []));
     expect(swarmed).toContain(i);
@@ -264,6 +261,8 @@ describe('hive breaches (spawn points)', () => {
       w.players[0].hp = w.players[0].maxHp;
       stepWorld(w, TICK_DT);
       for (const e of w.events) if (e.e === 'breach') used.add(e.i);
+      // the squad wipes out whatever emerges, so waves keep coming
+      for (const e of w.enemies) if (!e.burrowed) e.dead = true;
     }
     expect(used.size).toBeGreaterThanOrEqual(4);
   });
@@ -280,9 +279,7 @@ describe('downed marines', () => {
       ],
       3,
     );
-    w.director.nextSurgeAt = Infinity;
-    w.director.nextCrateAt = Infinity;
-    w.director.budget = -1e9;
+    w.director.idle = true;
     const [a, b] = w.players;
     b.x = a.x + 900;
     a.invuln = 0;

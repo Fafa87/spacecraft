@@ -1,4 +1,5 @@
 import { round } from '../math/vec.js';
+import { remainingEnemies } from './systems/director.js';
 import { isBraced } from './systems/weapons.js';
 import type { Enemy, Player, PlayerState, World } from './types.js';
 import type { GameEvent, PickupKind } from './types.js';
@@ -45,7 +46,23 @@ export const ENEMY_FLAG = {
   windup: 8,
   dashing: 16,
   attacking: 32,
+  /** End-of-wave hunt: revealed (HUD marker) and closing in. */
+  hunt: 64,
 } as const;
+
+/** Finite-wave status. */
+export interface WaveSnap {
+  /** Enemies of the wave still to kill (alive + telegraphing + not yet sent). */
+  r: number;
+  /** Enemies in the wave so far (children included). */
+  t: number;
+  /** 1 = wave in progress, 0 = breather / countdown to the next wave. */
+  a: 0 | 1;
+  /** Breather: seconds until the next wave. */
+  nx?: number;
+  /** Stragglers revealed and hunting. */
+  h?: 1;
+}
 
 /** [id, enemyTypeIndex, x, y, angle, hp% (0-100), flags (ENEMY_FLAG bits)] */
 export type EnemySnap = [number, number, number, number, number, number, number];
@@ -65,6 +82,7 @@ export interface Snapshot {
   tick: number;
   time: number;
   wave: number;
+  wv: WaveSnap;
   over: boolean;
   players: PlayerSnap[];
   enemies: EnemySnap[];
@@ -86,6 +104,18 @@ export function breachStates(world: World): number[] {
   );
 }
 
+export function waveSnap(world: World): WaveSnap {
+  const st = world.director;
+  const active = st.phase === 'active';
+  return {
+    r: remainingEnemies(world),
+    t: st.waveTotal,
+    a: active ? 1 : 0,
+    ...(active ? {} : { nx: round(Math.max(0, st.nextWaveAt - world.time), 1) }),
+    ...(st.hunting ? { h: 1 as const } : {}),
+  };
+}
+
 function heatFields(world: World, p: Player): { ht?: number; vt?: 1 } {
   const heat = world.content.weapon(p.current).heat;
   if (!heat) return {};
@@ -102,6 +132,7 @@ export function enemyFlags(e: Enemy): number {
   if (e.chargePhase === 1) f |= ENEMY_FLAG.windup;
   if (e.chargePhase === 2) f |= ENEMY_FLAG.dashing;
   if (e.attackAnim > 0) f |= ENEMY_FLAG.attacking;
+  if (e.hunt) f |= ENEMY_FLAG.hunt;
   return f;
 }
 
@@ -111,6 +142,7 @@ export function buildSnapshot(world: World, bleedOutTime: number): Snapshot {
     tick: world.tick,
     time: round(world.time, 3),
     wave: world.director.wave,
+    wv: waveSnap(world),
     over: world.over,
     players: world.players.map((p) => ({
       id: p.id,

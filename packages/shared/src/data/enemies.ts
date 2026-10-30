@@ -214,6 +214,8 @@ export const ENEMIES: EnemyDef[] = [
         explosion: { radius: 80, damage: 26, edgeFactor: 0.35 },
       },
     },
+    // Seeds a couple of drifting spore mines as it advances (children: finite, never drop).
+    spawner: { enemy: 'spore_mine', interval: 9, max: 2, range: 1100 },
     group: [1, 2],
     threat: 5,
     points: 8,

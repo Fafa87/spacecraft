@@ -5,10 +5,17 @@ export * from './snapshot.js';
 export * from './spatialHash.js';
 export { stepPlayerMovement, playerMoveSpeed } from './systems/movement.js';
 export {
-  budgetRate,
+  waveBudget,
+  wavePace,
   maxAlive,
-  waveEntryAt,
+  waveEntryFor,
   enemyHpScale,
+  dropCaps,
+  isBossWave,
+  buildRoster,
+  remainingEnemies,
+  startWave,
+  perTeam,
   pickBreach,
   pickFlankingBreaches,
   queueGroup,

@@ -15,17 +15,21 @@ service cloud.firestore {
 
     function validRun(runId, d) {
       return runId.matches("[A-Za-z0-9_-]{6,64}")
-        && d.teamSize is int && d.teamSize >= 1 && d.teamSize <= 4
+        && d.teamSize is int && d.teamSize >= 1 && d.teamSize <= 8
         && d.names is list && d.names.size() == d.teamSize
         && (d.names.size() <= 0 || validName(d.names[0]))
         && (d.names.size() <= 1 || validName(d.names[1]))
         && (d.names.size() <= 2 || validName(d.names[2]))
         && (d.names.size() <= 3 || validName(d.names[3]))
+        && (d.names.size() <= 4 || validName(d.names[4]))
+        && (d.names.size() <= 5 || validName(d.names[5]))
+        && (d.names.size() <= 6 || validName(d.names[6]))
+        && (d.names.size() <= 7 || validName(d.names[7]))
         && d.survivalMs is int && d.survivalMs >= 1000 && d.survivalMs <= 14400000
         && d.kills is int && d.kills >= 0 && d.kills <= 1000000
         && d.kills * 1000 <= d.survivalMs * 25 * d.teamSize + 50000
         && d.wave is int && d.wave >= 0 && d.wave <= 1000
-        && (d.wave <= 2 || (d.wave - 2) * 55000 <= d.survivalMs - 60000)
+        && (d.wave <= 1 || (d.wave - 1) * 8000 <= d.survivalMs - 4000)
         && d.mode in ['local', 'p2p', 'dedicated']
         && d.version is string && d.version.matches("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}(?:-[0-9A-Za-z.]{1,12})?")
         && d.timestamp == request.time;
@@ -45,7 +49,11 @@ service cloud.firestore {
         && (d.teamSize <= 0 || validMarine(d, 0))
         && (d.teamSize <= 1 || validMarine(d, 1))
         && (d.teamSize <= 2 || validMarine(d, 2))
-        && (d.teamSize <= 3 || validMarine(d, 3));
+        && (d.teamSize <= 3 || validMarine(d, 3))
+        && (d.teamSize <= 4 || validMarine(d, 4))
+        && (d.teamSize <= 5 || validMarine(d, 5))
+        && (d.teamSize <= 6 || validMarine(d, 6))
+        && (d.teamSize <= 7 || validMarine(d, 7));
     }
 
     function boardVersion(board, d) {
@@ -58,7 +66,7 @@ service cloud.firestore {
     // An individual score row must mirror its run, written in the same commit.
     function validScoreRow(board, scoreId, d) {
       let run = getAfter(/databases/$(database)/documents/boards/$(board)/highscores/$(d.runId)).data;
-      return d.slot is int && d.slot >= 0 && d.slot < 4
+      return d.slot is int && d.slot >= 0 && d.slot < 8
         && d.runId is string && scoreId == d.runId + '-' + string(d.slot)
         && d.timestamp == request.time
         && run.timestamp == request.time

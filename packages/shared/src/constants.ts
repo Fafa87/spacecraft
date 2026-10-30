@@ -2,14 +2,15 @@
 
 export const GAME_VERSION = '0.4.0-dev';
 /** Bump whenever the wire protocol or data tables change incompatibly. */
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
 
 export const TICK_RATE = 30;
 export const TICK_DT = 1 / TICK_RATE;
 /** Max simulation ticks the host will run in one frame to catch up after a stall. */
 export const MAX_CATCHUP_TICKS = 5;
 
-export const MAX_PLAYERS = 4;
+/** Marines per squad / session (lobby, spawn ring, chapters, highscore boards 1..MAX_PLAYERS). */
+export const MAX_PLAYERS = 8;
 export const MIN_TEAM_SIZE = 1;
 
 export const ARENA = { width: 3200, height: 2200 } as const;

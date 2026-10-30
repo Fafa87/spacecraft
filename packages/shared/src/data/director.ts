@@ -1,19 +1,24 @@
 import type { DirectorConfig } from './types.js';
 
-/** Spawn director tuning (escalating Tyranid swarm). All times in seconds of survival. */
+/**
+ * Spawn director tuning: finite Tyranid waves. Each wave has a fixed enemy budget; the next one
+ * starts only after the whole wave (children included) is dead. Index-by-team-size arrays cover
+ * squads of 1..8 marines (MAX_PLAYERS).
+ */
 export const DIRECTOR: DirectorConfig = {
-  budget: { base: 0.85, perMinute: 1.35, exponent: 1.25 },
-  teamScale: [1, 1.5, 2.1, 2.7],
-  maxAlive: { base: 40, perMinute: 15, cap: 280 },
-  hpScalePerMinute: 0.07,
-  surge: {
-    firstAtSec: 60,
-    interval: 55,
-    duration: 7,
-    budgetMultiplier: 2.4,
-    bonusThreat: 7,
-    bonusThreatPerWave: 5,
+  teamScale: [1, 1.5, 2.1, 2.7, 3.25, 3.8, 4.3, 4.8],
+  waves: {
+    firstDelay: 4,
+    breather: 8,
+    budget: { base: 14, perWave: 9, exponent: 1.2 },
+    pace: { base: 2.2, perWave: 0.5 },
+    flankPoints: [2, 3],
+    hpScalePerWave: 0.06,
+    maxChildren: 10,
+    reveal: { remaining: 6, fraction: 0.08, afterSec: 30, speedMul: 1.35 },
+    forceNextAfter: 240,
   },
+  maxAlive: { base: 40, perWave: 10, cap: 280 },
   // Six hive breaches: four in the bulkheads at the arena edges, two floor vents inside.
   spawnPoints: [
     { id: 'north', x: 1600, y: 130, kind: 'breach' },
@@ -27,7 +32,6 @@ export const DIRECTOR: DirectorConfig = {
     telegraph: 1.1,
     bossTelegraph: 2.2,
     pointMinDistance: 430,
-    surgePoints: [2, 3],
     // minDistance / maxDistance: burrowing Raveners (and crates) still use a ring around a marine.
     minDistance: 620,
     maxDistance: 900,
@@ -35,29 +39,33 @@ export const DIRECTOR: DirectorConfig = {
     groupMax: 6,
     groupSpread: 60,
   },
-  crates: { firstAtSec: 25, intervalMin: 22, intervalMax: 38, minDistance: 220, maxDistance: 520 },
-  // Surges at 60, 115, 170, 225 ... -> a Carnifex arrives on the 3rd surge (170 s) and every 3rd after.
+  drops: {
+    medkits: { base: 2, perMarine: 0.5 },
+    crates: { base: 1, perMarine: 0.25 },
+  },
+  crates: { firstAfter: 10, intervalMin: 20, intervalMax: 32, minDistance: 220, maxDistance: 520 },
+  // A Carnifex leads wave 3 and every 3rd wave after it.
   bosses: {
     enemy: 'carnifex',
-    firstSurge: 3,
-    everySurge: 3,
-    count: [1, 1, 2, 2],
+    firstWave: 3,
+    everyWave: 3,
+    count: [1, 1, 2, 2, 2, 3, 3, 3],
     extraPerAppearance: 1,
   },
   waveTable: [
-    { fromSec: 0, weights: { hormagaunt: 10, ripper: 3 } },
-    { fromSec: 30, weights: { hormagaunt: 10, termagant: 5, ripper: 3 } },
-    { fromSec: 70, weights: { hormagaunt: 9, termagant: 5, ripper: 3, genestealer: 2 } },
+    { fromWave: 1, weights: { hormagaunt: 10, ripper: 3 } },
+    { fromWave: 2, weights: { hormagaunt: 10, termagant: 5, ripper: 3 } },
+    { fromWave: 3, weights: { hormagaunt: 9, termagant: 5, ripper: 3, genestealer: 2 } },
     {
-      fromSec: 110,
+      fromWave: 4,
       weights: { hormagaunt: 9, termagant: 5, ripper: 2, genestealer: 2, warrior: 1 },
     },
     {
-      fromSec: 160,
+      fromWave: 5,
       weights: { hormagaunt: 9, termagant: 5, ripper: 2, genestealer: 3, warrior: 1, ravener: 1.2 },
     },
     {
-      fromSec: 230,
+      fromWave: 6,
       weights: {
         hormagaunt: 8,
         termagant: 5,
@@ -70,7 +78,7 @@ export const DIRECTOR: DirectorConfig = {
       },
     },
     {
-      fromSec: 330,
+      fromWave: 8,
       weights: {
         hormagaunt: 8,
         termagant: 6,
@@ -84,7 +92,7 @@ export const DIRECTOR: DirectorConfig = {
       },
     },
     {
-      fromSec: 480,
+      fromWave: 11,
       weights: {
         hormagaunt: 7,
         termagant: 6,

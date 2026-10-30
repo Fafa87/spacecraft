@@ -421,3 +421,132 @@ export const VOWELS: Record<string, [number, number, number]> = {
 export function vowel(v: string | [number, number, number]): [number, number, number] {
   return typeof v === 'string' ? (VOWELS[v] ?? VOWELS.a) : v;
 }
+
+// ---------------------------------------------------------------- convolution reverb
+
+/** In-place iterative radix-2 FFT (re/im arrays, length a power of two). */
+export function fft(re: Float64Array, im: Float64Array, inverse = false): void {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) {
+      [re[i], re[j]] = [re[j], re[i]];
+      [im[i], im[j]] = [im[j], im[i]];
+    }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = ((inverse ? 2 : -2) * Math.PI) / len;
+    const wr = Math.cos(ang);
+    const wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1;
+      let ci = 0;
+      for (let k = 0; k < len / 2; k++) {
+        const a = i + k;
+        const b = a + len / 2;
+        const xr = re[b] * cr - im[b] * ci;
+        const xi = re[b] * ci + im[b] * cr;
+        re[b] = re[a] - xr;
+        im[b] = im[a] - xi;
+        re[a] += xr;
+        im[a] += xi;
+        const t = cr * wr - ci * wi;
+        ci = cr * wi + ci * wr;
+        cr = t;
+      }
+    }
+  }
+  if (inverse)
+    for (let i = 0; i < n; i++) {
+      re[i] /= n;
+      im[i] /= n;
+    }
+}
+
+export interface ConvReverbOpts {
+  /** Wet mix 0..1. */
+  mix: number;
+  /** RT60-ish decay, seconds. */
+  decay: number;
+  /** 0..1: how much faster the highs die (stone / flesh = high). */
+  damp?: number;
+  predelay?: number;
+  /** Early-reflection taps (hard walls of a hive corridor). */
+  early?: number;
+  /** IR seed (same seed = same "room"). */
+  seed?: number;
+}
+
+/**
+ * Synthetic impulse response: sparse early reflections then a dense exponentially decaying
+ * noise tail whose highs decay faster (two-band IR), like a stone vault / hive cavern.
+ */
+export function makeIR(o: ConvReverbOpts): Float32Array {
+  const rng = new Rng(o.seed ?? 4242);
+  const n = secToSamples(o.decay * 1.1 + (o.predelay ?? 0.015));
+  const ir = new Float32Array(n);
+  const pre = secToSamples(o.predelay ?? 0.015);
+  const lo = new Biquad('lp', 1400, 0.6);
+  const hi = new Biquad('hp', 1400, 0.6);
+  const damp = o.damp ?? 0.5;
+  for (let i = pre; i < n; i++) {
+    const t = (i - pre) / SR;
+    const w = rng.bi();
+    const eLo = Math.exp((-6.9 * t) / o.decay);
+    const eHi = Math.exp((-6.9 * t) / (o.decay * (1 - damp * 0.8)));
+    const fadeIn = Math.min(1, t / 0.012);
+    ir[i] = (lo.process(w) * eLo + hi.process(w) * eHi * 0.8) * fadeIn;
+  }
+  const taps = o.early ?? 7;
+  for (let k = 0; k < taps; k++) {
+    const at = pre + secToSamples(rng.range(0.004, 0.07));
+    if (at < n) ir[at] += rng.range(0.3, 0.8) * (rng.next() < 0.5 ? -1 : 1);
+  }
+  let e = 0;
+  for (let i = 0; i < n; i++) e += ir[i] * ir[i];
+  const g = 1 / Math.sqrt(Math.max(1e-9, e));
+  for (let i = 0; i < n; i++) ir[i] *= g;
+  return ir;
+}
+
+/** FFT convolution with a synthetic IR; the output keeps the input length + the tail. */
+export function convReverb(buf: Float32Array, o: ConvReverbOpts): Float32Array {
+  const ir = makeIR(o);
+  const outLen = buf.length + ir.length - 1;
+  let size = 1;
+  while (size < outLen) size <<= 1;
+  const ar = new Float64Array(size);
+  const ai = new Float64Array(size);
+  const br = new Float64Array(size);
+  const bi = new Float64Array(size);
+  ar.set(buf);
+  br.set(ir);
+  fft(ar, ai);
+  fft(br, bi);
+  for (let i = 0; i < size; i++) {
+    const r = ar[i] * br[i] - ai[i] * bi[i];
+    ai[i] = ar[i] * bi[i] + ai[i] * br[i];
+    ar[i] = r;
+  }
+  fft(ar, ai, true);
+  const pk = peak(buf) || 1;
+  let wpk = 0;
+  for (let i = 0; i < outLen; i++) wpk = Math.max(wpk, Math.abs(ar[i]));
+  const wet = wpk > 0 ? pk / wpk : 0;
+  const out = new Float32Array(outLen);
+  for (let i = 0; i < outLen; i++)
+    out[i] = (i < buf.length ? buf[i] : 0) * (1 - o.mix * 0.5) + ar[i] * wet * o.mix;
+  return out;
+}
+
+/** Asymmetric soft clip (even harmonics: throaty, "wet" distortion). */
+export function asymDrive(buf: Float32Array, drive: number, bias = 0.25): Float32Array {
+  const off = Math.tanh(bias * drive);
+  for (let i = 0; i < buf.length; i++) {
+    const x = buf[i] * drive + bias * drive;
+    buf[i] = (Math.tanh(x) - off) / Math.max(1, drive * 0.6);
+  }
+  return dcBlock(buf);
+}

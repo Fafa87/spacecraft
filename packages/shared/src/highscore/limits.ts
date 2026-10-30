@@ -1,7 +1,9 @@
+import { MAX_PLAYERS } from '../constants.js';
+
 /** Highscore limits shared by the client, the HTTP server and the generated firestore.rules. */
 export const HIGHSCORE_LIMITS = {
   minTeamSize: 1,
-  maxTeamSize: 4,
+  maxTeamSize: MAX_PLAYERS,
   nameMinLength: 1,
   nameMaxLength: 16,
   minSurvivalMs: 1000,

@@ -101,8 +101,8 @@ export function buildFirestoreRules(): string {
     { length: L.maxTeamSize },
     (_, i) => `        && (d.names.size() <= ${i} || validName(d.names[${i}]))`,
   ).join('\n');
-  const firstMs = DIRECTOR.surge.firstAtSec * 1000;
-  const intervalMs = DIRECTOR.surge.interval * 1000;
+  const firstMs = DIRECTOR.waves.firstDelay * 1000;
+  const breatherMs = DIRECTOR.waves.breather * 1000;
   const k = L.maxKillsPerSecondPerPlayer;
   return `rules_version = '2';
 
@@ -128,7 +128,7 @@ ${nameChecks}
         && d.kills is int && d.kills >= 0 && d.kills <= ${L.maxKills}
         && d.kills * 1000 <= d.survivalMs * ${k} * d.teamSize + ${L.killsSlack * 1000}
         && d.wave is int && d.wave >= 0 && d.wave <= ${L.maxWave}
-        && (d.wave <= 2 || (d.wave - 2) * ${intervalMs} <= d.survivalMs - ${firstMs})
+        && (d.wave <= 1 || (d.wave - 1) * ${breatherMs} <= d.survivalMs - ${firstMs})
         && d.mode in [${RUN_MODES.map((m) => `'${m}'`).join(', ')}]
         && d.version is string && d.version.matches(${lit(unanchored(L.versionPattern))})
         && d.timestamp == request.time;

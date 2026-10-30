@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ContentRegistry, defaultContent, DIRECTOR, ENEMIES, WEAPONS } from '../src/data/index.js';
-import { budgetRate, enemyHpScale, maxAlive, waveEntryAt } from '../src/sim/index.js';
+import { MAX_PLAYERS } from '../src/constants.js';
+import { enemyHpScale, maxAlive, waveBudget, waveEntryFor } from '../src/sim/index.js';
 
 describe('content registry', () => {
   it('default content is valid', () => {
@@ -12,7 +13,7 @@ describe('content registry', () => {
   it('reports broken content', () => {
     const bad = new ContentRegistry([...WEAPONS, { ...WEAPONS[0], id: 'dup-slot' }], ENEMIES, {
       ...DIRECTOR,
-      waveTable: [{ fromSec: 0, weights: { nope: 1 } }] as typeof DIRECTOR.waveTable,
+      waveTable: [{ fromWave: 1, weights: { nope: 1 } }] as typeof DIRECTOR.waveTable,
     });
     const errors = bad.validate();
     expect(errors.some((e) => e.includes('duplicate weapon slot'))).toBe(true);
@@ -26,21 +27,24 @@ describe('content registry', () => {
 });
 
 describe('director escalation', () => {
-  it('budget, cap and hp scale grow over time', () => {
-    for (const ts of [1, 2, 3, 4]) {
-      expect(budgetRate(DIRECTOR, 300, ts)).toBeGreaterThan(budgetRate(DIRECTOR, 60, ts));
-      expect(maxAlive(DIRECTOR, 300, ts)).toBeGreaterThanOrEqual(maxAlive(DIRECTOR, 0, ts));
+  it('wave budget, cap and hp scale grow wave by wave', () => {
+    for (let ts = 1; ts <= MAX_PLAYERS; ts++) {
+      expect(waveBudget(DIRECTOR, 8, ts)).toBeGreaterThan(waveBudget(DIRECTOR, 2, ts));
+      expect(maxAlive(DIRECTOR, 8, ts)).toBeGreaterThanOrEqual(maxAlive(DIRECTOR, 1, ts));
     }
-    expect(enemyHpScale(DIRECTOR, 600)).toBeGreaterThan(enemyHpScale(DIRECTOR, 0));
+    expect(enemyHpScale(DIRECTOR, 10)).toBeGreaterThan(enemyHpScale(DIRECTOR, 1));
   });
 
-  it('bigger teams face more pressure', () => {
-    expect(budgetRate(DIRECTOR, 120, 4)).toBeGreaterThan(budgetRate(DIRECTOR, 120, 1));
+  it('bigger squads (1..8) face bigger waves', () => {
+    for (let ts = 2; ts <= MAX_PLAYERS; ts++)
+      expect(waveBudget(DIRECTOR, 3, ts)).toBeGreaterThan(waveBudget(DIRECTOR, 3, ts - 1));
+    expect(DIRECTOR.teamScale.length).toBeGreaterThanOrEqual(MAX_PLAYERS);
+    expect(DIRECTOR.bosses.count.length).toBeGreaterThanOrEqual(MAX_PLAYERS);
   });
 
   it('wave table unlocks new enemy types later', () => {
-    const early = Object.keys(waveEntryAt(DIRECTOR, 0).weights);
-    const late = Object.keys(waveEntryAt(DIRECTOR, 100_000).weights);
+    const early = Object.keys(waveEntryFor(DIRECTOR, 1).weights);
+    const late = Object.keys(waveEntryFor(DIRECTOR, 1000).weights);
     expect(late.length).toBeGreaterThan(early.length);
   });
 });

@@ -792,6 +792,59 @@ export class Renderer {
     return { x: lerp(pa.x, p.x, f.t), y: lerp(pa.y, p.y, f.t), a: lerpAngle(pa.a, p.a, f.t) };
   }
 
+  /**
+   * Braced heavy weapon: feet planted wide (mag-clamp marks either side), a tight amber firing
+   * cone ahead and a bipod stub at the muzzle — readable at a glance for the whole squad.
+   */
+  private drawBraceStance(x: number, y: number, a: number, time: number): void {
+    const { ctx } = this;
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    ctx.save();
+    // firing cone
+    const g = ctx.createRadialGradient(x, y, 20, x, y, 190);
+    g.addColorStop(0, 'rgba(255,190,80,0.28)');
+    g.addColorStop(1, 'rgba(255,190,80,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(x + c * 18, y + s * 18);
+    ctx.arc(x, y, 190, a - 0.16, a + 0.16);
+    ctx.closePath();
+    ctx.fill();
+    // planted feet: two clamp plates perpendicular to the aim, with a pulsing gold rim
+    const pulse = 0.65 + 0.35 * Math.sin(time * 6);
+    for (const side of [-1, 1]) {
+      const fx = x - s * side * 19 - c * 6;
+      const fy = y + c * side * 19 - s * 6;
+      ctx.save();
+      ctx.translate(fx, fy);
+      ctx.rotate(a);
+      ctx.fillStyle = 'rgba(20,18,14,0.85)';
+      ctx.fillRect(-9, -5, 18, 10);
+      ctx.strokeStyle = `rgba(232,196,106,${pulse})`;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-9, -5, 18, 10);
+      ctx.restore();
+    }
+    // bracing arc behind the marine
+    ctx.strokeStyle = `rgba(232,196,106,${0.5 * pulse})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x, y, 30, a + Math.PI - 0.9, a + Math.PI + 0.9);
+    ctx.stroke();
+    // bipod at the muzzle
+    const mx = x + c * 40;
+    const my = y + s * 40;
+    ctx.strokeStyle = 'rgba(40,36,30,0.95)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(mx - s * 9 + c * 4, my + c * 9 + s * 4);
+    ctx.lineTo(mx, my);
+    ctx.lineTo(mx + s * 9 + c * 4, my - c * 9 + s * 4);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   private drawPlayers(f: RenderFrame): void {
     const { ctx } = this;
     const time = this.time;
@@ -806,6 +859,7 @@ export class Renderer {
       w.y = y;
       this.walk.set(p.id, w);
 
+      if (p.br && p.st === 'alive') this.drawBraceStance(x, y, a, time);
       this.drawShadow(x, y, PLAYER.radius + 6);
       ctx.strokeStyle = color;
       ctx.globalAlpha = 0.55;

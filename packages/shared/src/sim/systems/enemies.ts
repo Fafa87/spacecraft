@@ -93,7 +93,8 @@ export function updateEnemies(world: World, hash: SpatialHash<Enemy>, dt: number
     e.attackCooldown = Math.max(0, e.attackCooldown - dt);
     e.attackAnim = Math.max(0, e.attackAnim - dt);
     const target = nearestAlivePlayer(world, e.x, e.y);
-    const speed = def.speed * e.synSpeed;
+    // End-of-wave hunt: the stragglers close in faster (no hiding from the last xenos).
+    const speed = def.speed * e.synSpeed * (e.hunt ? world.content.director.waves.reveal.speedMul : 1);
 
     let desiredX = 0;
     let desiredY = 0;
@@ -136,7 +137,7 @@ export function updateEnemies(world: World, hash: SpatialHash<Enemy>, dt: number
           case 'ranged': {
             const r = def.ranged!;
             // Synapse makes shooters bolder: they close in further.
-            const pref = r.preferredDistance * (e.synSpeed > 1 ? 0.7 : 1);
+            const pref = r.preferredDistance * (e.synSpeed > 1 ? 0.7 : 1) * (e.hunt ? 0.5 : 1);
             let radial = 0;
             if (d > pref + 60) radial = 1;
             else if (d < pref - 60) radial = -0.8;

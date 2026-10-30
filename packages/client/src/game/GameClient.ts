@@ -53,6 +53,9 @@ export class GameClient extends Emitter<GameClientEvents> {
   private cameraInit = false;
   private unsubs: Array<() => void> = [];
   private disposed = false;
+  /** Smoothed 0..1 music intensity and seconds since a boss was last on the field. */
+  private intensity = 0;
+  private sinceBoss = Infinity;
   /** Open leave-game dialog, or null. */
   private dialog: HTMLElement | null = null;
 
@@ -95,7 +98,7 @@ export class GameClient extends Emitter<GameClientEvents> {
 
   start(): void {
     this.renderer.clearWorld();
-    this.audio.playMusic('battle');
+    this.audio.playMusic('combat');
     this.canvas.classList.add('playing');
     this.lastFrame = performance.now();
     const loop = (now: number) => {
@@ -287,7 +290,10 @@ export class GameClient extends Emitter<GameClientEvents> {
       nowMs: now,
       dt,
     });
-    if (!this.over) this.enemyAudio.update(sample.b, this.audio.listener, dt, meLatest, r.landings);
+    if (!this.over) {
+      this.enemyAudio.update(sample.b, this.audio.listener, dt, meLatest, r.landings);
+      this.updateMusic(latest, dt);
+    }
     this.audio.update();
     this.hurt = Math.max(0, this.hurt - dt * 1.2);
     r.ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -300,6 +306,7 @@ export class GameClient extends Emitter<GameClientEvents> {
       players: latest.players,
       time: latest.time,
       wave: latest.wave,
+      wv: latest.wv,
       sp: latest.sp,
     };
     this.hud.draw(r.ctx, r.pixelRatio, r.camera.width, r.camera.height, {
@@ -321,6 +328,23 @@ export class GameClient extends Emitter<GameClientEvents> {
         ? `tick ${latest.tick} · buf ${(sample.t * 100) | 0}% · pending ${this.predictor.pendingCount} · corr ${this.predictor.lastCorrection.toFixed(1)}px · ents ${latest.enemies.length}/${latest.projectiles.length}`
         : null,
     });
+  }
+
+  /**
+   * Adaptive score: the combat drive stems follow the number of live enemies (silent in a
+   * breather), and a boss on the field switches to the boss track (with a few seconds'
+   * hysteresis so a dying Carnifex does not flip the music back and forth).
+   */
+  private updateMusic(snap: Snapshot, dt: number): void {
+    const boss = snap.enemies.some(
+      (e) => this.content.enemies.get(this.content.enemyIds[e[1]] ?? '')?.boss,
+    );
+    this.sinceBoss = boss ? 0 : this.sinceBoss + dt;
+    this.audio.playMusic(this.sinceBoss < 6 ? 'boss' : 'combat');
+    const active = !snap.wv || snap.wv.a === 1;
+    const target = active ? Math.min(1, snap.enemies.length / 30) : 0;
+    this.intensity += (target - this.intensity) * Math.min(1, dt / 2.5);
+    this.audio.setMusicIntensity(this.intensity);
   }
 
   /** Crosshair position in CSS px: the mouse on PC, a reticle along the aim stick on touch. */

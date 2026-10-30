@@ -1,6 +1,7 @@
 import {
   ARENA,
   BREACH_STATE,
+  ENEMY_FLAG,
   PLAYER,
   type ContentRegistry,
   type EnemyDef,
@@ -137,6 +138,7 @@ export class Hud {
       if (s.me.br && s.me.st === 'alive') this.braced(ctx, w, touch ? h - 24 : h - 122, s.now ?? 0);
     }
     const boss = this.bossBar(ctx, w, s);
+    this.waveBanner(ctx, w, h, s);
     this.notices(ctx, w, s.notices, boss ? 136 : 110);
     this.footer(ctx, w, h, s);
     // convert slot rects to CSS px
@@ -149,6 +151,7 @@ export class Hud {
     // sticks + crosshair are positioned in raw CSS px
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.breachArrows(ctx, cw, ch, s);
+    this.huntMarkers(ctx, cw, ch, s);
     if (s.touch) this.sticks(ctx, cw, ch, s.touch, s.me?.st === 'alive');
     if (s.me?.st === 'alive' && s.crosshair) this.crosshair(ctx, s.crosshair);
     ctx.restore();
@@ -241,11 +244,77 @@ export class Hud {
     ctx.font = F(600, 11);
     ctx.fillStyle = HUD.gold;
     const kills = s.snap.players.reduce((a, p) => a + p.k, 0);
-    ctx.fillText(
-      `WAVE ${s.snap.wave}  ✠  ${s.snap.enemies.length} XENOS  ✠  ${kills} PURGED`,
-      w / 2,
-      65,
-    );
+    const wv = s.snap.wv;
+    const status = !wv
+      ? `${s.snap.enemies.length} XENOS`
+      : wv.a
+        ? `${wv.r} REMAINING`
+        : `NEXT IN ${Math.ceil(wv.nx ?? 0)}s`;
+    ctx.fillStyle = wv?.h ? '#ff8a60' : HUD.gold;
+    ctx.fillText(`WAVE ${s.snap.wave}  ✠  ${status}  ✠  ${kills} PURGED`, w / 2, 65);
+  }
+
+  /** Breather between waves: big "WAVE N CLEARED" plate with the countdown. */
+  private waveBanner(ctx: CanvasRenderingContext2D, w: number, h: number, s: HudState): void {
+    const wv = s.snap.wv;
+    if (!wv || wv.a || s.snap.wave < 1) return;
+    const y = h * 0.3;
+    this.panel(ctx, w / 2 - 190, y - 34, 380, 64);
+    ctx.textAlign = 'center';
+    ctx.font = F(800, 24);
+    ctx.fillStyle = HUD.gold;
+    ctx.fillText(`✠ WAVE ${s.snap.wave} CLEARED ✠`, w / 2, y - 2);
+    ctx.font = F(600, 13);
+    ctx.fillStyle = HUD.parchment;
+    ctx.fillText(`Wave ${s.snap.wave + 1} in ${Math.ceil(wv.nx ?? 0)}s — resupply, regroup`, w / 2, y + 20);
+  }
+
+  /**
+   * Anti-stall: revealed stragglers get a pulsing ring on screen and an edge arrow when they
+   * are off screen, so the last xenos can always be found.
+   */
+  private huntMarkers(ctx: CanvasRenderingContext2D, cw: number, ch: number, s: HudState): void {
+    const cam = s.camera;
+    if (!cam || !s.snap.wv?.h) return;
+    const t = s.now ?? 0;
+    const m = 30;
+    const pulse = 0.55 + 0.45 * Math.sin(t * 9);
+    for (const e of s.snap.enemies) {
+      if (!(e[6] & ENEMY_FLAG.hunt)) continue;
+      const sx = (e[2] - cam.x) * cam.zoom + cw / 2;
+      const sy = (e[3] - cam.y) * cam.zoom + ch / 2;
+      ctx.strokeStyle = `rgba(255,120,70,${pulse})`;
+      ctx.fillStyle = `rgba(255,120,70,${pulse})`;
+      ctx.lineWidth = 2;
+      if (sx >= 0 && sx <= cw && sy >= 0 && sy <= ch) {
+        const r = 22 + 4 * Math.sin(t * 9);
+        ctx.beginPath();
+        ctx.arc(sx, sy, r, 0, Math.PI * 2);
+        ctx.stroke();
+        for (let q = 0; q < 4; q++) {
+          const a = (q * Math.PI) / 2;
+          ctx.beginPath();
+          ctx.moveTo(sx + Math.cos(a) * (r - 6), sy + Math.sin(a) * (r - 6));
+          ctx.lineTo(sx + Math.cos(a) * (r + 6), sy + Math.sin(a) * (r + 6));
+          ctx.stroke();
+        }
+        continue;
+      }
+      const dx = sx - cw / 2;
+      const dy = sy - ch / 2;
+      const k = Math.min((cw / 2 - m) / Math.abs(dx || 1e-6), (ch / 2 - m) / Math.abs(dy || 1e-6));
+      ctx.save();
+      ctx.translate(cw / 2 + dx * k, ch / 2 + dy * k);
+      ctx.rotate(Math.atan2(dy, dx));
+      ctx.beginPath();
+      ctx.moveTo(12, 0);
+      ctx.lineTo(-7, -9);
+      ctx.lineTo(-3, 0);
+      ctx.lineTo(-7, 9);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
   }
 
   private team(ctx: CanvasRenderingContext2D, s: HudState, top: number): void {
@@ -377,7 +446,12 @@ export class Hud {
       ctx.fill();
     });
     ctx.fillStyle = '#c05ad0';
-    for (const e of s.snap.enemies) ctx.fillRect(x0 + e[2] * k - 1, y0 + e[3] * k - 1, 2, 2);
+    for (const e of s.snap.enemies) {
+      const hunt = e[6] & ENEMY_FLAG.hunt;
+      ctx.fillStyle = hunt ? '#ff8a50' : '#c05ad0';
+      const r = hunt ? 2.5 : 1;
+      ctx.fillRect(x0 + e[2] * k - r, y0 + e[3] * k - r, r * 2, r * 2);
+    }
     for (const p of s.snap.pickups) {
       ctx.fillStyle = p.k === 'medkit' ? '#9be07a' : HUD.gold;
       ctx.fillRect(x0 + p.x * k - 2.5, y0 + p.y * k - 2.5, 5, 5);

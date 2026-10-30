@@ -54,6 +54,8 @@ export interface MusicEntry {
   loop: boolean;
   durationSec: number;
   source: AssetSource;
+  /** Adaptive stem: started sample-locked with this track; level follows intensity. */
+  layerOf?: string;
 }
 
 export interface AssetManifest {

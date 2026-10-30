@@ -2,6 +2,7 @@ import { PICKUP, PLAYER } from '../../constants.js';
 import type { ExplosionSpec } from '../../data/index.js';
 import { dist } from '../../math/vec.js';
 import { allocId } from '../world.js';
+import { dropCaps } from './director.js';
 import type { Enemy, Player, World } from '../types.js';
 
 export interface DamageOpts {
@@ -51,7 +52,12 @@ export function killEnemy(world: World, enemy: Enemy, killer?: Player): void {
   world.events.push({ e: 'die', t: enemy.type, x: Math.round(enemy.x), y: Math.round(enemy.y) });
   if (def.explode?.onDeath)
     explode(world, enemy.x, enemy.y, def.explode, { hurtsPlayers: true, hurtsEnemies: true });
-  if (world.rng.chance(def.medkitDropChance)) {
+  // Drops come out of the wave's medkit budget (bosses always drop); children never drop.
+  const st = world.director;
+  const roll = !enemy.child && world.rng.chance(def.medkitDropChance);
+  const inBudget = st.drops.medkits < dropCaps(world.content.director, world.teamSize).medkits;
+  if (roll && (inBudget || def.boss)) {
+    st.drops.medkits++;
     world.pickups.push({
       id: allocId(world),
       kind: 'medkit',

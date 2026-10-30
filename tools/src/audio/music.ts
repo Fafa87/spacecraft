@@ -1,13 +1,19 @@
-import { Rng } from '@sms/shared';
+import { Biquad, Rng, SR, convReverb, vowel } from './dsp.js';
 import { normalize } from './wav.js';
 
 /**
- * Procedural gothic music generator: additive pipe organ, formant "aah" choir,
- * bells and war drums. A SongSpec + seed fully defines a track; the result is a
- * seamless loop (note tails wrap to the start).
+ * Procedural gothic music (Chaos Gate / Warhammer 40k): a formant-synthesised monastic
+ * choir (unison ensembles of glottal sources through vowel formants), an additive pipe
+ * organ with mixture ranks, tuned cathedral bells, timpani with membrane modes, and low
+ * bowed drones, all in one convolution "cathedral". A SongSpec + seed fully defines a
+ * track; every track is a seamless loop (note tails and reverb wrap to the start).
+ *
+ * Adaptive combat: `combat` is the base bed and `combat_drive` (layerOf: 'combat') the
+ * intensity stem with the same bpm/bars, so the client plays both sample-locked and
+ * fades the drive stem with the fight's intensity (see AudioEngine.setMusicIntensity).
  */
 
-export type SongStyle = 'battle' | 'menu' | 'tension';
+export type SongStyle = 'menu' | 'combat' | 'combatDrive' | 'boss' | 'tension';
 
 export interface SongSpec {
   key: string;
@@ -23,6 +29,8 @@ export interface SongSpec {
   /** Chord per bar as scale degree (0-based), repeated to fill `bars`. */
   progression: number[];
   volume: number;
+  /** Adaptive stem: played in sync with the named track, level follows intensity. */
+  layerOf?: string;
 }
 
 export const SCALES = {
@@ -32,38 +40,62 @@ export const SCALES = {
   dorian: [0, 2, 3, 5, 7, 9, 10],
 };
 
+const COMBAT_BASE = {
+  seed: 1337,
+  bpm: 128,
+  bars: 32, // 60 s
+  root: 40, // E2
+  scale: SCALES.phrygian,
+  progression: [0, 0, 5, 6, 0, 0, 3, 4, 0, 1, 5, 6, 3, 3, 4, 4],
+};
+
 export const SONGS: SongSpec[] = [
   {
-    key: 'battle',
-    description: 'Siege battle loop: organ ostinato, war drums, choir',
-    style: 'battle',
-    seed: 1337,
-    bpm: 126,
-    bars: 16,
-    root: 40, // E2
-    scale: SCALES.phrygian,
-    progression: [0, 0, 5, 6, 0, 0, 3, 4],
-    volume: 0.35,
-  },
-  {
     key: 'menu',
-    description: 'Cathedral lobby loop: organ drone, choir, funeral bell',
+    description: 'Cathedral lobby: organ pedal, monastic choir, funeral bells, distant timpani',
     style: 'menu',
     seed: 42,
-    bpm: 66,
-    bars: 8,
+    bpm: 64,
+    bars: 16, // 60 s
     root: 45, // A2
     scale: SCALES.harmonicMinor,
-    progression: [0, 5, 3, 4],
+    progression: [0, 5, 3, 4, 0, 5, 1, 4],
+    volume: 0.32,
+  },
+  {
+    key: 'combat',
+    description: 'Combat bed (adaptive base): drones, organ chords, sustained choir',
+    style: 'combat',
+    ...COMBAT_BASE,
     volume: 0.3,
+  },
+  {
+    key: 'combat_drive',
+    description: 'Combat intensity stem: war timpani, organ ostinato, marcato chant, bells',
+    style: 'combatDrive',
+    ...COMBAT_BASE,
+    volume: 0.34,
+    layerOf: 'combat',
+  },
+  {
+    key: 'boss',
+    description: 'Carnifex / boss: full choir fortissimo, timpani rolls, organ tutti, bells',
+    style: 'boss',
+    seed: 666,
+    bpm: 120,
+    bars: 24, // 48 s
+    root: 38, // D2
+    scale: SCALES.harmonicMinor,
+    progression: [0, 0, 5, 4, 0, 0, 1, 4],
+    volume: 0.36,
   },
   {
     key: 'gameover',
     description: 'Requiem for the fallen (game-over loop)',
     style: 'tension',
     seed: 7,
-    bpm: 70,
-    bars: 4,
+    bpm: 60,
+    bars: 8,
     root: 38, // D2
     scale: SCALES.minor,
     progression: [0, 5, 3, 4],
@@ -73,212 +105,214 @@ export const SONGS: SongSpec[] = [
 
 const midiToFreq = (m: number): number => 440 * Math.pow(2, (m - 69) / 12);
 
-type Osc = 'pulse' | 'triangle' | 'saw' | 'sine' | 'organ' | 'choir' | 'bell';
-
-/** Pipe organ drawbars: harmonic number -> level (8', 4', 2 2/3', 2', 1 3/5', 1'). */
+/** Pipe organ: 16' 8' 4' 2 2/3' 2' + mixture (harmonic, level). */
 const ORGAN: Array<[number, number]> = [
-  [0.5, 0.55],
+  [0.5, 0.5],
   [1, 1],
   [2, 0.6],
-  [3, 0.35],
-  [4, 0.3],
-  [6, 0.15],
-  [8, 0.12],
+  [3, 0.38],
+  [4, 0.32],
+  [6, 0.2],
+  [8, 0.16],
+  [12, 0.08],
+  [16, 0.06],
 ];
-/** Inharmonic bell partials (ratio, level). */
-const BELL: Array<[number, number]> = [
-  [0.5, 0.6],
-  [1, 1],
-  [1.19, 0.5],
-  [1.56, 0.35],
-  [2, 0.4],
-  [2.66, 0.25],
-  [3.01, 0.15],
+/** Church bell partials: hum, prime, minor third, fifth, nominal, ... (ratio, level, decay x). */
+const BELL: Array<[number, number, number]> = [
+  [0.5, 0.7, 0.35],
+  [1, 1, 0.6],
+  [1.2, 0.6, 0.8],
+  [1.5, 0.35, 0.9],
+  [2, 0.55, 1],
+  [2.5, 0.25, 1.4],
+  [3, 0.2, 1.6],
+  [4.2, 0.12, 2.2],
 ];
 
-/** "Aah" vowel: harmonic amplitudes shaped by three formant peaks (F1 750, F2 1150, F3 2600 Hz). */
-function choirPartials(freq: number): Array<[number, number]> {
-  const out: Array<[number, number]> = [];
-  const formants: Array<[number, number, number]> = [
-    [750, 130, 1],
-    [1150, 160, 0.6],
-    [2600, 260, 0.25],
-  ];
-  for (let k = 1; k * freq < 4200 && k <= 40; k++) {
-    const f = k * freq;
-    let a = 0.08 / k; // glottal tilt
-    for (const [fc, bw, g] of formants) a += g * Math.exp(-(((f - fc) / bw) ** 2));
-    out.push([k, a]);
-  }
-  const sum = out.reduce((t, [, a]) => t + a, 0) || 1;
-  return out.map(([k, a]) => [k, a / sum]);
-}
-
-interface Env {
-  a: number;
-  d: number;
-  s: number;
-  r: number;
-}
-
-class Track {
+/** A stem buffer at SR with wrap-around writes (for seamless loops). */
+class Stem {
   readonly buf: Float32Array;
-
-  constructor(
-    readonly sampleRate: number,
-    length: number,
-  ) {
-    this.buf = new Float32Array(length);
+  constructor(len: number) {
+    this.buf = new Float32Array(len);
   }
-
-  tone(
-    start: number,
-    dur: number,
-    freq: number,
-    osc: Osc,
-    gain: number,
-    env: Env,
-    duty = 0.5,
-    vibrato = 0,
-  ): void {
-    const sr = this.sampleRate;
-    const n = Math.floor((dur + env.r) * sr);
-    const s0 = Math.floor(start * sr);
-    const len = this.buf.length;
-    if (osc === 'organ' || osc === 'choir' || osc === 'bell') {
-      const partials = osc === 'organ' ? ORGAN : osc === 'bell' ? BELL : choirPartials(freq);
-      const norm = osc === 'choir' ? 1 : 1 / partials.reduce((t, [, a]) => t + a, 0);
-      const phases = partials.map(() => 0);
-      for (let i = 0; i < n; i++) {
-        const t = i / sr;
-        let e: number;
-        if (osc === 'bell') e = Math.exp(-t * 2.2) * Math.min(1, t / 0.003);
-        else if (t < env.a) e = t / env.a;
-        else if (t < env.a + env.d) e = 1 - (1 - env.s) * ((t - env.a) / env.d);
-        else if (t < dur) e = env.s;
-        else e = env.s * Math.max(0, 1 - (t - dur) / env.r);
-        // Choir: slow ensemble vibrato; organ: steady.
-        const f =
-          osc === 'choir'
-            ? freq * (1 + Math.sin(t * 2 * Math.PI * 4.6 + freq) * (vibrato || 0.004))
-            : freq;
-        let v = 0;
-        for (let k = 0; k < partials.length; k++) {
-          const [ratio, amp] = partials[k]!;
-          const fk = f * ratio;
-          if (fk > sr * 0.45) continue;
-          phases[k] = (phases[k]! + fk / sr) % 1;
-          // Bell partials decay faster the higher they are.
-          const pk = osc === 'bell' ? Math.exp(-t * ratio * 1.2) : 1;
-          v += Math.sin(phases[k]! * 2 * Math.PI) * amp * pk;
-        }
-        this.buf[(s0 + i) % len] += v * norm * e * gain;
-      }
-      return;
-    }
-    let phase = 0;
-    for (let i = 0; i < n; i++) {
-      const t = i / sr;
-      let e: number;
-      if (t < env.a) e = t / env.a;
-      else if (t < env.a + env.d) e = 1 - (1 - env.s) * ((t - env.a) / env.d);
-      else if (t < dur) e = env.s;
-      else e = env.s * Math.max(0, 1 - (t - dur) / env.r);
-      const f =
-        vibrato > 0 && t > 0.15 ? freq * (1 + Math.sin(t * 2 * Math.PI * 5.5) * vibrato) : freq;
-      phase = (phase + f / sr) % 1;
-      let v: number;
-      switch (osc) {
-        case 'pulse':
-          v = phase < duty ? 1 : -1;
-          break;
-        case 'triangle':
-          v = 4 * Math.abs(phase - 0.5) - 1;
-          break;
-        case 'saw':
-          v = 2 * phase - 1;
-          break;
-        default:
-          v = Math.sin(phase * 2 * Math.PI);
-      }
-      this.buf[(s0 + i) % len] += v * e * gain;
-    }
-  }
-
-  kick(start: number, gain: number): void {
-    const sr = this.sampleRate;
-    const n = Math.floor(0.25 * sr);
-    const s0 = Math.floor(start * sr);
-    let phase = 0;
-    for (let i = 0; i < n; i++) {
-      const t = i / sr;
-      const f = 45 + 110 * Math.exp(-t * 28);
-      phase += f / sr;
-      this.buf[(s0 + i) % this.buf.length] +=
-        Math.sin(phase * 2 * Math.PI) * Math.exp(-t * 12) * gain;
-    }
-  }
-
-  /** Deep war-drum tom: pitch-dropping sine with a short noisy skin attack. */
-  tom(start: number, baseHz: number, gain: number): void {
-    const sr = this.sampleRate;
-    const n = Math.floor(0.5 * sr);
-    const s0 = Math.floor(start * sr);
-    let phase = 0;
-    let seed = Math.floor(start * 1000) + 1;
-    for (let i = 0; i < n; i++) {
-      const t = i / sr;
-      const f = baseHz * (1 + 0.8 * Math.exp(-t * 22));
-      phase += f / sr;
-      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-      const skin = ((seed / 0x7fffffff) * 2 - 1) * Math.exp(-t * 60) * 0.3;
-      this.buf[(s0 + i) % this.buf.length] +=
-        (Math.sin(phase * 2 * Math.PI) * Math.exp(-t * 6) + skin) * gain;
-    }
-  }
-
-  noise(start: number, dur: number, gain: number, decay: number, rng: Rng, hp = 0): void {
-    const sr = this.sampleRate;
-    const n = Math.floor(dur * sr);
-    const s0 = Math.floor(start * sr);
-    let prev = 0;
-    for (let i = 0; i < n; i++) {
-      const t = i / sr;
-      const w = rng.next() * 2 - 1;
-      const v = hp > 0 ? w - prev * hp : w;
-      prev = w;
-      this.buf[(s0 + i) % this.buf.length] += v * Math.exp(-t * decay) * gain;
-    }
-  }
-
-  /** One-pole low-pass in place. */
-  lowpass(cutoffHz: number): void {
-    const a = 1 - Math.exp((-2 * Math.PI * cutoffHz) / this.sampleRate);
-    let y = 0;
-    // two passes so the loop seam is smooth
-    for (let pass = 0; pass < 2; pass++)
-      for (let i = 0; i < this.buf.length; i++) this.buf[i] = y += a * (this.buf[i] - y);
-  }
-
-  /** Circular feedback delay (echo). */
-  echo(delaySec: number, feedback: number, mix: number): void {
-    const d = Math.floor(delaySec * this.sampleRate);
-    const len = this.buf.length;
-    const wet = new Float32Array(len);
-    for (let pass = 0; pass < 2; pass++)
-      for (let i = 0; i < len; i++)
-        wet[i] = this.buf[(i - d + len) % len] + wet[(i - d + len) % len] * feedback;
-    for (let i = 0; i < len; i++) this.buf[i] += wet[i] * mix;
+  add(i: number, v: number): void {
+    const n = this.buf.length;
+    this.buf[((i % n) + n) % n] += v;
   }
 }
 
-function chordNotes(spec: SongSpec, degree: number, octave = 0): number[] {
-  const s = spec.scale;
-  const note = (deg: number) =>
-    spec.root +
-    12 * (octave + Math.floor(deg / s.length)) +
-    s[((deg % s.length) + s.length) % s.length];
-  return [note(degree), note(degree + 2), note(degree + 4)];
+interface ChoirOpts {
+  voices?: number;
+  vowel?: string;
+  vowelTo?: string;
+  a?: number;
+  r?: number;
+  breath?: number;
+  marcato?: boolean;
+}
+
+/**
+ * One choir note: `voices` singers (detuned, own vibrato + drift) with a glottal-ish
+ * source summed into a shared 3-formant vowel bank, plus breath noise.
+ */
+function choir(
+  st: Stem,
+  rng: Rng,
+  t0: number,
+  dur: number,
+  midi: number,
+  gain: number,
+  o: ChoirOpts = {},
+): void {
+  const f0 = midiToFreq(midi);
+  const voices = o.voices ?? 5;
+  const a = o.a ?? Math.min(0.35, dur * 0.3);
+  const r = o.r ?? 0.6;
+  const n = Math.floor((dur + r) * SR);
+  const s0 = Math.floor(t0 * SR);
+  const vs = Array.from({ length: voices }, () => ({
+    ph: rng.next(),
+    det: Math.pow(2, rng.range(-12, 12) / 1200),
+    vr: rng.range(4.6, 5.8),
+    vp: rng.next() * 6.28,
+    vd: rng.range(0.003, 0.007),
+    drift: rng.range(0.1, 0.4),
+  }));
+  const v1 = vowel(o.vowel ?? 'a');
+  const v2 = vowel(o.vowelTo ?? o.vowel ?? 'a');
+  // male voices: slightly lowered formants
+  const bank = [new Biquad(), new Biquad(), new Biquad()];
+  const gains = [1, 0.7, 0.35];
+  const lp = new Biquad('lp', 4200, 0.7);
+  let x1 = 0;
+  const dnorm = (SR / (2 * Math.PI * f0)) * 0.8;
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    let env: number;
+    if (o.marcato) env = Math.min(1, t / 0.03) * (0.55 + 0.45 * Math.exp(-t * 6));
+    else env = t < a ? Math.pow(t / a, 1.5) : 1;
+    if (t > dur) env *= Math.max(0, 1 - (t - dur) / r);
+    if (env <= 0 && t > dur) break;
+    if ((i & 63) === 0) {
+      const k = Math.min(1, t / Math.max(0.01, dur));
+      for (let j = 0; j < 3; j++)
+        bank[j]!.set('bp', (v1[j]! + (v2[j]! - v1[j]!) * k) * 0.9, 5 + j * 2);
+    }
+    let src = 0;
+    for (const v of vs) {
+      const vib = 1 + Math.sin(t * 6.28 * v.vr + v.vp) * v.vd * Math.min(1, t / 0.4);
+      const dr = 1 + Math.sin(t * v.drift + v.vp) * 0.002;
+      v.ph += (f0 * v.det * vib * dr) / SR;
+      v.ph -= Math.floor(v.ph);
+      // smoothed glottal pulse: saw with rounded top (less buzzy than a raw saw)
+      const p = v.ph;
+      src +=
+        p < 0.6
+          ? Math.sin((p / 0.6) * Math.PI) * 0.8
+          : -0.5 * Math.sin(((p - 0.6) / 0.4) * Math.PI);
+    }
+    src /= Math.sqrt(voices);
+    const dsrc = src - x1; // spectral tilt like a real glottis
+    x1 = src;
+    const br = rng.bi() * (o.breath ?? 0.04);
+    // differentiation scales the source by ~2πf0/SR; undo that so the level is pitch-independent
+    const exc = dsrc * dnorm + br;
+    let y = 0;
+    for (let j = 0; j < 3; j++) y += bank[j]!.process(exc) * gains[j]!;
+    // formant bank is narrow (≈ -20 dB vs the source): make up the level, plus a little
+    // unfiltered chest tone so low notes keep body
+    st.add(s0 + i, lp.process(y * 5 + src * 0.12) * env * gain);
+  }
+}
+
+function organ(st: Stem, t0: number, dur: number, midi: number, gain: number, chiff = 0.15): void {
+  const f0 = midiToFreq(midi);
+  const n = Math.floor((dur + 0.35) * SR);
+  const s0 = Math.floor(t0 * SR);
+  const ph = ORGAN.map(() => 0);
+  const norm = 1 / ORGAN.reduce((s, [, a]) => s + a, 0);
+  let seed = (midi * 7919 + Math.floor(t0 * 100)) | 1;
+  const nb = new Biquad('bp', Math.min(8000, f0 * 4), 2);
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    let env = Math.min(1, t / 0.04);
+    if (t > dur) env *= Math.max(0, 1 - (t - dur) / 0.35);
+    let v = 0;
+    for (let k = 0; k < ORGAN.length; k++) {
+      const [ratio, amp] = ORGAN[k]!;
+      const fk = f0 * ratio;
+      if (fk > 9000) continue;
+      ph[k] = (ph[k]! + fk / SR) % 1;
+      v += Math.sin(ph[k]! * 6.2832) * amp;
+    }
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    const noise = (seed / 0x3fffffff - 1) * chiff * Math.exp(-t * 30);
+    st.add(s0 + i, (v * norm + nb.process(noise)) * env * gain);
+  }
+}
+
+function bell(st: Stem, t0: number, midi: number, gain: number, len = 5): void {
+  const f0 = midiToFreq(midi);
+  const n = Math.floor(len * SR);
+  const s0 = Math.floor(t0 * SR);
+  const ph = BELL.map(() => 0);
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    let v = 0;
+    for (let k = 0; k < BELL.length; k++) {
+      const [ratio, amp, dk] = BELL[k]!;
+      ph[k] = (ph[k]! + (f0 * ratio) / SR) % 1;
+      v += Math.sin(ph[k]! * 6.2832) * amp * Math.exp(-t * dk * 1.1);
+    }
+    st.add(s0 + i, v * 0.4 * gain * Math.min(1, t / 0.002));
+  }
+}
+
+/** Timpani: pitched membrane modes (1, 1.5, 1.99, 2.44) + mallet noise. */
+function timpani(st: Stem, rng: Rng, t0: number, hz: number, gain: number, len = 1.6): void {
+  const modes: Array<[number, number, number]> = [
+    [1, 1, 2.6],
+    [1.5, 0.5, 4],
+    [1.99, 0.3, 5],
+    [2.44, 0.18, 6],
+  ];
+  const n = Math.floor(len * SR);
+  const s0 = Math.floor(t0 * SR);
+  const ph = modes.map(() => 0);
+  const nb = new Biquad('lp', 1500, 0.8);
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    const bend = 1 + 0.04 * Math.exp(-t * 20);
+    let v = 0;
+    for (let k = 0; k < modes.length; k++) {
+      const [r, a, d] = modes[k]!;
+      ph[k] = (ph[k]! + (hz * r * bend) / SR) % 1;
+      v += Math.sin(ph[k]! * 6.2832) * a * Math.exp(-t * d);
+    }
+    v += nb.process(rng.bi()) * Math.exp(-t * 45) * 0.8;
+    st.add(s0 + i, v * gain * Math.min(1, t / 0.0015));
+  }
+}
+
+/** Low bowed drone: detuned saws, lowpassed; level breathes slowly, pitch stays put. */
+function drone(st: Stem, rng: Rng, t0: number, dur: number, midi: number, gain: number): void {
+  const f0 = midiToFreq(midi);
+  const n = Math.floor((dur + 0.5) * SR);
+  const s0 = Math.floor(t0 * SR);
+  const dets = [-7, -2, 3, 8].map((c) => Math.pow(2, c / 1200));
+  const ph = dets.map(() => rng.next());
+  const lp = new Biquad('lp', 380, 0.7);
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    let env = Math.min(1, t / 0.5);
+    if (t > dur) env *= Math.max(0, 1 - (t - dur) / 0.5);
+    let v = 0;
+    for (let k = 0; k < dets.length; k++) {
+      ph[k] = (ph[k]! + (f0 * dets[k]!) / SR) % 1;
+      v += 2 * ph[k]! - 1;
+    }
+    st.add(s0 + i, lp.process(v * 0.3) * env * gain);
+  }
 }
 
 function scaleNote(spec: SongSpec, deg: number, octave: number): number {
@@ -286,106 +320,196 @@ function scaleNote(spec: SongSpec, deg: number, octave: number): number {
   return (
     spec.root +
     12 * (octave + Math.floor(deg / s.length)) +
-    s[((deg % s.length) + s.length) % s.length]
+    s[((deg % s.length) + s.length) % s.length]!
   );
 }
+const chordOf = (spec: SongSpec, deg: number, oct = 0): number[] => [
+  scaleNote(spec, deg, oct),
+  scaleNote(spec, deg + 2, oct),
+  scaleNote(spec, deg + 4, oct),
+];
 
-/** Renders a song to mono samples. Length = bars * 4 beats exactly (seamless loop). */
+/** Reverb that wraps its tail onto the start so the loop stays seamless. */
+function cathedral(buf: Float32Array, mix: number, decay: number): Float32Array {
+  const wet = convReverb(buf, { mix, decay, damp: 0.55, predelay: 0.035, early: 9, seed: 1234 });
+  const out = wet.slice(0, buf.length);
+  for (let i = buf.length; i < wet.length; i++) out[i % buf.length] += wet[i]!;
+  return out;
+}
+
+/**
+ * Runs a filter over a loop in place, primed with the loop's tail so the filter state at the
+ * start matches the end (no click at the loop point).
+ */
+function loopFilter(buf: Float32Array, f: Biquad): void {
+  const prime = Math.min(buf.length, SR);
+  for (let i = buf.length - prime; i < buf.length; i++) f.process(buf[i]!);
+  for (let i = 0; i < buf.length; i++) buf[i] = f.process(buf[i]!);
+}
+
+/** Renders the song mono at SR, then resamples to `sampleRate`. Length = bars*4 beats. */
 export function renderSong(spec: SongSpec, sampleRate = 22050): Float32Array {
   const rng = new Rng(spec.seed);
   const beat = 60 / spec.bpm;
-  const step = beat / 4; // 16th note
-  const barLen = beat * 4;
-  const total = Math.round(spec.bars * barLen * sampleRate);
-  const organ = new Track(sampleRate, total);
-  const choir = new Track(sampleRate, total);
-  const bells = new Track(sampleRate, total);
-  const drums = new Track(sampleRate, total);
-  const held: Env = { a: 0.06, d: 0.2, s: 0.85, r: 0.25 };
-  const swell: Env = { a: barLen * 0.3, d: 0.3, s: 0.8, r: barLen * 0.35 };
-
-  // Chant motif: one note per half bar, mostly stepwise.
+  const bar = beat * 4;
+  const total = Math.round(spec.bars * bar * SR);
+  const st = new Stem(total);
   const motif: number[] = [];
-  let m = 0;
-  for (let i = 0; i < 16; i++) {
-    m = Math.max(-2, Math.min(5, m + rng.int(-2, 2)));
+  let m = 2;
+  for (let i = 0; i < 32; i++) {
+    m = Math.max(-1, Math.min(6, m + Math.round(rng.range(-2.4, 2.4))));
     motif.push(m);
   }
+  const vowels = ['a', 'o', 'a', 'u', 'o'];
 
-  for (let bar = 0; bar < spec.bars; bar++) {
-    const degree = spec.progression[bar % spec.progression.length];
-    const chord = chordNotes(spec, degree, 0);
-    const t0 = bar * barLen;
-    const section = Math.floor(bar / 4); // 4-bar sections add/remove layers
-    const intense = spec.style === 'battle' && section % 2 === 1;
-
-    // Pedal: low organ root held through the bar (16' + 8').
-    organ.tone(t0, barLen * 0.98, midiToFreq(chord[0] - 12), 'organ', 0.3, held);
-    // Choir: the chord as sustained "aah"s, two slightly detuned ensemble voices.
-    if (spec.style !== 'battle' || section > 0 || bar % 4 >= 2)
-      for (const n of chord) {
-        const f = midiToFreq(n + 12);
-        choir.tone(t0, barLen, f, 'choir', 0.16, swell, 0, 0.004);
-        choir.tone(t0, barLen, f * 1.005, 'choir', 0.12, swell, 0, 0.005);
-      }
-
-    if (spec.style === 'battle') {
-      // Organ ostinato: driving 8ths over the chord.
-      const pattern = [0, 2, 1, 2, 0, 2, 1, 3];
-      for (let i = 0; i < 8; i++) {
-        const k = pattern[i]!;
-        const n = k === 3 ? chord[0] + 12 : chord[k]!;
-        organ.tone(t0 + i * step * 2, step * 1.6, midiToFreq(n), 'organ', 0.16, {
-          a: 0.005,
-          d: 0.06,
-          s: 0.7,
-          r: 0.05,
-        });
-      }
-      // Choir chant line in intense sections.
-      if (intense)
-        for (let h = 0; h < 2; h++) {
-          const n = scaleNote(spec, degree + motif[(bar * 2 + h) % motif.length]!, 2);
-          choir.tone(t0 + h * beat * 2, beat * 1.9, midiToFreq(n), 'choir', 0.22, held, 0, 0.006);
+  for (let b = 0; b < spec.bars; b++) {
+    const deg = spec.progression[b % spec.progression.length]!;
+    const ch = chordOf(spec, deg);
+    const t0 = b * bar;
+    const sec = Math.floor(b / 4);
+    const vw = vowels[sec % vowels.length]!;
+    switch (spec.style) {
+      case 'menu': {
+        organ(st, t0, bar * 0.98, ch[0]! - 12, 0.28, 0.05);
+        organ(st, t0, bar * 0.98, ch[0]! + 7 - 12, 0.12, 0.05);
+        drone(st, rng, t0, bar, spec.root - 12, 0.16);
+        if (sec >= 1)
+          for (const nn of ch)
+            choir(st, rng, t0, bar * 0.95, nn + 12, 0.10, { vowel: vw, vowelTo: 'o' });
+        if (sec >= 2) {
+          // plainchant line: one note per beat-and-a-half, low male voices
+          for (let h = 0; h < 2; h++) {
+            const nn = scaleNote(spec, deg + motif[(b * 2 + h) % motif.length]!, 1);
+            choir(st, rng, t0 + h * beat * 2, beat * 1.9, nn, 0.16, {
+              vowel: 'o',
+              vowelTo: 'a',
+              voices: 6,
+            });
+          }
         }
-      // War drums: deep toms + a gated snare, tom fills at phrase ends.
-      for (let i = 0; i < 16; i++) {
-        const t = t0 + i * step;
-        if (i === 0 || i === 6 || i === 8 || (intense && (i === 10 || i === 14)))
-          drums.tom(t, 55, 0.9);
-        if (i === 4 || i === 12) drums.noise(t, 0.22, 0.4, 14, rng, 0.25);
-        if (intense && i % 2 === 1) drums.noise(t, 0.04, 0.07, 60, rng, 0.9);
+        if (b % 2 === 0) bell(st, t0, ch[0]! + 24, 0.4, 6);
+        if (b % 4 === 3) {
+          for (let k = 0; k < 8; k++)
+            timpani(
+              st,
+              rng,
+              t0 + beat * 2 + k * beat * 0.25,
+              midiToFreq(spec.root),
+              0.08 + k * 0.02,
+            );
+        }
+        if (b % 4 === 0) timpani(st, rng, t0, midiToFreq(spec.root), 0.35, 2.5);
+        break;
       }
-      if (bar % 4 === 3)
-        for (let i = 8; i < 16; i += 2) drums.tom(t0 + i * step, 70 + (16 - i) * 6, 0.6);
-    } else {
-      // Slow: organ fifth drone, a funeral bell every other bar, low heartbeat drum.
-      organ.tone(t0, barLen * 0.98, midiToFreq(chord[0] + 7 - 12), 'organ', 0.14, held);
-      if (bar % 2 === 0 || spec.style === 'tension')
-        bells.tone(t0, 2.5, midiToFreq(chord[0] + 12), 'bell', 0.35, held);
-      drums.tom(t0, 48, spec.style === 'tension' ? 0.45 : 0.55);
-      drums.tom(t0 + beat * 2.5, 48, 0.35);
-      // Sparse chant phrase on top.
-      if (section % 2 === 1 || spec.style === 'tension') {
-        const n = scaleNote(spec, degree + motif[bar % motif.length]!, 2);
-        choir.tone(t0 + beat, beat * 2.5, midiToFreq(n), 'choir', 0.18, swell, 0, 0.006);
+      case 'combat': {
+        drone(st, rng, t0, bar, spec.root - 12, 0.18);
+        organ(st, t0, bar * 0.98, ch[0]! - 12, 0.25, 0.05);
+        for (const nn of ch) organ(st, t0 + bar * 0.5 * (b % 2), bar * 0.48, nn, 0.06);
+        for (const nn of ch)
+          choir(st, rng, t0, bar * 0.95, nn + 12, 0.09, { vowel: vw, voices: 5 });
+        timpani(st, rng, t0, midiToFreq(spec.root + (deg === 0 ? 0 : 7)), 0.24);
+        break;
+      }
+      case 'combatDrive': {
+        // organ ostinato in 8ths
+        const pat = [0, 2, 1, 2, 0, 2, 1, 3];
+        for (let i = 0; i < 8; i++) {
+          const k = pat[i]!;
+          const nn = k === 3 ? ch[0]! + 12 : ch[k]!;
+          organ(st, t0 + i * beat * 0.5, beat * 0.42, nn, 0.14, 0.25);
+        }
+        // war timpani: tonic/fifth pattern with 16th pickups
+        const tf = midiToFreq(spec.root);
+        const t5 = midiToFreq(spec.root + 7);
+        const hits: Array<[number, number, number]> = [
+          [0, tf, 0.9],
+          [1.5, tf, 0.6],
+          [2, t5, 0.75],
+          [3, tf, 0.6],
+          [3.5, t5, 0.5],
+          [3.75, t5, 0.55],
+        ];
+        for (const [at, hz, g] of hits) timpani(st, rng, t0 + at * beat, hz, g * 0.42, 1.1);
+        if (b % 4 === 3)
+          for (let k = 0; k < 16; k++)
+            timpani(st, rng, t0 + k * beat * 0.25, k < 8 ? tf : t5, 0.14 + k * 0.02, 0.6);
+        // marcato chant on the beat in odd sections
+        if (sec % 2 === 1)
+          for (let h = 0; h < 4; h++) {
+            const nn = scaleNote(spec, deg + motif[(b * 4 + h) % motif.length]!, 1);
+            choir(st, rng, t0 + h * beat, beat * 0.8, nn + 12, 0.18, {
+              vowel: h % 2 ? 'o' : 'a',
+              marcato: true,
+              voices: 6,
+              r: 0.25,
+            });
+          }
+        if (b % 8 === 0) bell(st, t0, ch[0]! + 24, 0.45, 4);
+        break;
+      }
+      case 'boss': {
+        drone(st, rng, t0, bar, spec.root - 12, 0.15);
+        organ(st, t0, bar * 0.98, ch[0]! - 12, 0.2, 0.05);
+        for (const nn of ch) organ(st, t0, bar * 0.98, nn + 12, 0.07, 0.1);
+        for (const nn of ch)
+          choir(st, rng, t0, bar * 0.96, nn + 12, 0.12, { vowel: 'a', voices: 6 });
+        for (let h = 0; h < 2; h++) {
+          const nn = scaleNote(spec, deg + motif[(b * 2 + h) % motif.length]!, 2);
+          choir(st, rng, t0 + h * beat * 2, beat * 1.8, nn, 0.16, {
+            vowel: 'a',
+            vowelTo: 'o',
+            voices: 7,
+            marcato: true,
+            r: 0.4,
+          });
+        }
+        const tf = midiToFreq(spec.root);
+        for (let i = 0; i < 4; i++)
+          timpani(st, rng, t0 + i * beat, i % 2 ? midiToFreq(spec.root + 7) : tf, 0.28);
+        if (b % 2 === 1)
+          for (let k = 0; k < 12; k++)
+            timpani(st, rng, t0 + beat * 2 + k * beat * (2 / 12), tf, 0.1 + k * 0.03, 0.7);
+        if (b % 2 === 0) {
+          bell(st, t0, ch[0]! + 24, 0.5, 4);
+          bell(st, t0 + beat * 2, ch[0]! + 30, 0.3, 3); // tritone toll
+        }
+        break;
+      }
+      case 'tension': {
+        organ(st, t0, bar * 0.98, ch[0]! - 12, 0.25, 0.04);
+        drone(st, rng, t0, bar, spec.root - 12, 0.14);
+        for (const nn of ch)
+          choir(st, rng, t0, bar * 0.95, nn + 12, 0.10, { vowel: 'u', vowelTo: 'o' });
+        bell(st, t0, ch[0]! + 24, 0.35, 6);
+        timpani(st, rng, t0, midiToFreq(spec.root), 0.28, 2.5);
+        timpani(st, rng, t0 + beat * 2.5, midiToFreq(spec.root), 0.17, 2);
+        break;
       }
     }
   }
 
-  organ.lowpass(2400);
-  choir.lowpass(3200);
-  // Cathedral reverb: a few long echoes.
-  const space = spec.style === 'battle' ? 0.22 : 0.4;
-  for (const tr of [choir, bells, organ]) {
-    tr.echo(beat * 0.75, 0.45, space);
-    tr.echo(beat * 1.33, 0.3, space * 0.6);
-  }
-
-  const out = new Float32Array(total);
-  for (let i = 0; i < total; i++) {
-    const v = organ.buf[i] + choir.buf[i] + bells.buf[i] + drums.buf[i];
-    out[i] = Math.tanh(v * 1.1); // gentle saturation glues the mix
+  const wetMix = spec.style === 'combatDrive' ? 0.25 : spec.style === 'boss' ? 0.32 : 0.42;
+  const decay = spec.style === 'menu' || spec.style === 'tension' ? 4.2 : 2.8;
+  let out = cathedral(st.buf, wetMix, decay);
+  // Clear the sub rumble below the timpani fundamentals; keep the loop seamless.
+  loopFilter(out, new Biquad('hp', 34, 0.7));
+  // tame the 80-130 Hz build-up of drone + pedal + timpani, open up the top a little
+  loopFilter(out, new Biquad('lowshelf', 140, 0.7, -3));
+  loopFilter(out, new Biquad('highshelf', 1800, 0.7, 5));
+  for (let i = 0; i < out.length; i++) out[i] = Math.tanh(out[i]! * 1.2);
+  // resample to the target rate (anti-alias lowpass, then linear interpolation)
+  if (sampleRate !== SR) {
+    loopFilter(out, new Biquad('lp', sampleRate * 0.45, 0.7));
+    loopFilter(out, new Biquad('lp', sampleRate * 0.45, 0.7));
+    const len = Math.round((out.length * sampleRate) / SR);
+    const rs = new Float32Array(len);
+    for (let i = 0; i < len; i++) {
+      const x = (i * SR) / sampleRate;
+      const j = Math.floor(x);
+      const f = x - j;
+      rs[i] = out[j % out.length]! * (1 - f) + out[(j + 1) % out.length]! * f;
+    }
+    out = rs;
   }
   return normalize(out, 0.8);
 }

@@ -26,7 +26,7 @@ describe('highscore validation', () => {
 
   it.each([
     ['teamSize 0', { teamSize: 0, players: [] }],
-    ['teamSize 5', { teamSize: 5, players: ['a', 'b', 'c', 'd', 'e'] }],
+    ['teamSize 9', { teamSize: 9, players: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] }],
     ['player count mismatch', { players: ['Solo'] }],
     ['empty name', { players: ['Alpha', '   '] }],
     ['short survival', { survivalMs: 10 }],

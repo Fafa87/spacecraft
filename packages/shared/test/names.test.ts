@@ -70,12 +70,14 @@ describe('run validation for leaderboards', () => {
   });
   it('caps kills and waves', () => {
     expect(maxPlausibleKills(10_000, 2)).toBe(550);
-    expect(maxPlausibleWave(60_000)).toBe(2);
-    expect(maxPlausibleWave(170_000)).toBe(4);
+    // finite waves: wave n needs firstDelay (4 s) + (n - 1) * breather (8 s) of survival
+    expect(maxPlausibleWave(3_000)).toBe(1);
+    expect(maxPlausibleWave(60_000)).toBe(8);
+    expect(maxPlausibleWave(170_000)).toBe(21);
     expect(validateRunResult(run({ kills: 3051 })).ok).toBe(false);
     expect(validateRunResult(run({ kills: 3050 })).ok).toBe(true);
-    expect(validateRunResult(run({ wave: 3 })).ok).toBe(true);
-    expect(validateRunResult(run({ wave: 4 })).ok).toBe(false);
+    expect(validateRunResult(run({ wave: 15 })).ok).toBe(true);
+    expect(validateRunResult(run({ wave: 16 })).ok).toBe(false);
   });
   it('validateLeaderboardRun makes names board-safe', () => {
     const v = validateLeaderboardRun(run({ teamSize: 2, players: ['fuck', 'Ok'] }));

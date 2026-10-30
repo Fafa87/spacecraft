@@ -21,9 +21,13 @@ export const maxPlausiblePlayerKills = (survivalMs: number) =>
   maxPlausibleKills(survivalMs, 1);
 
 /** Highest wave reachable in a survival time (the director's surge schedule + slack). */
+/**
+ * Finite waves: a wave can only start after the previous one was cleared plus a breather, so
+ * wave n needs at least firstDelay + (n - 1) * breather seconds of survival.
+ */
 export const maxPlausibleWave = (survivalMs: number) =>
-  Math.floor(Math.max(0, survivalMs / 1000 - DIRECTOR.surge.firstAtSec) / DIRECTOR.surge.interval) +
-  2;
+  Math.floor(Math.max(0, survivalMs / 1000 - DIRECTOR.waves.firstDelay) / DIRECTOR.waves.breather) +
+  1;
 
 export type ValidationResult<T> = { ok: true; value: T } | { ok: false; errors: string[] };
 

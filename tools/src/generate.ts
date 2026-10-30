@@ -191,6 +191,7 @@ function buildAudio(manifest: AssetManifest): void {
       loop: true,
       durationSec: +(wav.samples.length / wav.channels / wav.sampleRate).toFixed(2),
       source,
+      ...(song.layerOf ? { layerOf: song.layerOf } : {}),
     };
   }
   console.log(

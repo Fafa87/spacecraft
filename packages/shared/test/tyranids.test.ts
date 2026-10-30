@@ -33,9 +33,7 @@ function run(w: World, ticks: number, input?: Partial<ReturnType<typeof emptyInp
 /** A solo world where the director stays quiet, so only staged enemies exist. */
 function quietWorld(seed = 7): World {
   const w = createWorld([{ id: 1, name: 'A' }], seed);
-  w.director.nextSurgeAt = Infinity;
-  w.director.nextCrateAt = Infinity;
-  w.director.budget = -1e9;
+  w.director.idle = true;
   return w;
 }
 
@@ -207,11 +205,11 @@ describe('Tyranid behaviours', () => {
     expect(p.hp).toBeLessThan(hp0);
   });
 
-  it('boss waves bring a Carnifex on the configured surge', () => {
+  it('boss waves bring a Carnifex on the configured wave', () => {
     const w = createWorld([{ id: 1, name: 'A' }], 3);
     const b = content.director.bosses;
-    w.director.wave = b.firstSurge - 1;
-    w.director.nextSurgeAt = w.time;
+    w.director.wave = b.firstWave - 1;
+    w.director.nextWaveAt = w.time;
     // The boss telegraphs at a breach first, then emerges.
     const evs = run(w, Math.ceil((content.director.spawn.bossTelegraph + 0.2) / TICK_DT));
     expect(evs.some((e) => e.e === 'boss' && e.t === 'carnifex' && e.n === b.count[0])).toBe(true);

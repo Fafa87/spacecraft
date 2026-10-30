@@ -138,6 +138,17 @@ export interface EnemyBurrowSpec {
 }
 
 /** Synapse creature: nearby swarm moves faster, hits harder and closes in more boldly. */
+/** Spawns child enemies during the wave (e.g. a Biovore seeding spore mines). */
+export interface EnemySpawnerSpec {
+  enemy: string;
+  /** Seconds between children. */
+  interval: number;
+  /** Children per parent, ever (no endless regeneration). */
+  max: number;
+  /** Only while a marine is within this distance. */
+  range: number;
+}
+
 export interface EnemySynapseSpec {
   radius: number;
   speedMul: number;
@@ -167,6 +178,7 @@ export interface EnemyDef {
   charge?: EnemyChargeSpec;
   burrow?: EnemyBurrowSpec;
   synapse?: EnemySynapseSpec;
+  spawner?: EnemySpawnerSpec;
   /** Group size the director spawns (default: director spawn.groupMin..groupMax). */
   group?: [number, number];
   /** Boss: big HP bar + banner on the client. */
@@ -175,7 +187,7 @@ export interface EnemyDef {
   threat: number;
   /** Score awarded to the marine who lands the killing blow. */
   points: number;
-  /** Chance to drop a medkit on death. */
+  /** Chance to drop a medkit on death (within the wave's drop budget; children never drop). */
   medkitDropChance: number;
   sprite: string;
   /** death/attack + optional roar (charge / emerge / boss arrival). */
@@ -209,32 +221,48 @@ export interface SpawnPointDef {
 }
 
 export interface WaveTableEntry {
-  /** Entry applies from this survival second until the next entry. */
-  fromSec: number;
+  /** Entry applies from this wave number until the next entry. */
+  fromWave: number;
   /** Relative spawn weights per enemy id. */
   weights: Record<string, number>;
 }
 
+/** Per team size 1..MAX_PLAYERS (index = teamSize - 1). */
+export type PerTeamSize = readonly number[];
+
 export interface DirectorConfig {
-  /** Threat points earned per second = (base + perMinute * minutes^exponent) * teamScale. */
-  budget: { base: number; perMinute: number; exponent: number };
-  /** Multiplier on budget & max alive by team size (index = teamSize - 1). */
-  teamScale: [number, number, number, number];
-  maxAlive: { base: number; perMinute: number; cap: number };
-  /** Enemy HP multiplier grows by this fraction per minute survived. */
-  hpScalePerMinute: number;
-  /** Periodic big waves ("surges"). */
-  surge: {
-    firstAtSec: number;
-    interval: number;
-    duration: number;
-    budgetMultiplier: number;
-    bonusThreat: number;
-    bonusThreatPerWave: number;
+  /** Multiplier on wave budgets, pacing and max alive by team size (index = teamSize - 1). */
+  teamScale: PerTeamSize;
+  /**
+   * Finite waves: wave n has a fixed threat budget of (base + perWave * (n-1)^exponent) * teamScale.
+   * The next wave starts only when every enemy of the wave (children included) is dead.
+   */
+  waves: {
+    /** Seconds before wave 1. */
+    firstDelay: number;
+    /** Breather between "WAVE N CLEARED" and the next wave. */
+    breather: number;
+    budget: { base: number; perWave: number; exponent: number };
+    /** Threat per second sent to the breaches while the roster lasts: (base + perWave*(n-1)) * teamScale. */
+    pace: { base: number; perWave: number };
+    /** Breaches a wave flanks from, [min, max]. */
+    flankPoints: [number, number];
+    /** Enemy HP multiplier grows by this fraction per wave. */
+    hpScalePerWave: number;
+    /** Children (spawner enemies) per wave at most, times teamScale. */
+    maxChildren: number;
+    /**
+     * Anti-stall: once the roster is out and at most max(remaining, fraction * total) enemies are
+     * left, or `afterSec` seconds passed since the roster ran out, the rest are revealed and hunt.
+     */
+    reveal: { remaining: number; fraction: number; afterSec: number; speedMul: number };
+    /** Hard stall timeout: seconds after a wave started that force the next one. */
+    forceNextAfter: number;
   };
+  maxAlive: { base: number; perWave: number; cap: number };
   /**
    * Fixed hive breaches the swarm emerges from (arena coordinates). The director picks among
-   * them (never one too close to a marine); surges flank from several at once.
+   * them (never one too close to a marine); a wave flanks from several at once.
    */
   spawnPoints: SpawnPointDef[];
   spawn: {
@@ -243,28 +271,34 @@ export interface DirectorConfig {
     bossTelegraph: number;
     /** A breach this close to a living marine is not used. */
     pointMinDistance: number;
-    /** Breaches used at once by a surge wave (flanking), [min, max]. */
-    surgePoints: [number, number];
     minDistance: number;
     maxDistance: number;
     groupMin: number;
     groupMax: number;
     groupSpread: number;
   };
+  /** Per-wave drop budget, so kills and crates can't be farmed. */
+  drops: {
+    /** Medkits from kills per wave: base + perMarine * (teamSize - 1), rounded. Bosses always drop. */
+    medkits: { base: number; perMarine: number };
+    /** Weapon crates per wave: base + perMarine * (teamSize - 1), rounded. */
+    crates: { base: number; perMarine: number };
+  };
+  /** Weapon crate timing inside a wave (survival seconds after the wave starts). */
   crates: {
-    firstAtSec: number;
+    firstAfter: number;
     intervalMin: number;
     intervalMax: number;
     minDistance: number;
     maxDistance: number;
   };
-  /** Boss waves: on surge `firstSurge` and every `everySurge` surges after it. */
+  /** Boss waves: wave `firstWave` and every `everyWave` waves after it. */
   bosses: {
     enemy: string;
-    firstSurge: number;
-    everySurge: number;
+    firstWave: number;
+    everyWave: number;
     /** Bosses per appearance by team size (index = teamSize - 1). */
-    count: [number, number, number, number];
+    count: PerTeamSize;
     /** Extra bosses per further appearance. */
     extraPerAppearance: number;
   };

@@ -27,6 +27,9 @@ import {
   trimTail,
   vowel,
   waveAt,
+  asymDrive,
+  convReverb,
+  type ConvReverbOpts,
   hashString,
   type CompressorOpts,
   type Env,
@@ -122,6 +125,11 @@ export interface GrainLayer extends LayerBase {
   src: 'noise' | 'chirp' | 'click';
   /** Chirp end/start frequency ratio. */
   chirp?: number;
+  /**
+   * Periodic grains (stridulation / mandible ratchet) instead of a Poisson cloud;
+   * the value is the timing jitter fraction (0 = machine-exact, 0.15 = organic).
+   */
+  regular?: number;
 }
 
 /** Voice through formant filters: growls, grunts, screeches, roars. */
@@ -143,6 +151,42 @@ export interface FormantLayer extends LayerBase {
   wave?: 'saw' | 'pulse';
 }
 
+/**
+ * Creature voice (v0.4): a physically-flavoured throat. Source = Rosenberg glottal pulses
+ * (derivative) with per-period jitter / shimmer, `voices` detuned unison throats, optional
+ * period-doubling rasp; aspiration noise is gated by the glottal open phase (breath that
+ * rides the pulses, not a separate hiss). Filtered by 5 parallel formants: F1-F3 glide
+ * through `vowels`, F4/F5 are fixed throat/mandible resonances (2.5-6 kHz) that give
+ * Tyranids their wet, rasping edge. Finished with asymmetric drive.
+ */
+export interface CreatureLayer extends LayerBase {
+  kind: 'creature';
+  f0: Range;
+  vowels: Array<string | [number, number, number]>;
+  /** Formant shift multiplier (bigger beast = lower). */
+  shift?: number;
+  /** Fixed throat resonances F4/F5 in Hz (not shifted). Default [3100, 4700]. */
+  throat?: [number, number];
+  /** Formant bandwidth factor (default 1; lower = wider, rougher). */
+  q?: number;
+  /** Unison throats (default 3) spread over ±`detune` cents. */
+  voices?: number;
+  detune?: number;
+  /** Per-period pitch jitter 0..1. */
+  jitter?: number;
+  /** Per-period amplitude shimmer 0..1. */
+  shimmer?: number;
+  /** Period-doubling rasp 0..1 (alternate pulses weaker + later = growl). */
+  rasp?: number;
+  /** Gated aspiration share 0..1. */
+  breath?: number;
+  /** Glottal open quotient (0.3 pressed / shrieky .. 0.8 breathy). */
+  oq?: number;
+  vib?: { rate: number; depth: number };
+  /** Asymmetric drive amount (default 2). */
+  drive?: number;
+}
+
 /** Sparse electric discharges. */
 export interface CrackleLayer extends LayerBase {
   kind: 'crackle';
@@ -151,7 +195,14 @@ export interface CrackleLayer extends LayerBase {
 }
 
 export type Layer =
-  ToneLayer | NoiseLayer | ClickLayer | MetalLayer | GrainLayer | FormantLayer | CrackleLayer;
+  | ToneLayer
+  | NoiseLayer
+  | ClickLayer
+  | MetalLayer
+  | GrainLayer
+  | FormantLayer
+  | CreatureLayer
+  | CrackleLayer;
 
 export interface PostChain {
   eq?: FilterSpec[];
@@ -159,6 +210,10 @@ export interface PostChain {
   drive?: number;
   comp?: CompressorOpts;
   reverb?: ReverbOpts;
+  /** Convolution reverb with a synthetic IR (applied after `reverb`). */
+  conv?: ConvReverbOpts;
+  /** Asymmetric drive after normalisation (wet throaty distortion). */
+  asym?: number;
   /** Final peak level (default 0.89). */
   peak?: number;
 }
@@ -342,7 +397,10 @@ function renderGrains(l: GrainLayer, rng: Rng, n: number): Float32Array {
   let t = 0;
   while (t < total) {
     const rate = Math.max(1, rangeAt(l.rate, t, st, l.curve, true));
-    t += -Math.log(1 - rng.next() * 0.999) / rate;
+    t +=
+      l.regular !== undefined
+        ? (1 + rng.bi() * l.regular) / rate
+        : -Math.log(1 - rng.next() * 0.999) / rate;
     if (t >= total) break;
     const amp = envAt(l.env, t) * rng.range(0.35, 1);
     const d = rng.range(l.dur[0], l.dur[1]);
@@ -406,6 +464,91 @@ function renderFormant(l: FormantLayer, rng: Rng, n: number): Float32Array {
   return out;
 }
 
+/** Rosenberg glottal flow at phase p (0..1) with open quotient oq. */
+function glottal(p: number, oq: number): number {
+  const tp = oq * 0.66;
+  const tn = oq * 0.34;
+  if (p < tp) return 0.5 * (1 - Math.cos((Math.PI * p) / tp));
+  if (p < tp + tn) return Math.cos((Math.PI * (p - tp)) / (2 * tn));
+  return 0;
+}
+
+function renderCreature(l: CreatureLayer, rng: Rng, n: number): Float32Array {
+  const out = new Float32Array(n);
+  const st = l.sweepTime ?? envLength(l.env);
+  const shift = l.shift ?? 1;
+  const vs = l.vowels.map(vowel);
+  const throat = l.throat ?? [3100, 4700];
+  const qk = l.q ?? 1;
+  const bands = [0, 1, 2, 3, 4].map(() => new Biquad());
+  const bGain = [1, 0.8, 0.55, 0.45, 0.32];
+  const bQ = [3.5, 5, 6, 7, 6];
+  const oq = l.oq ?? 0.55;
+  const nv = Math.max(1, l.voices ?? 3);
+  const det = l.detune ?? 18;
+  const voices = Array.from({ length: nv }, (_, k) => ({
+    ph: rng.next(),
+    prevG: 0,
+    cents: nv === 1 ? 0 : -det + (2 * det * k) / (nv - 1) + rng.bi() * det * 0.2,
+    jit: 1,
+    amp: 1,
+    odd: false,
+    drift: 0,
+  }));
+  const asp = new Noise(rng, 'white');
+  const aspHp = new Biquad('hp', 700, 0.7);
+  const jitter = l.jitter ?? 0.4;
+  const shimmer = l.shimmer ?? 0.3;
+  const rasp = l.rasp ?? 0;
+  const breath = l.breath ?? 0.25;
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    if ((i & 31) === 0) {
+      const x = Math.min(0.9999, t / Math.max(1e-4, st)) * (vs.length - 1);
+      const k = Math.floor(x);
+      const fr = x - k;
+      const a = vs[k];
+      const b = vs[Math.min(vs.length - 1, k + 1)];
+      for (let j = 0; j < 3; j++)
+        bands[j].set('bp', Math.min(SR * 0.45, (a[j] + (b[j] - a[j]) * fr) * shift), bQ[j] * qk);
+      bands[3].set('bp', throat[0], bQ[3] * qk);
+      bands[4].set('bp', Math.min(SR * 0.45, throat[1]), bQ[4] * qk);
+    }
+    let f0 = rangeAt(l.f0, t, st, l.curve);
+    if (l.vib) f0 *= Math.pow(2, (Math.sin(Math.PI * 2 * l.vib.rate * t) * l.vib.depth) / 12);
+    let src = 0;
+    let open = 0;
+    for (const v of voices) {
+      // slow random drift per throat so the unison never phases statically
+      v.drift += (rng.bi() * 0.6 - v.drift) * 0.0008;
+      const f =
+        f0 * Math.pow(2, (v.cents + v.drift * det) / 1200) * v.jit * (v.odd ? 1 + rasp * 0.12 : 1);
+      v.ph += f / SR;
+      if (v.ph >= 1) {
+        v.ph -= 1;
+        v.jit = 1 + rng.bi() * jitter * 0.07;
+        v.amp = 1 + rng.bi() * shimmer * 0.45;
+        v.odd = !v.odd;
+      }
+      const g = glottal(v.ph, oq);
+      const dg = (g - v.prevG) * (SR / Math.max(20, f)) * 0.12;
+      v.prevG = g;
+      const a = v.amp * (v.odd ? 1 - rasp * 0.7 : 1);
+      src += dg * a;
+      open += g * a;
+    }
+    src /= Math.sqrt(nv);
+    open /= nv;
+    // aspiration rides the open phase (turbulence through the opening throat)
+    src += aspHp.process(asp.next()) * breath * (0.2 + open * 1.6);
+    let v = 0;
+    for (let j = 0; j < 5; j++) v += bands[j].process(src) * bGain[j];
+    out[i] = v * envAt(l.env, t) * 2.2;
+  }
+  asymDrive(out, l.drive ?? 2, 0.3);
+  return out;
+}
+
 function renderCrackle(l: CrackleLayer, rng: Rng, n: number): Float32Array {
   const out = new Float32Array(n);
   const st = l.sweepTime ?? envLength(l.env);
@@ -439,6 +582,8 @@ function renderLayer(l: Layer, rng: Rng, n: number): Float32Array {
       return renderGrains(l, rng, n);
     case 'formant':
       return renderFormant(l, rng, n);
+    case 'creature':
+      return renderCreature(l, rng, n);
     case 'crackle':
       return renderCrackle(l, rng, n);
   }
@@ -487,6 +632,15 @@ function varyLayer(l: Layer, p: number, tk: number, rng: Rng): Layer {
         shift: (l.shift ?? 1) * (1 + (p - 1) * 0.5),
         sweepTime: l.sweepTime && l.sweepTime * tk,
       };
+    case 'creature':
+      return {
+        ...l,
+        at,
+        env: stretchEnv(l.env, tk),
+        f0: scaleRange(l.f0, p),
+        shift: (l.shift ?? 1) * (1 + (p - 1) * 0.5),
+        sweepTime: l.sweepTime && l.sweepTime * tk,
+      };
     case 'crackle':
       return { ...l, at, env: stretchEnv(l.env, tk), sweepTime: l.sweepTime && l.sweepTime * tk };
   }
@@ -520,7 +674,20 @@ export function renderRecipe(r: Recipe, variant = 0): Float32Array {
   const pk = peak(buf);
   if (pk > 1e-6) for (let i = 0; i < n; i++) buf[i] /= pk;
   if (post.comp) compress(buf, post.comp);
+  if (post.asym) {
+    asymDrive(buf, post.asym, 0.3);
+    const p2 = peak(buf);
+    if (p2 > 1e-6) for (let i = 0; i < buf.length; i++) buf[i] /= p2;
+  }
   if (post.reverb) reverb(buf, post.reverb);
+  if (post.conv) {
+    const wet = convReverb(buf, post.conv);
+    if (r.loop) {
+      // circular: fold the tail back over the start so the loop stays seamless
+      buf = wet.slice(0, n);
+      for (let i = n; i < wet.length; i++) buf[i % n] += wet[i];
+    } else buf = wet;
+  }
   dcBlock(buf);
   if (r.loop) buf = makeLoop(buf, r.loop.xf);
   else buf = trimTail(buf, 0.004 * peak(buf));

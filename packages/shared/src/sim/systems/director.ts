@@ -1,92 +1,234 @@
-import { ARENA, PICKUP } from '../../constants.js';
-import type { DirectorConfig, WaveTableEntry } from '../../data/index.js';
+import { ARENA, MAX_PLAYERS, PICKUP } from '../../constants.js';
+import type { DirectorConfig, PerTeamSize, WaveTableEntry } from '../../data/index.js';
 import { clamp, dist2 } from '../../math/vec.js';
 import { allocId, alivePlayers } from '../world.js';
-import type { Enemy, World } from '../types.js';
+import type { Enemy, RosterGroup, World } from '../types.js';
+
+/** Value for a squad of `teamSize` marines from a per-team-size table (1..MAX_PLAYERS). */
+export const perTeam = (table: PerTeamSize, teamSize: number): number =>
+  table[clamp(teamSize, 1, Math.min(MAX_PLAYERS, table.length)) - 1];
 
 const teamScale = (cfg: DirectorConfig, teamSize: number): number =>
-  cfg.teamScale[clamp(teamSize, 1, 4) - 1];
+  perTeam(cfg.teamScale, teamSize);
 
-export function waveEntryAt(cfg: DirectorConfig, t: number): WaveTableEntry {
+export function waveEntryFor(cfg: DirectorConfig, wave: number): WaveTableEntry {
   let entry = cfg.waveTable[0];
-  for (const e of cfg.waveTable) if (t >= e.fromSec) entry = e;
+  for (const e of cfg.waveTable) if (wave >= e.fromWave) entry = e;
   return entry;
 }
 
-/** Threat points per second at survival time t (seconds). */
-export function budgetRate(cfg: DirectorConfig, t: number, teamSize: number): number {
-  const minutes = t / 60;
-  return (
-    (cfg.budget.base + cfg.budget.perMinute * minutes ** cfg.budget.exponent) *
-    teamScale(cfg, teamSize)
-  );
+/** Fixed threat budget of wave `wave` (1-based) for a squad. */
+export function waveBudget(cfg: DirectorConfig, wave: number, teamSize: number): number {
+  const b = cfg.waves.budget;
+  return (b.base + b.perWave * Math.max(0, wave - 1) ** b.exponent) * teamScale(cfg, teamSize);
 }
 
-export function maxAlive(cfg: DirectorConfig, t: number, teamSize: number): number {
-  const raw = (cfg.maxAlive.base + cfg.maxAlive.perMinute * (t / 60)) * teamScale(cfg, teamSize);
+/** Threat per second sent to the breaches while a wave's roster lasts. */
+export function wavePace(cfg: DirectorConfig, wave: number, teamSize: number): number {
+  const p = cfg.waves.pace;
+  return (p.base + p.perWave * Math.max(0, wave - 1)) * teamScale(cfg, teamSize);
+}
+
+export function maxAlive(cfg: DirectorConfig, wave: number, teamSize: number): number {
+  const raw = (cfg.maxAlive.base + cfg.maxAlive.perWave * Math.max(0, wave - 1)) * teamScale(cfg, teamSize);
   return Math.min(cfg.maxAlive.cap, Math.floor(raw));
 }
 
-export const enemyHpScale = (cfg: DirectorConfig, t: number): number =>
-  1 + cfg.hpScalePerMinute * (t / 60);
+export const enemyHpScale = (cfg: DirectorConfig, wave: number): number =>
+  1 + cfg.waves.hpScalePerWave * Math.max(0, wave - 1);
 
-/** Escalating spawn director: earns a threat budget over time and spends it on enemy groups. */
-export function updateDirector(world: World, dt: number): void {
+/** Per-wave drop caps for a squad. */
+export function dropCaps(cfg: DirectorConfig, teamSize: number): { medkits: number; crates: number } {
+  const n = clamp(teamSize, 1, MAX_PLAYERS) - 1;
+  const d = cfg.drops;
+  return {
+    medkits: Math.round(d.medkits.base + d.medkits.perMarine * n),
+    crates: Math.round(d.crates.base + d.crates.perMarine * n),
+  };
+}
+
+export const isBossWave = (cfg: DirectorConfig, wave: number): boolean =>
+  wave >= cfg.bosses.firstWave && (wave - cfg.bosses.firstWave) % cfg.bosses.everyWave === 0;
+
+/**
+ * The wave's fixed roster: groups drawn from the wave table until the threat budget is spent
+ * (deterministic given the world RNG). A boss wave leads with its Carnifexes.
+ */
+export function buildRoster(world: World, wave: number): RosterGroup[] {
   const cfg = world.content.director;
-  const st = world.director;
-  const t = world.time;
-  const alive = alivePlayers(world);
-  if (alive.length === 0) return;
-  const scale = teamScale(cfg, world.teamSize);
-
-  if (t >= st.nextSurgeAt) {
-    st.wave++;
-    st.surgeUntil = t + cfg.surge.duration;
-    st.nextSurgeAt += cfg.surge.interval;
-    st.budget += (cfg.surge.bonusThreat + cfg.surge.bonusThreatPerWave * (st.wave - 1)) * scale;
-    const [pMin, pMax] = cfg.spawn.surgePoints;
-    st.surgePoints = pickFlankingBreaches(world, world.rng.int(pMin, pMax));
-    world.events.push({ e: 'surge', n: st.wave });
-    const b = cfg.bosses;
-    if (st.wave >= b.firstSurge && (st.wave - b.firstSurge) % b.everySurge === 0) {
-      const n = b.count[clamp(world.teamSize, 1, 4) - 1] + b.extraPerAppearance * st.bossWaves;
-      st.bossWaves++;
-      queueGroup(world, b.enemy, n, enemyHpScale(cfg, t), true);
-      world.events.push({ e: 'boss', t: b.enemy, n });
-    }
+  const roster: RosterGroup[] = [];
+  if (isBossWave(cfg, wave)) {
+    const n = perTeam(cfg.bosses.count, world.teamSize) + cfg.bosses.extraPerAppearance * world.director.bossWaves;
+    roster.push({ type: cfg.bosses.enemy, n, boss: true });
   }
-  const surging = t < st.surgeUntil;
-  st.budget += budgetRate(cfg, t, world.teamSize) * (surging ? cfg.surge.budgetMultiplier : 1) * dt;
-  st.budget = Math.min(st.budget, 120 * scale + st.wave * 10);
-
-  const cap = Math.floor(maxAlive(cfg, t, world.teamSize) * (surging ? 1.3 : 1));
-  const entry = waveEntryAt(cfg, t);
-  const count = () => world.enemies.length + st.queue.reduce((s, q) => s + q.n, 0);
+  const entry = waveEntryFor(cfg, wave);
+  let budget = waveBudget(cfg, wave, world.teamSize);
   let guard = 0;
-  while (st.budget >= 1 && count() < cap && guard++ < 10) {
+  while (budget >= 1 && guard++ < 500) {
     const type = world.rng.weighted(entry.weights);
     if (!type) break;
     const def = world.content.enemy(type);
-    const affordable = Math.floor(st.budget / def.threat);
-    if (affordable < 1) break;
+    const affordable = Math.floor(budget / def.threat);
+    if (affordable < 1) {
+      // Spend the remainder on the cheapest enemy in the table.
+      const cheapest = Object.keys(entry.weights)
+        .map((id) => world.content.enemy(id))
+        .reduce((a, b) => (b.threat < a.threat ? b : a));
+      if (cheapest.threat > budget) break;
+      roster.push({ type: cheapest.id, n: Math.floor(budget / cheapest.threat) });
+      break;
+    }
     const [gMin, gMax] = def.group ?? [
       cfg.spawn.groupMin,
       def.threat >= 5 ? Math.max(1, Math.floor(cfg.spawn.groupMax / 3)) : cfg.spawn.groupMax,
     ];
-    const n = Math.min(affordable, cap - count(), world.rng.int(gMin, gMax));
-    if (n < 1) break;
-    // Burrowers tunnel in from anywhere; everything else comes out of a hive breach.
-    if (def.burrow) spawnGroup(world, type, n, enemyHpScale(cfg, t));
-    else queueGroup(world, type, n, enemyHpScale(cfg, t), false);
-    st.budget -= n * def.threat;
+    const n = Math.min(affordable, world.rng.int(gMin, gMax));
+    roster.push({ type, n });
+    budget -= n * def.threat;
   }
+  return roster;
+}
+
+/** Enemies of the current wave still to kill: alive + telegraphing + not yet sent. */
+export function remainingEnemies(world: World): number {
+  const st = world.director;
+  let n = 0;
+  for (const e of world.enemies) if (!e.dead) n++;
+  for (const q of st.queue) n += q.n;
+  for (const g of st.roster) n += g.n;
+  return n;
+}
+
+/** Starts the next wave (normally after a full clear; `forced` = stall timeout). */
+export function startWave(world: World, forced = false): void {
+  const cfg = world.content.director;
+  const st = world.director;
+  st.wave++;
+  st.phase = 'active';
+  st.waveStartedAt = world.time;
+  st.roster = buildRoster(world, st.wave);
+  if (st.roster[0]?.boss) st.bossWaves++;
+  st.dispatch = 0;
+  st.hunting = false;
+  st.huntAt = -1;
+  for (const e of world.enemies) e.hunt = false;
+  st.waveChildren = 0;
+  const carried = world.enemies.filter((e) => !e.dead).length + st.queue.reduce((s, q) => s + q.n, 0);
+  st.waveTotal = carried + st.roster.reduce((s, g) => s + g.n, 0);
+  st.drops = { medkits: 0, crates: 0 };
+  st.nextCrateAt = world.time + cfg.crates.firstAfter;
+  const [pMin, pMax] = cfg.waves.flankPoints;
+  st.surgePoints = pickFlankingBreaches(world, world.rng.int(pMin, pMax));
+  world.events.push({ e: 'surge', n: st.wave, total: st.waveTotal, ...(forced ? { f: 1 as const } : {}) });
+  const boss = st.roster[0]?.boss ? st.roster[0] : undefined;
+  if (boss) world.events.push({ e: 'boss', t: boss.type, n: boss.n });
+}
+
+/**
+ * Finite-wave director: between waves it counts down a breather; during a wave it sends the
+ * wave's fixed roster to the breaches at a steady pace, reveals the last stragglers so nobody can
+ * hide from them, and declares the wave cleared once every enemy (children included) is dead.
+ */
+export function updateDirector(world: World, dt: number): void {
+  const cfg = world.content.director;
+  const st = world.director;
+  if (st.idle) return;
+  const t = world.time;
+  if (alivePlayers(world).length === 0) return;
+
+  if (st.phase === 'breather') {
+    if (t >= st.nextWaveAt) startWave(world);
+    else return;
+  }
+
+  // Dispatch the roster at the wave's pace, respecting the alive cap.
+  const cap = maxAlive(cfg, st.wave, world.teamSize);
+  const pending = () =>
+    world.enemies.reduce((n, e) => n + (e.dead ? 0 : 1), 0) + st.queue.reduce((s, q) => s + q.n, 0);
+  st.dispatch += wavePace(cfg, st.wave, world.teamSize) * dt;
+  const hpMul = enemyHpScale(cfg, st.wave);
+  let guard = 0;
+  while (st.roster.length && guard++ < 10) {
+    const g = st.roster[0];
+    const def = world.content.enemy(g.type);
+    if (!g.boss && st.dispatch < def.threat) break;
+    const room = cap - pending();
+    if (room < 1) break;
+    const n = g.boss ? g.n : Math.min(g.n, room, Math.max(1, Math.floor(st.dispatch / def.threat)));
+    if (def.burrow && !g.boss) spawnGroup(world, g.type, n, hpMul);
+    else queueGroup(world, g.type, n, hpMul, !!g.boss);
+    if (!g.boss) st.dispatch -= n * def.threat;
+    g.n -= n;
+    if (g.n <= 0) st.roster.shift();
+  }
+  if (st.roster.length === 0) st.dispatch = 0;
 
   emergeQueued(world);
+  updateSpawners(world, dt);
 
+  // Weapon crates: on a timer, within the wave's crate budget.
   if (t >= st.nextCrateAt) {
     st.nextCrateAt = t + world.rng.range(cfg.crates.intervalMin, cfg.crates.intervalMax);
-    spawnCrate(world);
+    if (st.drops.crates < dropCaps(cfg, world.teamSize).crates) {
+      st.drops.crates++;
+      spawnCrate(world);
+    }
   }
+
+  const remaining = remainingEnemies(world);
+  const sentOut = st.roster.length === 0 && st.queue.length === 0;
+  if (sentOut && remaining === 0) {
+    st.phase = 'breather';
+    st.nextWaveAt = t + cfg.waves.breather;
+    st.hunting = false;
+    world.events.push({ e: 'cleared', n: st.wave, next: cfg.waves.breather });
+    return;
+  }
+  // Anti-stall: reveal the last few (or everyone after a while) and send them hunting.
+  const r = cfg.waves.reveal;
+  if (!st.hunting && sentOut) {
+    const few = remaining <= Math.max(r.remaining, Math.ceil(r.fraction * st.waveTotal));
+    if (few) {
+      st.hunting = true;
+      world.events.push({ e: 'hunt', n: remaining });
+    } else if (st.huntAt < 0) st.huntAt = t + r.afterSec;
+    else if (t >= st.huntAt) {
+      st.hunting = true;
+      world.events.push({ e: 'hunt', n: remaining });
+    }
+  }
+  if (st.hunting) for (const e of world.enemies) if (!e.dead) e.hunt = true;
+  if (t - st.waveStartedAt >= cfg.waves.forceNextAfter) startWave(world, true);
+}
+
+/** Spawner enemies seed a capped number of children (per parent and per wave). */
+function updateSpawners(world: World, dt: number): void {
+  const cfg = world.content.director;
+  const st = world.director;
+  const waveCap = Math.round(cfg.waves.maxChildren * teamScale(cfg, world.teamSize));
+  const born: Enemy[] = [];
+  for (const e of world.enemies) {
+    if (e.dead || e.burrowed) continue;
+    const sp = world.content.enemy(e.type).spawner;
+    if (!sp || e.children >= sp.max) continue;
+    e.spawnTimer -= dt;
+    if (e.spawnTimer > 0) continue;
+    e.spawnTimer = sp.interval;
+    if (st.waveChildren >= waveCap) continue;
+    let near = false;
+    for (const p of alivePlayers(world))
+      if (dist2(p.x, p.y, e.x, e.y) <= sp.range * sp.range) near = true;
+    if (!near) continue;
+    const a = world.rng.range(0, Math.PI * 2);
+    const c = makeEnemy(world, sp.enemy, e.x + Math.cos(a) * 30, e.y + Math.sin(a) * 30, 1);
+    c.child = true;
+    c.hunt = e.hunt;
+    e.children++;
+    st.waveChildren++;
+    st.waveTotal++;
+    born.push(c);
+  }
+  world.enemies.push(...born);
 }
 
 /** How long a breach shows as active after a group bursts out of it. */
@@ -105,8 +247,11 @@ export function queueGroup(
 ): void {
   const cfg = world.content.director;
   const st = world.director;
-  const surging = world.time < st.surgeUntil && st.surgePoints.length > 0;
-  const point = surging && !boss ? world.rng.pick(st.surgePoints) : pickBreach(world);
+  // Most groups pour out of the wave's flanking breaches; some use any usable breach.
+  const flank = st.surgePoints.filter(
+    (i) => nearestMarine(world, cfg.spawnPoints[i].x, cfg.spawnPoints[i].y) >= cfg.spawn.pointMinDistance,
+  );
+  const point = flank.length && !boss && world.rng.chance(0.7) ? world.rng.pick(flank) : pickBreach(world);
   const pending = st.queue.find((q) => q.point === point && q.at > world.time);
   const delay = boss ? cfg.spawn.bossTelegraph : cfg.spawn.telegraph;
   const at = pending && !boss ? pending.at : world.time + delay;
@@ -208,8 +353,14 @@ export function spawnGroup(world: World, type: string, n: number, hpMul: number)
   }
 }
 
-/** Creates one enemy (clamped into the arena). */
+/** Creates one enemy (clamped into the arena) and adds it to the world. */
 export function spawnEnemy(world: World, type: string, x: number, y: number, hpMul = 1): Enemy {
+  const e = makeEnemy(world, type, x, y, hpMul);
+  world.enemies.push(e);
+  return e;
+}
+
+function makeEnemy(world: World, type: string, x: number, y: number, hpMul: number): Enemy {
   const def = world.content.enemy(type);
   const hp = def.hp * hpMul;
   const e: Enemy = {
@@ -235,8 +386,11 @@ export function spawnEnemy(world: World, type: string, x: number, y: number, hpM
     synDamage: 1,
     attackAnim: 0,
     dead: false,
+    child: false,
+    children: 0,
+    spawnTimer: def.spawner ? def.spawner.interval * world.rng.range(0.4, 1) : 0,
+    hunt: world.director.hunting,
   };
-  world.enemies.push(e);
   return e;
 }
 

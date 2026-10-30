@@ -102,6 +102,14 @@ export interface Enemy {
   /** > 0 for a moment after attacking (animation). */
   attackAnim: number;
   dead: boolean;
+  /** Spawned by another enemy (spore mine from a Biovore...): counts toward the wave, never drops. */
+  child: boolean;
+  /** Children this enemy has spawned so far (capped by its `spawner.max`). */
+  children: number;
+  /** Seconds until it may spawn its next child. */
+  spawnTimer: number;
+  /** End-of-wave hunt: revealed on the HUD, faster, closes in on the marines. */
+  hunt: boolean;
 }
 
 export type ProjectileOwner = 'player' | 'enemy';
@@ -169,7 +177,12 @@ export type GameEvent =
   | { e: 'unlock'; p: number; w: string }
   | { e: 'pickup'; p: number; k: PickupKind; w?: string }
   | { e: 'crate'; x: number; y: number }
-  | { e: 'surge'; n: number }
+  /** Wave `n` begins: `total` enemies (before children); `f` = forced by the stall timeout. */
+  | { e: 'surge'; n: number; total?: number; f?: 1 }
+  /** Every enemy of wave `n` is dead; the next wave starts in `next` seconds. */
+  | { e: 'cleared'; n: number; next: number }
+  /** The last few enemies of the wave are revealed and hunt the marines. */
+  | { e: 'hunt'; n: number }
   /** A hive breach starts pulsing: a group emerges from spawn point `i` soon (`b` = boss). */
   | { e: 'breach'; i: number; t: string; b?: 1 }
   /** The group bursts out of spawn point `i`. */
@@ -189,20 +202,45 @@ export interface QueuedGroup {
   hpMul: number;
 }
 
+/** A group of the current wave not yet sent to a breach. */
+export interface RosterGroup {
+  type: string;
+  n: number;
+  boss?: boolean;
+}
+
 export interface DirectorState {
   /** Groups telegraphing at breaches. */
   queue: QueuedGroup[];
   /** Per spawn point: survival second until which it counts as active (emerging). */
   activeUntil: number[];
-  /** Breaches the current surge flanks from. */
+  /** Breaches the current wave flanks from. */
   surgePoints: number[];
-  budget: number;
+  /** Current wave number (0 before the first wave). */
   wave: number;
-  surgeUntil: number;
-  nextSurgeAt: number;
+  /** 'breather' = between waves (countdown to nextWaveAt), 'active' = a wave is being fought. */
+  phase: 'breather' | 'active';
+  nextWaveAt: number;
+  waveStartedAt: number;
+  /** The wave's fixed enemy budget still to be sent out, in dispatch order. */
+  roster: RosterGroup[];
+  /** Threat credit for pacing the dispatch of the roster. */
+  dispatch: number;
+  /** Enemies of this wave so far (roster + children spawned). */
+  waveTotal: number;
+  /** Children spawned this wave (capped by waves.maxChildren). */
+  waveChildren: number;
+  /** The last enemies are revealed and hunting. */
+  hunting: boolean;
+  /** Survival second the hunt starts anyway (-1 = roster not out yet). */
+  huntAt: number;
+  /** Drops used this wave (capped by DirectorConfig.drops). */
+  drops: { medkits: number; crates: number };
   nextCrateAt: number;
   /** How many boss waves have arrived. */
   bossWaves: number;
+  /** Tests / demo: the director spawns nothing and never advances waves. */
+  idle: boolean;
 }
 
 export interface World {

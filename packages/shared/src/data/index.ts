@@ -1,3 +1,4 @@
+import { MAX_PLAYERS } from '../constants.js';
 import { CHAPTERS } from './chapters.js';
 import { DIRECTOR } from './director.js';
 import { ENEMIES } from './enemies.js';
@@ -137,15 +138,29 @@ export class ContentRegistry {
       if (cids.has(c.id)) errors.push(`duplicate chapter id ${c.id}`);
       cids.add(c.id);
     }
-    let prev = -1;
+    for (const e of this.enemies.values()) {
+      if (e.spawner && !this.enemies.has(e.spawner.enemy))
+        errors.push(`enemy ${e.id} spawner.enemy '${e.spawner.enemy}' is unknown`);
+      if (e.spawner && this.enemies.get(e.spawner.enemy)?.spawner)
+        errors.push(`enemy ${e.id} spawner child must not spawn children itself`);
+    }
+    const d = this.director;
+    for (const [name, arr] of [
+      ['teamScale', d.teamScale],
+      ['bosses.count', d.bosses.count],
+    ] as const) {
+      if (arr.length < MAX_PLAYERS)
+        errors.push(`director.${name} needs ${MAX_PLAYERS} entries (team sizes 1..${MAX_PLAYERS})`);
+    }
+    let prev = 0;
     for (const entry of this.director.waveTable) {
-      if (entry.fromSec <= prev) errors.push('waveTable must be sorted by fromSec ascending');
-      prev = entry.fromSec;
+      if (entry.fromWave <= prev) errors.push('waveTable must be sorted by fromWave ascending');
+      prev = entry.fromWave;
       for (const id of Object.keys(entry.weights)) {
         if (!this.enemies.has(id)) errors.push(`waveTable references unknown enemy '${id}'`);
       }
     }
-    if (this.director.waveTable[0]?.fromSec !== 0) errors.push('waveTable must start at fromSec 0');
+    if (this.director.waveTable[0]?.fromWave !== 1) errors.push('waveTable must start at fromWave 1');
     return errors;
   }
 }

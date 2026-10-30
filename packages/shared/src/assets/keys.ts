@@ -20,6 +20,8 @@ export const CORE_SOUNDS = [
   'amb_hive',
   'dust_land',
   'nid_hiss',
+  'breach_telegraph',
+  'breach_burst',
 ] as const;
 
 /** Terrain / prop / FX sprites the renderer uses regardless of content. */
@@ -58,7 +60,7 @@ export const ENEMY_ANIMS = ['walk', 'attack', 'death'] as const;
 export const MARINE_ANIMS = ['walk'] as const;
 
 /** Music tracks the client expects. */
-export const CORE_MUSIC = ['menu', 'battle', 'gameover'] as const;
+export const CORE_MUSIC = ['menu', 'combat', 'combat_drive', 'boss', 'gameover'] as const;
 
 export const DECAL_VARIANTS = 3;
 

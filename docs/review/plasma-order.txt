@@ -1,0 +1,12 @@
+docs/review/plasma.mp3 — play order
+  0.00s  plasma_whine_0
+  2.20s  shoot_plasma_0
+  3.50s  shoot_plasma_1
+  4.78s  shoot_plasma_0
+  6.08s  shoot_plasma_1
+  7.35s  shoot_plasma_super_0
+  9.37s  shoot_plasma_super_1
+ 11.36s  plasma_impact_0
+ 12.37s  plasma_impact_1
+ 13.34s  overheat_0
+ 15.19s  overheat_1
