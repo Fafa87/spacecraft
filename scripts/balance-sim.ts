@@ -19,12 +19,17 @@ import {
   type World,
 } from '@sms/shared';
 
-const args = Object.fromEntries(
-  process.argv.slice(2).map((a) => {
-    const [k, v] = a.replace(/^--/, '').split('=');
-    return [k, v ?? 'true'];
-  }),
-);
+/** Accepts `--key=value` and `--key value`. */
+const args: Record<string, string> = {};
+{
+  const argv = process.argv.slice(2);
+  for (let i = 0; i < argv.length; i++) {
+    const [k, v] = argv[i].replace(/^--/, '').split('=');
+    if (v !== undefined) args[k] = v;
+    else if (argv[i + 1] && !argv[i + 1].startsWith('--')) args[k] = argv[++i];
+    else args[k] = 'true';
+  }
+}
 const bot = (args.bot ?? 'kite') as 'kite' | 'turret';
 const seeds = Number(args.seeds ?? 6);
 const maxSec = Number(args.max ?? 600);
