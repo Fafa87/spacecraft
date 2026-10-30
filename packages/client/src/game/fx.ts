@@ -1,4 +1,10 @@
-import { DECAL_VARIANTS, type ContentRegistry, type GameEvent, type PlayerSnap } from '@sms/shared';
+import {
+  DECAL_VARIANTS,
+  weaponRolesLabel,
+  type ContentRegistry,
+  type GameEvent,
+  type PlayerSnap,
+} from '@sms/shared';
 import type { AudioEngine } from '../audio/AudioEngine.js';
 import type { Renderer } from '../render/Renderer.js';
 import {
@@ -185,6 +191,21 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
         color: '#ffe0a0',
         maxLife: 0.12,
         size: 1.5,
+        shape: 'spark',
+        additive: true,
+      });
+      break;
+    }
+    case 'bnc': {
+      // Armour bounced (the Tyranid made its save): a ricochet and a few white-hot sparks
+      // glancing off. Deliberately no ring / marker on the enemy.
+      if (!throttled('carapace_ricochet', 60))
+        audio.play('carapace_ricochet', { x: ev.x, y: ev.y, volume: 0.55 });
+      P.burst(ev.x, ev.y, 3, {
+        speed: 320,
+        color: '#fff2c0',
+        maxLife: 0.14,
+        size: 1.6,
         shape: 'spark',
         additive: true,
       });
@@ -425,7 +446,10 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
       if (ev.p !== fx.myId) break;
       const w = content.weapons.get(ev.w);
       audio.play('unlock');
-      fx.notify(`${w?.name ?? ev.w} unlocked — press ${w?.slot ?? '?'}`, 'good');
+      fx.notify(
+        `${w?.name ?? ev.w} unlocked — press ${w?.slot ?? '?'}${w ? ` · ${weaponRolesLabel(w)}` : ''}`,
+        'good',
+      );
       break;
     }
     case 'pickup': {
@@ -433,11 +457,13 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
       audio.play('pickup', p ? { x: p.x, y: p.y } : {});
       if (ev.p === fx.myId) {
         if (ev.k === 'medkit') fx.notify('+ Medicae kit', 'good');
-        else
+        else {
+          const w = content.weapons.get(ev.w ?? '');
           fx.notify(
-            `${content.weapons.get(ev.w ?? '')?.name ?? 'Weapon'} acquired — ammo refilled`,
+            `${w?.name ?? 'Weapon'} acquired${w ? ` — ${weaponRolesLabel(w)}` : ' — ammo refilled'}`,
             'good',
           );
+        }
       }
       break;
     }

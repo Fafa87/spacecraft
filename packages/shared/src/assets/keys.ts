@@ -16,6 +16,7 @@ export const CORE_SOUNDS = [
   'overheat',
   'boss_horn',
   'armour_hit',
+  'carapace_ricochet',
   'amb_swarm',
   'amb_hive',
   'dust_land',

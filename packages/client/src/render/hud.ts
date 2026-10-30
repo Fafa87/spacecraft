@@ -1,8 +1,13 @@
 import {
   ARENA,
   PLAYER,
+  ROLE_COLOR,
+  ROLE_SHORT,
+  weaponProfileLabel,
+  weaponRolesLabel,
   type ContentRegistry,
   type EnemyDef,
+  type WeaponDef,
   type PlayerSnap,
   type Snapshot,
 } from '@sms/shared';
@@ -408,12 +413,42 @@ export class Hud {
     }
   }
 
+  /** Defining role of a weapon as a small coloured tag, right-aligned at (x, y). */
+  private roleTag(
+    ctx: CanvasRenderingContext2D,
+    def: WeaponDef,
+    x: number,
+    y: number,
+    size: number,
+  ): void {
+    const role = def.roles[0];
+    if (!role) return;
+    ctx.save();
+    ctx.textAlign = 'right';
+    ctx.font = F(800, size);
+    ctx.fillStyle = ROLE_COLOR[role];
+    ctx.fillText(ROLE_SHORT[role], x, y);
+    ctx.restore();
+  }
+
   private weapons(ctx: CanvasRenderingContext2D, w: number, h: number, me: PlayerSnap): void {
     const order = this.content.weaponOrder;
     const cell = order.length > 6 ? 80 : 86;
     const total = order.length * (cell + 6) - 6;
     let x = w / 2 - total / 2;
     const y = h - 78;
+    const cur = this.content.weapons.get(me.w);
+    if (cur && me.st === 'alive') {
+      // Active weapon "tooltip": its 40k profile and every role tag.
+      const label = `${cur.name.toUpperCase()}  ${weaponProfileLabel(cur)}  ·  ${weaponRolesLabel(cur)}`;
+      ctx.font = F(700, 10);
+      const tw = ctx.measureText(label).width;
+      ctx.fillStyle = 'rgba(8,6,4,0.62)';
+      ctx.fillRect(w / 2 - tw / 2 - 8, y - 46, tw + 16, 16);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = ROLE_COLOR[cur.roles[0] ?? 'GENERALIST'];
+      ctx.fillText(label, w / 2, y - 34);
+    }
     for (const def of order) {
       const owned = me.ws.includes(def.id);
       const active = me.w === def.id;
@@ -428,6 +463,7 @@ export class Hud {
       ctx.font = F(700, 11);
       ctx.fillStyle = active ? HUD.gold : HUD.dim;
       ctx.fillText(String(def.slot), x + 5, y + 13);
+      this.roleTag(ctx, def, x + cell - 4, y + 12, 7.5);
       if (!this.assets.draw(ctx, def.sprites.icon, 0, x + cell / 2, y + 30)) {
         ctx.fillStyle = '#ccc';
         ctx.fillRect(x + cell / 2 - 24, y + 26, 48, 8);
@@ -499,6 +535,7 @@ export class Hud {
       ctx.font = F(700, 11);
       ctx.fillStyle = active ? HUD.gold : HUD.dim;
       ctx.fillText(String(def.slot), x + 5, y + 13);
+      this.roleTag(ctx, def, x + cw - 4, y + 12, 7.5);
       if (!this.assets.draw(ctx, def.sprites.icon, 0, x + cw / 2, y + 24)) {
         ctx.fillStyle = '#ccc';
         ctx.fillRect(x + cw / 2 - 22, y + 20, 44, 8);

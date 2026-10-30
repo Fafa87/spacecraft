@@ -1,4 +1,4 @@
-import type { EnemyDef, ProjectileSpec, WeaponDef } from './types.js';
+import type { EnemyDef, ProjectileSpec, WeaponDef, WeaponRole } from './types.js';
 
 /**
  * Warhammer 40k-style damage profiles (10th-edition spirit, adapted to a real-time HP game).
@@ -68,3 +68,39 @@ export function sustainedDps(w: WeaponDef, enemy: EnemyDef): number {
   const cycle = w.magazine * w.fireInterval + w.reloadTime;
   return (expectedShotDamage(w, enemy) * w.magazine) / cycle;
 }
+
+/** Short role tag for compact UI (the first, defining role): HORDE / ELITE / TANK / ALL... */
+export const ROLE_SHORT: Record<WeaponRole, string> = {
+  GENERALIST: 'ALL-ROUND',
+  'ANTI-HORDE': 'ANTI-HORDE',
+  'ANTI-ELITE': 'ANTI-ELITE',
+  'ANTI-TANK': 'ANTI-TANK',
+  SUSTAINED: 'SUSTAINED',
+  BLAST: 'BLAST',
+  'SHORT RANGE': 'SHORT RANGE',
+  OVERCHARGE: 'OVERCHARGE',
+};
+
+/** HUD colour per defining role (horde = amber, elite = cyan, tank = red, generalist = parchment). */
+export const ROLE_COLOR: Record<WeaponRole, string> = {
+  GENERALIST: '#e8dcc0',
+  'ANTI-HORDE': '#ffb347',
+  'ANTI-ELITE': '#7fe0ff',
+  'ANTI-TANK': '#ff6a50',
+  SUSTAINED: '#e8dcc0',
+  BLAST: '#ffb347',
+  'SHORT RANGE': '#bba98a',
+  OVERCHARGE: '#7fe0ff',
+};
+
+/** "S5 AP-1" (the direct hit's profile; blast-only weapons show the blast's). */
+export function weaponProfileLabel(w: WeaponDef): string {
+  const p = w.projectile;
+  const s = p.strength ?? p.explosion?.strength;
+  const ap = p.strength !== undefined ? (p.ap ?? 0) : (p.explosion?.ap ?? 0);
+  if (s === undefined) return '';
+  return `S${s} AP${ap ? `-${ap}` : '0'}`;
+}
+
+/** "ANTI-HORDE · SUSTAINED" */
+export const weaponRolesLabel = (w: WeaponDef): string => w.roles.join(' · ');

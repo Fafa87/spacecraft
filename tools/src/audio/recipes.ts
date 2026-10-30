@@ -771,6 +771,38 @@ const WEAPONS: Recipe[] = [
       clank(2600, 0.05, 0.25, 0.22),
     ],
   },
+  // v0.5: a shot stopped by a Tyranid's armour save ("armour bounced"); the only feedback is
+  // this sound plus a spark (no markers on enemies).
+  {
+    key: 'carapace_ricochet',
+    description: 'Shot glancing off chitin carapace: hard tick and a short whining ping',
+    bus: 'weapons',
+    volume: 0.32,
+    maxVoices: 3,
+    priority: 2,
+    variants: 4,
+    vary: { pitch: 0.12, time: 0.1 },
+    layers: [
+      crack(0.004, 0.7, 3800),
+      {
+        kind: 'metal',
+        freq: 1900,
+        partials: [1, 1.53, 2.41],
+        decay: 0.16,
+        noise: 0.2,
+        gain: 0.35,
+      },
+      {
+        kind: 'tone',
+        wave: 'sine',
+        freq: [3400, 2200],
+        env: e(0.09, 0.002),
+        gain: 0.12,
+        at: 0.004,
+      },
+    ],
+    post: { reverb: CORRIDOR },
+  },
   // ---- the marine himself
   {
     key: 'armour_hit',

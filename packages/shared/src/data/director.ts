@@ -8,12 +8,12 @@ import type { DirectorConfig } from './types.js';
 export const DIRECTOR: DirectorConfig = {
   // Squad size 1..8. v0.5: bigger squads face more, tougher and more elite Tyranids.
   teamScaling: {
-    budget: [1, 1.5, 2.1, 2.7, 3.25, 3.8, 4.3, 4.8],
-    pace: [1, 1.5, 2.1, 2.7, 3.25, 3.8, 4.3, 4.8],
-    maxAlive: [1, 1.5, 2.1, 2.7, 3.25, 3.8, 4.3, 4.8],
-    children: [1, 1.5, 2.1, 2.7, 3.25, 3.8, 4.3, 4.8],
-    hp: [1, 1, 1, 1, 1, 1, 1, 1],
-    elite: [1, 1, 1, 1, 1, 1, 1, 1],
+    budget: [0.85, 2.0, 3.3, 4.5, 6.0, 7.0, 7.5, 7.9],
+    pace: [0.85, 2.3, 4.22, 6.3, 9.0, 11.2, 12.9, 14.54],
+    maxAlive: [1, 1.9, 2.9, 3.9, 4.9, 5.7, 6.3, 6.8],
+    children: [0.85, 2.0, 3.3, 4.5, 6.0, 7.0, 7.5, 7.9],
+    hp: [1, 1.15, 1.3, 1.4, 1.55, 1.7, 1.75, 1.75],
+    elite: [1, 1.5, 1.9, 2.3, 2.7, 3.1, 3.4, 3.8],
     eliteThreat: 3,
   },
   waves: {
@@ -27,7 +27,7 @@ export const DIRECTOR: DirectorConfig = {
     reveal: { remaining: 6, fraction: 0.08, afterSec: 30, speedMul: 1.35 },
     forceNextAfter: 240,
   },
-  maxAlive: { base: 40, perWave: 10, cap: 280 },
+  maxAlive: { base: 40, perWave: 10, cap: 320 },
   // Six hive breaches: four in the bulkheads at the arena edges, two floor vents inside.
   spawnPoints: [
     { id: 'north', x: 1600, y: 130, kind: 'breach' },

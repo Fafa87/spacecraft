@@ -67,7 +67,7 @@ export const WEAPONS: WeaponDef[] = [
       ap: 1,
       pierce: 0,
       knockback: 70,
-      explosion: { radius: 30, damage: 10, edgeFactor: 0.5, strength: 5, ap: 1 },
+      explosion: { radius: 30, damage: 10, edgeFactor: 0.5, strength: 5, ap: 0 },
     },
     unlockAtSec: 60,
     crateWeight: 10,

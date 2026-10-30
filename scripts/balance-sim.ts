@@ -16,6 +16,7 @@ import {
   MAX_PLAYERS,
   PLAYER,
   stepWorld,
+  sustainedDps,
   TICK_DT,
   type World,
 } from '@sms/shared';
@@ -40,18 +41,26 @@ const sizes = String(args.sizes ?? Array.from({ length: MAX_PLAYERS }, (_, i) =>
 
 function think(world: World, id: number, seq: number) {
   const p = world.players.find((x) => x.id === id)!;
-  let nearest: { x: number; y: number; d: number } | null = null;
+  let nearest: { x: number; y: number; d: number; type: string } | null = null;
+  let big: { x: number; y: number; d: number; type: string; threat: number } | null = null;
+  let crowd = 0;
   let fx = 0;
   let fy = 0;
   for (const e of world.enemies) {
+    if (e.dead || e.burrowed) continue;
     const d = Math.hypot(e.x - p.x, e.y - p.y);
-    if (!nearest || d < nearest.d) nearest = { x: e.x, y: e.y, d };
+    if (!nearest || d < nearest.d) nearest = { x: e.x, y: e.y, d, type: e.type };
+    const threat = world.content.enemy(e.type).threat;
+    if (d < 480 && (!big || threat > big.threat)) big = { x: e.x, y: e.y, d, type: e.type, threat };
+    if (d < 360) crowd++;
     if (d < 320) {
       fx -= (e.x - p.x) / (d * d + 1);
       fy -= (e.y - p.y) / (d * d + 1);
     }
   }
-  const aim = nearest ? Math.atan2(nearest.y - p.y, nearest.x - p.x) : p.aim;
+  // Shoot the biggest threat close by (else the nearest bug).
+  const target = big && big.threat >= 3 ? big : nearest;
+  const aim = target ? Math.atan2(target.y - p.y, target.x - p.x) : p.aim;
   let mx = 0;
   let my = 0;
   if (bot === 'kite') {
@@ -59,15 +68,14 @@ function think(world: World, id: number, seq: number) {
     const cy = ARENA.height / 2 - p.y;
     const downed = world.players.find((o) => o.state === 'downed');
     const crate = world.pickups[0];
-    const target =
-      downed ?? (crate && Math.hypot(crate.x - p.x, crate.y - p.y) < 500 ? crate : null);
+    const goal = downed ?? (crate && Math.hypot(crate.x - p.x, crate.y - p.y) < 500 ? crate : null);
     mx = fx * 900 + cx * 0.0012 - cy * 0.0009;
     my = fy * 900 + cy * 0.0012 + cx * 0.0009;
-    if (target) {
-      const d = Math.hypot(target.x - p.x, target.y - p.y) || 1;
+    if (goal) {
+      const d = Math.hypot(goal.x - p.x, goal.y - p.y) || 1;
       if (d > PLAYER.reviveRadius * 0.5) {
-        mx += ((target.x - p.x) / d) * 0.8;
-        my += ((target.y - p.y) / d) * 0.8;
+        mx += ((goal.x - p.x) / d) * 0.8;
+        my += ((goal.y - p.y) / d) * 0.8;
       }
     }
     const len = Math.hypot(mx, my);
@@ -76,9 +84,28 @@ function think(world: World, id: number, seq: number) {
       my /= len;
     }
   }
-  // Switch to the newest owned weapon now and then.
-  const slot = seq % 150 === 0 ? world.content.weapon(p.weapons[p.weapons.length - 1]!).slot : 0;
-  return { ...emptyInput(), seq, mx, my, aim, fire: !!nearest && nearest.d < 900, slot };
+  // Every half second pick the owned weapon with the best expected DPS (S/AP vs T/Sv) against the
+  // target, in range, with ammo; splash / piercing weapons get a bonus in a crowd.
+  let slot = 0;
+  if (target && seq % 30 === 0) {
+    const tdef = world.content.enemy(target.type);
+    let best = -1;
+    for (const id of p.weapons) {
+      if ((p.ammo[id] ?? 1) <= 0) continue;
+      const w = world.content.weapon(id);
+      const range = w.projectile.speed * w.projectile.lifetime;
+      let score = sustainedDps(w, tdef);
+      if (target.d > range * 0.9) score *= 0.05;
+      if (w.projectile.explosion || w.projectile.pierce > 2)
+        score *= 1 + Math.min(crowd, 12) * 0.15;
+      if (score > best) {
+        best = score;
+        slot = w.slot;
+      }
+    }
+    if (slot === world.content.weapon(p.current).slot) slot = 0;
+  }
+  return { ...emptyInput(), seq, mx, my, aim, fire: !!target && target.d < 900, slot };
 }
 
 console.log(`bot=${bot} seeds=${seeds} max=${maxSec}s`);
@@ -86,6 +113,9 @@ for (const size of sizes) {
   const times: number[] = [];
   let kills = 0;
   let waves = 0;
+  // Leaderboard plausibility headroom (Firestore rules / validateLeaderboardRun): worst marine.
+  let maxPtsPerSec = 0;
+  let maxKillsPerSec = 0;
   for (let s = 1; s <= seeds; s++) {
     const world = createWorld(
       Array.from({ length: size }, (_, i) => ({ id: i + 1, name: `bot${i + 1}` })),
@@ -98,6 +128,10 @@ for (const size of sizes) {
       stepWorld(world, TICK_DT);
     }
     times.push(world.time);
+    for (const p of world.players) {
+      maxPtsPerSec = Math.max(maxPtsPerSec, p.score / Math.max(1, world.time));
+      maxKillsPerSec = Math.max(maxKillsPerSec, p.kills / Math.max(1, world.time));
+    }
     kills += world.stats.kills;
     waves += world.director.wave;
   }
@@ -106,6 +140,7 @@ for (const size of sizes) {
   const fmt = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
   console.log(
     `team ${size}: avg ${fmt(avg)}  min ${fmt(times[0]!)}  median ${fmt(times[Math.floor(times.length / 2)]!)}  max ${fmt(times[times.length - 1]!)}` +
-      `  | kills/run ${(kills / seeds).toFixed(0)}  waves/run ${(waves / seeds).toFixed(1)}`,
+      `  | kills/run ${(kills / seeds).toFixed(0)}  waves/run ${(waves / seeds).toFixed(1)}` +
+      `  | max/marine ${maxPtsPerSec.toFixed(1)} pts/s ${maxKillsPerSec.toFixed(2)} kills/s`,
   );
 }
