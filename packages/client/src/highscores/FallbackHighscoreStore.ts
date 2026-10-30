@@ -8,16 +8,23 @@ import type { LocalHighscoreStore } from './LocalHighscoreStore.js';
  *  - submit: POST to the server; if unreachable, store locally (status 'local') and retry
  *    pending local runs next time the server answers.
  *  - top: server table (cached locally); cached/local table when offline.
+ * With `remote = null` (no server configured, e.g. a static GitHub Pages deploy) it is a
+ * quiet local-only store: no network requests, no warnings.
  */
 export class FallbackHighscoreStore implements HighscoreStore {
   online: boolean | null = null;
 
   constructor(
-    private readonly remote: HttpHighscoreStore,
+    private readonly remote: HttpHighscoreStore | null,
     private readonly local: LocalHighscoreStore,
   ) {}
 
+  get localOnly(): boolean {
+    return this.remote === null;
+  }
+
   async submit(result: RunResult): Promise<SubmitOutcome> {
+    if (!this.remote) return this.local.submit(result);
     try {
       const out = await this.remote.submit(result);
       this.online = true;
@@ -37,6 +44,7 @@ export class FallbackHighscoreStore implements HighscoreStore {
   }
 
   async top(teamSize: number, limit = 10): Promise<TopResult> {
+    if (!this.remote) return this.local.top(teamSize, limit);
     try {
       const res = await this.remote.top(teamSize, limit);
       this.online = true;
@@ -54,7 +62,7 @@ export class FallbackHighscoreStore implements HighscoreStore {
 
   /** Re-submits runs that were stored locally while offline. */
   async flushPending(): Promise<void> {
-    if (this.flushing) return;
+    if (this.flushing || !this.remote) return;
     this.flushing = true;
     try {
       for (const e of this.local.pending()) {

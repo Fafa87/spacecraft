@@ -5,6 +5,9 @@ endless Tyranid/Zerg-like swarms. The swarm keeps growing, new weapons unlock ov
 **survival time is the only score**. Teams of **1-4 marines** play together, and each team size
 has its **own highscore table**.
 
+**Play it:** https://fafa87.github.io/spacecraft/ (static GitHub Pages build: local highscores,
+P2P co-op through the public PeerJS broker).
+
 ![gameplay](docs/screenshot.png)
 
 > v1 / foundation release. The aim is a codebase that is easy to extend: data-driven content,
@@ -76,8 +79,27 @@ Then open **http://localhost:5173**, enter a name and choose **Solo**, **Host co
 | `WS_GAME_HOST`                                 | `true`                          | Enables the dedicated WebSocket game host at `/ws`          |
 | `LOG_LEVEL`                                    | `info`                          | pino level, or `silent`                                     |
 
-Client build-time env: `VITE_HIGHSCORE_URL`, `VITE_PEER_HOST`, `VITE_PEER_PORT` (otherwise the
-client finds the peer server through `/api/config`).
+Client build-time env:
+
+| Variable                                                                    | Default                                                 | Meaning                                                                                                                     |
+| --------------------------------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `BASE_PATH`                                                                 | `/`                                                     | Public base path (Vite `base`), e.g. `/spacecraft/` for GitHub Pages                                                        |
+| `VITE_HIGHSCORE_URL`                                                        | dev: `http://<page host>:8787`; prod: none              | Highscore server. With none set, a production build uses local (browser) highscores quietly and hides the dedicated WS host |
+| `VITE_PEER_HOST` / `VITE_PEER_PORT` / `VITE_PEER_PATH` / `VITE_PEER_SECURE` | dev: local server via `/api/config`; prod: PeerJS cloud | PeerJS signaling server                                                                                                     |
+
+## Deploying the client (GitHub Pages)
+
+`.github/workflows/pages.yml` runs on every push to `master`: `npm ci`, `npm run assets`, `npm test`,
+then builds the client with `BASE_PATH=/<repo>/` and publishes `packages/client/dist` with
+`actions/deploy-pages`. Pages must be set to "GitHub Actions" as its source
+(`gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow`). To use a hosted highscore
+server later, set the repository variable `HIGHSCORE_URL`; the server's `CORS_ORIGIN` must allow
+`https://<owner>.github.io`.
+
+Locally: `npm run build:pages` builds with `/spacecraft/`, and
+`npx tsx scripts/pages-check.ts <url> [screenshot.png]` checks a deployed or served build in headless
+Chrome (menu, assets under the base path, local scores, P2P room via PeerJS cloud, a solo run, no
+console errors).
 
 ## Repository layout
 

@@ -54,7 +54,9 @@ export function createLocalGame(name: string, submit: SubmitFn): GameConnection 
 async function peerOptions(): Promise<PeerOptions> {
   const base: PeerOptions = { debug: config.debug ? 2 : 0 };
   if (config.peerOverride) return { ...base, ...config.peerOverride };
-  const info = await getServerInfo();
+  // The self-hosted signaling server (from /api/config) is only used in dev; production
+  // builds use the public PeerJS cloud unless VITE_PEER_HOST points elsewhere.
+  const info = import.meta.env.DEV ? await getServerInfo() : null;
   if (info?.peer) {
     return {
       ...base,
@@ -168,7 +170,8 @@ export async function joinPeerGame(rawCode: string, name: string): Promise<GameC
 /** EXPERIMENTAL: create/join a room on the dedicated WebSocket host (?ws=1). */
 export async function connectDedicated(name: string, rawCode?: string): Promise<GameConnection> {
   const info = await getServerInfo();
-  if (!info?.wsGameHost) throw new Error('Dedicated host not available on the server.');
+  if (!config.apiUrl || !info?.wsGameHost)
+    throw new Error('Dedicated host not available on the server.');
   const url = new URL(config.apiUrl.replace(/^http/, 'ws') + info.wsGameHost.path);
   if (rawCode) url.searchParams.set('room', normalizeRoomCode(rawCode));
   else url.searchParams.set('create', '1');

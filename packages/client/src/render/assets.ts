@@ -11,7 +11,8 @@ export class Assets {
   baseUrl = '';
 
   async load(): Promise<void> {
-    const url = new URL(MANIFEST_PATH, document.baseURI);
+    // BASE_URL is Vite's `base` (e.g. /spacecraft/ on GitHub Pages); atlas/audio resolve from it.
+    const url = new URL(import.meta.env.BASE_URL + MANIFEST_PATH, location.href);
     this.baseUrl = url.href.replace(/manifest\.json$/, '');
     try {
       const res = await fetch(url);

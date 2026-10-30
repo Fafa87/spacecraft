@@ -99,3 +99,23 @@ describe('FallbackHighscoreStore', () => {
     expect((await s.submit(run(30_000))).status).toBe('failed');
   });
 });
+
+describe('FallbackHighscoreStore (local-only, no server configured)', () => {
+  it('stores and ranks locally without network calls or warnings', async () => {
+    const warn = vi.spyOn(console, 'warn');
+    warn.mockClear();
+    const fetchSpy = vi.fn();
+    (globalThis as { fetch?: unknown }).fetch = fetchSpy;
+    const s = new FallbackHighscoreStore(null, new LocalHighscoreStore());
+    expect(s.localOnly).toBe(true);
+    await s.submit(run(10_000));
+    const out = await s.submit(run(25_000));
+    expect(out).toEqual({ status: 'local', rank: 1 });
+    const top = await s.top(1);
+    expect(top.source).toBe('local');
+    expect(top.entries.map((e) => e.survivalMs)).toEqual([25_000, 10_000]);
+    await s.flushPending();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+  });
+});

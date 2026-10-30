@@ -3,7 +3,11 @@ import type { HighscoreStore } from '../highscores/index.js';
 import { $, html } from './dom.js';
 import { escapeHtml, formatDate, formatTime } from './format.js';
 
-export function highscoreRows(entries: HighscoreEntry[], highlightRunId?: string): string {
+export function highscoreRows(
+  entries: HighscoreEntry[],
+  highlightRunId?: string,
+  tagLocal = true,
+): string {
   if (!entries.length)
     return `<tr><td colspan="5" class="muted center">No runs yet — be the first.</td></tr>`;
   return entries
@@ -13,7 +17,7 @@ export function highscoreRows(entries: HighscoreEntry[], highlightRunId?: string
         <td class="time">${formatTime(e.survivalMs)}</td>
         <td class="names">${e.players.map(escapeHtml).join(', ')}</td>
         <td class="num">${e.wave}</td>
-        <td class="date">${formatDate(e.endedAt)}${e.id.startsWith('local_') ? ' <span class="tag">local</span>' : ''}</td>
+        <td class="date">${formatDate(e.endedAt)}${tagLocal && e.id.startsWith('local_') ? ' <span class="tag">local</span>' : ''}</td>
       </tr>`,
     )
     .join('');
@@ -40,11 +44,13 @@ export function createHighscorePanel(
     body.innerHTML = `<tr><td colspan="5" class="muted center">Loading…</td></tr>`;
     const res = await store.top(ts, opts.limit ?? 10);
     if (current !== ts) return;
-    body.innerHTML = highscoreRows(res.entries, opts.highlightRunId);
+    body.innerHTML = highscoreRows(res.entries, opts.highlightRunId, !store.localOnly);
     source.textContent =
       res.source === 'server'
         ? 'Global leaderboard'
-        : 'Highscore server unreachable — showing scores saved in this browser';
+        : store.localOnly
+          ? 'Local scores — saved in this browser'
+          : 'Highscore server unreachable — showing scores saved in this browser';
   };
   el.querySelectorAll<HTMLButtonElement>('.tabs button').forEach((b) =>
     b.addEventListener('click', () => void load(Number(b.dataset.ts))),

@@ -20,4 +20,6 @@ export interface TopResult {
 export interface HighscoreStore {
   submit(result: RunResult): Promise<SubmitOutcome>;
   top(teamSize: number, limit?: number): Promise<TopResult>;
+  /** True when no highscore server is configured (static deploy): scores live only in this browser. */
+  readonly localOnly?: boolean;
 }

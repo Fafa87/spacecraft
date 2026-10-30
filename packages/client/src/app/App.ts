@@ -61,6 +61,7 @@ export class App {
   }
 
   private serverStatus(): Promise<string> {
+    if (!config.hasServer) return Promise.resolve('local scores (saved in this browser)');
     return getServerInfo().then((i) =>
       i
         ? `highscore server online (${config.apiUrl})`
