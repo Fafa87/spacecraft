@@ -153,11 +153,11 @@ describe('per-version boards', () => {
   it('board id is major.minor of the version', () => {
     expect(leaderboardBoard('0.2.0')).toBe('0.2');
     expect(leaderboardBoard('12.30.4-beta.1')).toBe('12.30');
-    expect(leaderboardBoard(GAME_VERSION)).toBe('0.4');
+    expect(leaderboardBoard(GAME_VERSION)).toBe('0.5');
     expect(() => leaderboardBoard('x')).toThrow();
   });
   it('the game build uses its own board', () => {
-    expect(config.firebase === null || config.firebase.board === '0.4').toBe(true);
+    expect(config.firebase === null || config.firebase.board === '0.5').toBe(true);
   });
 });
 
