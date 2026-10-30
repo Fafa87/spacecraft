@@ -2,7 +2,7 @@
  * Headless balance simulator: runs the real shared simulation with simple bots and
  * reports survival times per team size. Use it after tuning data files.
  *
- *   npm run sim                 # 6 seeds, team sizes 1-4, "kite" bots
+ *   npm run sim                 # 6 seeds, team sizes 1-MAX_PLAYERS (8), "kite" bots
  *   npm run sim -- --bot=turret --seeds=10 --max=900
  *
  * Bots: "turret" stands still and aims at the nearest enemy; "kite" also moves away
@@ -13,6 +13,7 @@ import {
   ARENA,
   createWorld,
   emptyInput,
+  MAX_PLAYERS,
   PLAYER,
   stepWorld,
   TICK_DT,
@@ -33,7 +34,7 @@ const args: Record<string, string> = {};
 const bot = (args.bot ?? 'kite') as 'kite' | 'turret';
 const seeds = Number(args.seeds ?? 6);
 const maxSec = Number(args.max ?? 600);
-const sizes = String(args.sizes ?? '1,2,3,4')
+const sizes = String(args.sizes ?? Array.from({ length: MAX_PLAYERS }, (_, i) => i + 1).join(','))
   .split(',')
   .map(Number);
 

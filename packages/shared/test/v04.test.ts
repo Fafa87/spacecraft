@@ -295,4 +295,32 @@ describe('downed marines', () => {
     for (let i = 0; i < ticks(1.2); i++) stepWorld(w, TICK_DT);
     expect(a.state).toBe('dead');
   });
+
+  it('8-marine squad: everyone spawns apart, a downed marine is revived by a squadmate in 3 s', () => {
+    const w = createWorld(
+      Array.from({ length: 8 }, (_, i) => ({ id: i + 1, name: `M${i + 1}` })),
+      5,
+    );
+    w.director.idle = true;
+    expect(w.players).toHaveLength(8);
+    const spots = new Set(w.players.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`));
+    expect(spots.size).toBe(8);
+    const [a, b] = w.players;
+    // Keep the others far away so only B revives.
+    w.players.slice(2).forEach((p, i) => {
+      p.x = 200 + i * 10;
+      p.y = 200;
+    });
+    a.x = 1600;
+    a.y = 1100;
+    b.x = a.x + 30;
+    b.y = a.y;
+    a.invuln = 0;
+    damagePlayer(w, a, 10_000);
+    expect(a.state).toBe('downed');
+    for (let i = 0; i < ticks(2.8); i++) stepWorld(w, TICK_DT);
+    expect(a.state).toBe('downed');
+    for (let i = 0; i < ticks(0.4); i++) stepWorld(w, TICK_DT);
+    expect(a.state).toBe('alive');
+  });
 });
