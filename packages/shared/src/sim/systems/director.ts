@@ -2,7 +2,7 @@ import { ARENA, PICKUP } from '../../constants.js';
 import type { DirectorConfig, WaveTableEntry } from '../../data/index.js';
 import { clamp, dist2 } from '../../math/vec.js';
 import { allocId, alivePlayers } from '../world.js';
-import type { World } from '../types.js';
+import type { Enemy, World } from '../types.js';
 
 const teamScale = (cfg: DirectorConfig, teamSize: number): number =>
   cfg.teamScale[clamp(teamSize, 1, 4) - 1];
@@ -45,6 +45,13 @@ export function updateDirector(world: World, dt: number): void {
     st.nextSurgeAt += cfg.surge.interval;
     st.budget += (cfg.surge.bonusThreat + cfg.surge.bonusThreatPerWave * (st.wave - 1)) * scale;
     world.events.push({ e: 'surge', n: st.wave });
+    const b = cfg.bosses;
+    if (st.wave >= b.firstSurge && (st.wave - b.firstSurge) % b.everySurge === 0) {
+      const n = b.count[clamp(world.teamSize, 1, 4) - 1] + b.extraPerAppearance * st.bossWaves;
+      st.bossWaves++;
+      spawnGroup(world, b.enemy, n, enemyHpScale(cfg, t));
+      world.events.push({ e: 'boss', t: b.enemy, n });
+    }
   }
   const surging = t < st.surgeUntil;
   st.budget += budgetRate(cfg, t, world.teamSize) * (surging ? cfg.surge.budgetMultiplier : 1) * dt;
@@ -59,36 +66,13 @@ export function updateDirector(world: World, dt: number): void {
     const def = world.content.enemy(type);
     const affordable = Math.floor(st.budget / def.threat);
     if (affordable < 1) break;
-    const groupMax =
-      def.threat >= 5 ? Math.max(1, Math.floor(cfg.spawn.groupMax / 3)) : cfg.spawn.groupMax;
-    const n = Math.min(
-      affordable,
-      cap - world.enemies.length,
-      world.rng.int(cfg.spawn.groupMin, groupMax),
-    );
+    const [gMin, gMax] = def.group ?? [
+      cfg.spawn.groupMin,
+      def.threat >= 5 ? Math.max(1, Math.floor(cfg.spawn.groupMax / 3)) : cfg.spawn.groupMax,
+    ];
+    const n = Math.min(affordable, cap - world.enemies.length, world.rng.int(gMin, gMax));
     if (n < 1) break;
-    const [gx, gy] = pickSpawnPoint(world, cfg.spawn.minDistance, cfg.spawn.maxDistance, 80);
-    const hpMul = enemyHpScale(cfg, t);
-    for (let i = 0; i < n; i++) {
-      const ox = world.rng.range(-1, 1) * cfg.spawn.groupSpread;
-      const oy = world.rng.range(-1, 1) * cfg.spawn.groupSpread;
-      const hp = def.hp * hpMul;
-      world.enemies.push({
-        id: allocId(world),
-        type,
-        x: clamp(gx + ox, def.radius, ARENA.width - def.radius),
-        y: clamp(gy + oy, def.radius, ARENA.height - def.radius),
-        vx: 0,
-        vy: 0,
-        angle: 0,
-        hp,
-        maxHp: hp,
-        attackCooldown: world.rng.range(0.2, 1),
-        fuse: -1,
-        strafe: world.rng.chance(0.5) ? 1 : -1,
-        dead: false,
-      });
-    }
+    spawnGroup(world, type, n, enemyHpScale(cfg, t));
     st.budget -= n * def.threat;
   }
 
@@ -96,6 +80,49 @@ export function updateDirector(world: World, dt: number): void {
     st.nextCrateAt = t + world.rng.range(cfg.crates.intervalMin, cfg.crates.intervalMax);
     spawnCrate(world);
   }
+}
+
+/** Spawns `n` enemies of a type around one spawn point out of the marines' sight. */
+export function spawnGroup(world: World, type: string, n: number, hpMul: number): void {
+  const cfg = world.content.director;
+  const [gx, gy] = pickSpawnPoint(world, cfg.spawn.minDistance, cfg.spawn.maxDistance, 80);
+  for (let i = 0; i < n; i++) {
+    const ox = world.rng.range(-1, 1) * cfg.spawn.groupSpread;
+    const oy = world.rng.range(-1, 1) * cfg.spawn.groupSpread;
+    spawnEnemy(world, type, gx + ox, gy + oy, hpMul);
+  }
+}
+
+/** Creates one enemy (clamped into the arena). */
+export function spawnEnemy(world: World, type: string, x: number, y: number, hpMul = 1): Enemy {
+  const def = world.content.enemy(type);
+  const hp = def.hp * hpMul;
+  const e: Enemy = {
+    id: allocId(world),
+    type,
+    x: clamp(x, def.radius, ARENA.width - def.radius),
+    y: clamp(y, def.radius, ARENA.height - def.radius),
+    vx: 0,
+    vy: 0,
+    angle: 0,
+    hp,
+    maxHp: hp,
+    attackCooldown: world.rng.range(0.2, 1),
+    fuse: -1,
+    strafe: world.rng.chance(0.5) ? 1 : -1,
+    chargePhase: 0,
+    chargeTimer: 0,
+    chargeCooldown: def.charge ? world.rng.range(0.5, def.charge.cooldown) : 0,
+    chargeDx: 0,
+    chargeDy: 0,
+    burrowed: !!def.burrow,
+    synSpeed: 1,
+    synDamage: 1,
+    attackAnim: 0,
+    dead: false,
+  };
+  world.enemies.push(e);
+  return e;
 }
 
 /** Random point in a ring around a random alive marine, kept inside the arena and away from all marines. */

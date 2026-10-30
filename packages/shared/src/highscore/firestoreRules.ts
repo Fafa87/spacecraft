@@ -9,7 +9,23 @@ import { NAME_PATTERN_SOURCE, RUDE_SUBSTRINGS, RUDE_WORDS } from './names.js';
 import { RUN_MODES } from './validation.js';
 
 export const FIRESTORE_COLLECTION = 'highscores';
-export const FIRESTORE_FIELDS = [
+/**
+ * Per-version leaderboards: runs live in `boards/{board}/highscores/{runId}` where board is the
+ * game's major.minor ("0.2"), so every content/balance release starts with an empty board while
+ * frozen older builds keep theirs. The top-level `highscores` collection is the legacy v0.1.x
+ * board (written by the frozen /v0.1.0/ build), which stays readable and writable as before.
+ * Same collection id, so the existing composite index (teamSize ASC, survivalMs DESC) serves
+ * every board.
+ */
+export const FIRESTORE_BOARDS = 'boards';
+/** Board id for a game version: "0.2.3" → "0.2". */
+export function leaderboardBoard(version: string): string {
+  const m = /^(\d{1,3})\.(\d{1,3})\./.exec(version);
+  if (!m) throw new Error(`bad version ${version}`);
+  return `${m[1]}.${m[2]}`;
+}
+/** Fields of a legacy (v0.1.x, top-level collection) run. */
+export const FIRESTORE_LEGACY_FIELDS = [
   'teamSize',
   'names',
   'survivalMs',
@@ -19,13 +35,17 @@ export const FIRESTORE_FIELDS = [
   'version',
   'timestamp',
 ] as const;
+/** Fields of a per-board run: the legacy set + `board` (must equal the path segment). */
+export const FIRESTORE_FIELDS = [...FIRESTORE_LEGACY_FIELDS, 'board'] as const;
 
 /** A regex source → a rules string literal ("..." with \ and " escaped). */
 const lit = (s: string) => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 const unanchored = (r: RegExp) => r.source.replace(/^\^/, '').replace(/\$$/, '');
 
 export function buildFirestoreRules(): string {
-  const fields = FIRESTORE_FIELDS.map((f) => `'${f}'`).join(', ');
+  const list = (fs: readonly string[]) => fs.map((f) => `'${f}'`).join(', ');
+  const fields = list(FIRESTORE_FIELDS);
+  const legacy = list(FIRESTORE_LEGACY_FIELDS);
   const nameChecks = Array.from(
     { length: L.maxTeamSize },
     (_, i) => `        && (d.names.size() <= ${i} || validName(d.names[${i}]))`,
@@ -50,8 +70,6 @@ service cloud.firestore {
 
     function validRun(runId, d) {
       return runId.matches(${lit(unanchored(L.runIdPattern))})
-        && d.keys().hasOnly([${fields}])
-        && d.keys().hasAll([${fields}])
         && d.teamSize is int && d.teamSize >= ${L.minTeamSize} && d.teamSize <= ${L.maxTeamSize}
         && d.names is list && d.names.size() == d.teamSize
 ${nameChecks}
@@ -65,9 +83,26 @@ ${nameChecks}
         && d.timestamp == request.time;
     }
 
+    // Legacy v0.1.x board (frozen /v0.1.0/ build): unchanged field set, no board field.
     match /${FIRESTORE_COLLECTION}/{runId} {
       allow read: if true;
-      allow create: if validRun(runId, request.resource.data);
+      allow create: if request.resource.data.keys().hasOnly([${legacy}])
+        && request.resource.data.keys().hasAll([${legacy}])
+        && validRun(runId, request.resource.data);
+      allow update, delete: if false;
+    }
+
+    // Per-version boards (v0.2+): board = major.minor of the version, e.g. boards/0.2/highscores.
+    match /${FIRESTORE_BOARDS}/{board}/${FIRESTORE_COLLECTION}/{runId} {
+      allow read: if board.matches("[0-9]{1,3}[.][0-9]{1,3}");
+      allow create: if board.matches("[0-9]{1,3}[.][0-9]{1,3}")
+        && request.resource.data.keys().hasOnly([${fields}])
+        && request.resource.data.keys().hasAll([${fields}])
+        && request.resource.data.board == board
+        && request.resource.data.version is string
+        && request.resource.data.version.split('[.]').size() >= 3
+        && request.resource.data.version.split('[.]')[0] + '.' + request.resource.data.version.split('[.]')[1] == board
+        && validRun(runId, request.resource.data);
       allow update, delete: if false;
     }
 

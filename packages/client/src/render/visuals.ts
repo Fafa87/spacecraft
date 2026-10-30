@@ -9,16 +9,57 @@ export interface ProjectileVisual {
   /** Trail particles per second. */
   trail: number;
   trailColor?: string;
+  trailShape?: 'dot' | 'smoke';
   fallbackRadius: number;
+  /** Sprite draw scale. */
+  scale?: number;
 }
 
 export const PROJECTILE_VISUALS: Record<string, ProjectileVisual> = {
-  bullet: { color: '#ffe28a', glow: true, trail: 0, fallbackRadius: 3 },
-  pellet: { color: '#ffd27a', glow: true, trail: 0, fallbackRadius: 3 },
+  bolt: { color: '#ffd27a', glow: true, trail: 12, trailColor: '#ffb050', fallbackRadius: 3 },
+  heavy_bolt: { color: '#ffc060', glow: true, trail: 18, trailColor: '#ff9a40', fallbackRadius: 4 },
+  slash: { color: '#9fe8ff', glow: true, trail: 0, fallbackRadius: 14 },
   flame: { color: '#ff8a2a', glow: true, trail: 0, fallbackRadius: 10 },
   plasma: { color: '#6fd8ff', glow: true, trail: 30, trailColor: '#7fe0ff', fallbackRadius: 7 },
-  rocket: { color: '#ffb060', glow: false, trail: 60, trailColor: '#aaa', fallbackRadius: 5 },
-  acid: { color: '#9cff3a', glow: true, trail: 20, trailColor: '#8cff40', fallbackRadius: 7 },
+  plasma_super: {
+    color: '#b8f2ff',
+    glow: true,
+    trail: 60,
+    trailColor: '#a0ecff',
+    fallbackRadius: 10,
+    scale: 1.2,
+  },
+  melta: { color: '#ffe0a0', glow: true, trail: 40, trailColor: '#ff7040', fallbackRadius: 8 },
+  frag: {
+    color: '#7a7a62',
+    glow: false,
+    trail: 25,
+    trailColor: '#888',
+    trailShape: 'smoke',
+    fallbackRadius: 5,
+  },
+  fleshborer: {
+    color: '#c08040',
+    glow: false,
+    trail: 10,
+    trailColor: '#7a4a20',
+    fallbackRadius: 4,
+  },
+  deathspitter: {
+    color: '#c0ff40',
+    glow: true,
+    trail: 25,
+    trailColor: '#a0e030',
+    fallbackRadius: 6,
+  },
+  spore: {
+    color: '#a8c040',
+    glow: false,
+    trail: 12,
+    trailColor: '#8aa030',
+    trailShape: 'smoke',
+    fallbackRadius: 9,
+  },
 };
 
 export const DEFAULT_PROJECTILE_VISUAL: ProjectileVisual = {
@@ -32,22 +73,138 @@ export interface EnemyVisual {
   color: string;
   /** Gore particle colour. */
   ichor: string;
-  /** Animation frames per second (walk cycle). */
-  animFps: number;
+  /** World px travelled per walk frame (stride). */
+  stride: number;
+  /** Attack / death animation speed. */
+  attackFps: number;
+  deathFps: number;
   /** Screen shake on death. */
   deathShake: number;
+  /** Leave the last death frame on the floor as a corpse decal. */
+  corpse: boolean;
 }
 
+/** Behemoth-fleet gore: dark red ichor; acid beasts spill green. */
 export const ENEMY_VISUALS: Record<string, EnemyVisual> = {
-  swarmer: { color: '#8a4fd0', ichor: '#6a2f9a', animFps: 12, deathShake: 0 },
-  brute: { color: '#b04a4a', ichor: '#7a2020', animFps: 5, deathShake: 5 },
-  spitter: { color: '#5aa84a', ichor: '#7acc30', animFps: 6, deathShake: 0 },
-  burster: { color: '#d0a030', ichor: '#c8d040', animFps: 8, deathShake: 0 },
+  hormagaunt: {
+    color: '#3a3a8a',
+    ichor: '#6a1018',
+    stride: 7,
+    attackFps: 14,
+    deathFps: 12,
+    deathShake: 0,
+    corpse: true,
+  },
+  termagant: {
+    color: '#3a3a8a',
+    ichor: '#6a1018',
+    stride: 7,
+    attackFps: 12,
+    deathFps: 12,
+    deathShake: 0,
+    corpse: true,
+  },
+  ripper: {
+    color: '#8a2a3a',
+    ichor: '#6a1018',
+    stride: 4,
+    attackFps: 10,
+    deathFps: 12,
+    deathShake: 0,
+    corpse: true,
+  },
+  genestealer: {
+    color: '#6a3a9a',
+    ichor: '#5a1030',
+    stride: 8,
+    attackFps: 16,
+    deathFps: 12,
+    deathShake: 0,
+    corpse: true,
+  },
+  warrior: {
+    color: '#3a3a8a',
+    ichor: '#6a1018',
+    stride: 10,
+    attackFps: 10,
+    deathFps: 9,
+    deathShake: 3,
+    corpse: true,
+  },
+  ravener: {
+    color: '#3a3a8a',
+    ichor: '#6a1018',
+    stride: 9,
+    attackFps: 12,
+    deathFps: 9,
+    deathShake: 3,
+    corpse: true,
+  },
+  biovore: {
+    color: '#4a6a20',
+    ichor: '#7a9a20',
+    stride: 9,
+    attackFps: 8,
+    deathFps: 9,
+    deathShake: 0,
+    corpse: true,
+  },
+  spore_mine: {
+    color: '#9ab040',
+    ichor: '#a8c040',
+    stride: 30,
+    attackFps: 8,
+    deathFps: 14,
+    deathShake: 0,
+    corpse: false,
+  },
+  carnifex: {
+    color: '#3a3a8a',
+    ichor: '#5a0a10',
+    stride: 12,
+    attackFps: 9,
+    deathFps: 7,
+    deathShake: 9,
+    corpse: true,
+  },
 };
 
 export const DEFAULT_ENEMY_VISUAL: EnemyVisual = {
-  color: '#c050c0',
-  ichor: '#802080',
-  animFps: 8,
+  color: '#8050a0',
+  ichor: '#601030',
+  stride: 8,
+  attackFps: 10,
+  deathFps: 10,
   deathShake: 0,
+  corpse: true,
+};
+
+export interface WeaponVisual {
+  /** Muzzle flash scale (0 = none). */
+  muzzle: number;
+  muzzleColor: string;
+  /** Recoil kick in px (held weapon slides back). */
+  recoil: number;
+  /** Screen shake for the local shooter. */
+  shake: number;
+  /** Eject a brass casing. */
+  casing: boolean;
+}
+
+export const WEAPON_VISUALS: Record<string, WeaponVisual> = {
+  bolt_rifle: { muzzle: 1, muzzleColor: '#ffd070', recoil: 3, shake: 0.6, casing: true },
+  power_sword: { muzzle: 0, muzzleColor: '#9fe8ff', recoil: -4, shake: 0, casing: false },
+  heavy_bolter: { muzzle: 1.35, muzzleColor: '#ffc060', recoil: 4, shake: 1.6, casing: true },
+  flamer: { muzzle: 0, muzzleColor: '#ff9030', recoil: 0.5, shake: 0, casing: false },
+  plasma_gun: { muzzle: 1.1, muzzleColor: '#8fe4ff', recoil: 3, shake: 1.2, casing: false },
+  meltagun: { muzzle: 1.4, muzzleColor: '#ffb070', recoil: 5, shake: 3, casing: false },
+  frag_grenade: { muzzle: 0, muzzleColor: '#ffd070', recoil: -3, shake: 0, casing: false },
+};
+
+export const DEFAULT_WEAPON_VISUAL: WeaponVisual = {
+  muzzle: 1,
+  muzzleColor: '#ffd070',
+  recoil: 2,
+  shake: 0,
+  casing: false,
 };

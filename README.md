@@ -1,18 +1,79 @@
-# Space Marine Survival
+# Spacecraft: Hive Siege
 
-Top-down co-op swarm survival for the browser. You play a space marine holding out against
-endless Tyranid/Zerg-like swarms. The swarm keeps growing, new weapons unlock over time, and
-**survival time is the only score**. Teams of **1-4 marines** play together, and each team size
-has its **own highscore table**.
+> **Unofficial fan project.** This is a free, non-commercial fan game. It is **not affiliated with,
+> endorsed by or sponsored by Games Workshop**. Warhammer, Warhammer 40,000, Space Marine,
+> Tyranid, chapter names and all associated marks are trademarks of **Games Workshop Ltd**. The
+> repository contains no Games Workshop artwork, logos, text or sounds. Every sprite, icon, emblem,
+> sound and music track is generated procedurally by our own code. All in-game names live in
+> content data and can be swapped for neutral ones (`?names=generic`, see "Renaming").
 
-**Play it:** https://fafa87.github.io/spacecraft/ (static GitHub Pages build: global leaderboard
-in Firestore with a local fallback, P2P co-op through the public PeerJS broker).
+Top-down co-op swarm survival for the browser, styled after Warhammer 40,000 tabletop. A squad of
+**1-4 Primaris-style battle-brothers** holds a ruined hive city against an endless **Tyranid**
+swarm in Behemoth colours. The swarm escalates in surges, a **Carnifex** leads every boss wave,
+and wargear unlocks as you survive. **Survival time is the only score.** Each team size has its
+own table, and each game version (major.minor) has its own leaderboard.
 
-![gameplay](docs/screenshot.png)
+**Play it:** https://fafa87.github.io/spacecraft/ (latest). Frozen older builds:
+https://fafa87.github.io/spacecraft/v0.1.0/ and the menu's **Previous versions** link. It is a
+static GitHub Pages build: a global leaderboard in Firestore with a local fallback, and P2P co-op
+through the public PeerJS broker.
 
-> v1 / foundation release. The aim is a codebase that is easy to extend: data-driven content,
-> a deterministic shared simulation, transport-agnostic netcode, a real highscore server, and a
-> procedural asset pipeline for graphics, SFX and music.
+![Hive Siege gameplay](docs/wh-gameplay.png)
+
+| Menu (chapter picker)     | Units (procedural sprites)      | Phone (touch twin-stick)      |
+| ------------------------- | ------------------------------- | ----------------------------- |
+| ![menu](docs/wh-menu.png) | ![sprites](docs/wh-sprites.png) | ![mobile](docs/wh-mobile.png) |
+
+## The forces
+
+**Battle-brothers.** Primaris Intercessor-style marines with big rounded pauldrons, a grille
+helm and a backpack. Pick a chapter in the menu or the lobby; each player in a squad has a
+different one. Shoulder badges are simple geometric shapes of our own, not chapter logos.
+
+| Chapter        | Armour / trim    | Badge   |
+| -------------- | ---------------- | ------- |
+| Ultramarines   | blue / gold      | chevron |
+| Blood Angels   | red / black      | drop    |
+| Dark Angels    | green / bone     | blade   |
+| Imperial Fists | yellow / black   | tower   |
+| Space Wolves   | grey-blue / gold | fang    |
+
+**Wargear** (keys 1-7, the wheel or Q/E; unlocks over survival time, also found in supply crates):
+
+| #   | Weapon        | Unlocks | Play                                                                                                              |
+| --- | ------------- | ------- | ----------------------------------------------------------------------------------------------------------------- |
+| 1   | Bolt Rifle    | 0:00    | Reliable mass-reactive bolts that burst on impact                                                                 |
+| 2   | Power Sword   | 0:45    | Wide arc sweeps that cut through crowds; the blade's cell recharges                                               |
+| 3   | Heavy Bolter  | 1:30    | Belt-fed explosive bolts with high suppression; slows you down                                                    |
+| 4   | Flamer        | 2:30    | Short promethium cone that melts swarms                                                                           |
+| 5   | Plasma Gun    | 4:00    | Piercing shots. Shots past the heat line are **supercharged**; a full gauge **overheats**: it vents and burns you |
+| 6   | Meltagun      | 5:30    | Short-range thermal lance for bosses                                                                              |
+| 7   | Frag Grenades | 7:00    | Lobbed blast charges                                                                                              |
+
+**The swarm** (Behemoth-style palette: deep blue-purple carapace, red flesh, bone talons and yellow eyes; Genestealers in purple):
+
+| Tyranid         | Role                                                                                              |
+| --------------- | ------------------------------------------------------------------------------------------------- |
+| Hormagaunt      | fast melee swarm; leaps the last metres                                                           |
+| Termagant       | ranged gaunt spitting fleshborer beetles                                                          |
+| Ripper Swarm    | tiny worms in big clumps                                                                          |
+| Genestealer     | four-armed, purple, very fast                                                                     |
+| Tyranid Warrior | **synapse**: nearby gaunts are faster and hit harder (violet halo)                                |
+| Ravener         | **burrows** (untargetable dust trail) and erupts beside a marine                                  |
+| Biovore         | living artillery that lobs drifting spore mines                                                   |
+| Spore Mine      | floating gas-bag; bursts in acid near marines or when shot                                        |
+| Carnifex        | **boss**: rears up, then charges in a straight line. Arrives on surge 3 and every 3rd surge after |
+
+All stats live in `packages/shared/src/data/` (`weapons.ts`, `enemies.ts`, `director.ts`,
+`chapters.ts`, `naming.ts`); see [docs/ADDING_CONTENT.md](docs/ADDING_CONTENT.md).
+
+### Renaming (IP-neutral names)
+
+Every displayed name (title, subtitle, weapons, enemies and chapters) comes from content
+data. `NAME_PRESETS` in `packages/shared/src/data/naming.ts` overrides them by id, and ids (saves,
+the wire format, assets) never change. Pick a preset with `?names=generic` or at build time with
+`VITE_NAMES=generic`. The `generic` preset replaces every Games Workshop term (Burst Rifle,
+Slasher, Stalker…). Add your own preset in the same file.
 
 ## Quick start
 
@@ -89,6 +150,10 @@ public PeerJS cloud, so it needs nothing extra.
 - `?ws=1` uses the dedicated WebSocket host instead of P2P.
 - `?debug=1` (or F3 in game) shows the net/debug overlay.
 - `?autosolo=1&name=X` starts a solo run straight away (used by the smoke test).
+- `?names=generic` uses a display-name preset (see "Renaming").
+- `?demo=hive` starts a solo showcase: a staged late-game fight with every Tyranid type, all
+  wargear and a sturdy marine. Nothing is submitted (used for screenshots).
+- `?firestore=0` turns the Firestore leaderboard off (local scores only), for tests.
 
 ## Commands
 
@@ -107,6 +172,8 @@ public PeerJS cloud, so it needs nothing extra.
 | `npm run test:rules`                  | Firestore security-rules tests in the emulator (needs Java 11+), including the REST store end to end.                                          |
 | `npm run check:firestore`             | Live smoke test against the configured Firebase project: create, read, query, duplicate and invalid writes.                                    |
 | `npm run sim -- --bot=kite --seeds=6` | Headless balance simulation: bot survival statistics per team size.                                                                            |
+| `npm run contact-sheet -w @sms/tools` | Renders the labelled unit sheet `docs/wh-sprites.png` from the generated atlas.                                                                |
+| `npm run deploy:pages [-- --push]`    | Versioned GitHub Pages deploy: latest at `/`, frozen `/vX.Y.Z/`, updated `versions.json`; a normal commit on `gh-pages`, never forced.         |
 
 ### Server configuration (env vars)
 
@@ -131,28 +198,62 @@ Client build-time env:
 | `VITE_FIRESTORE_URL`                                                        | `https://firestore.googleapis.com/v1`                   | Firestore REST base, e.g. `http://127.0.0.1:8080/v1` for the emulator                                                                |
 | `VITE_PEER_HOST` / `VITE_PEER_PORT` / `VITE_PEER_PATH` / `VITE_PEER_SECURE` | dev: local server via `/api/config`; prod: PeerJS cloud | PeerJS signaling server                                                                                                              |
 
-## Deploying the client (GitHub Pages)
+## Versions, releases and deploy (GitHub Pages)
 
-`.github/workflows/pages.yml` runs on every push to `master`: `npm ci`, `npm run assets`, `npm test`,
-then builds the client with `BASE_PATH=/<repo>/` and publishes `packages/client/dist` with
-`actions/deploy-pages`. Pages must be set to "GitHub Actions" as its source
-(`gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow`). To use a hosted highscore
-server later, set the repository variable `HIGHSCORE_URL`. The repository variables
-`FIREBASE_API_KEY` / `FIREBASE_PROJECT_ID` override the Firebase defaults from `.env.production`. For a
-hosted highscore server, the server's `CORS_ORIGIN` must allow
-`https://<owner>.github.io`.
+The site is served from the **`gh-pages` branch** (Pages source "Deploy from a branch", root):
 
-Locally: `npm run build:pages` builds with `/spacecraft/`, and
-`npx tsx scripts/pages-check.ts <url> [screenshot.png]` checks a deployed or served build in headless
-Chrome (menu, assets under the base path, local scores, P2P room via PeerJS cloud, a solo run, no
-console errors).
+```
+/spacecraft/                 latest release (built with BASE_PATH=/spacecraft/)
+/spacecraft/v0.1.0/          frozen v0.1.0 (BASE_PATH=/spacecraft/v0.1.0/)
+/spacecraft/v0.2.0/          frozen v0.2.0 …
+/spacecraft/versions.json    {"latest":"0.2.0","versions":[{"version","date","title","path"}…]} (newest first)
+```
+
+The menu's **Previous versions** link reads `versions.json` from the site root (a frozen build
+finds it by stripping its own `vX.Y.Z/` from the base URL) and is hidden when the list can't be
+loaded. Each version keeps its own localStorage highscore table and its own Firestore board (see
+"Per-version boards"), so old builds keep working unchanged.
+
+**Release checklist**
+
+1. Bump `GAME_VERSION` in `packages/shared/src/constants.ts` (and the `version` in the
+   `package.json` files). A minor or major bump starts a **new, empty leaderboard**. If the
+   board pattern changes, re-publish `firestore.rules`.
+2. Run `npm run lint && npm run typecheck && npm test` (plus `npm run test:rules` when rules
+   changed). Then commit and push `master` (never force).
+3. Tag and release, targeting the exact commit:
+   ```bash
+   git tag -a v0.2.0 -m "v0.2.0: Hive Siege" && git push origin v0.2.0
+   gh release create v0.2.0 --target "$(git rev-parse HEAD)" --title "v0.2.0 · Hive Siege" --notes-file notes.md
+   ```
+4. Deploy: `npm run deploy:pages` builds the current checkout twice (into `/` and
+   `/v<GAME_VERSION>/`) and adds a worktree of `origin/gh-pages`. In it, it replaces only the root
+   files and this version's folder, keeps every other `vX.Y.Z/`, upserts `versions.json` and
+   commits. Inspect the result, then run `npm run deploy:pages -- --push`. The push is a plain
+   `git push origin HEAD:gh-pages`. It is **never forced**: if it is rejected, re-run the script.
+   - Options: `--title "…"` and `--add <ver>=<distDir>[=<title>]` to install a prebuilt frozen
+     build. Example: v0.1.0 was built from tag `v0.1.0` in a worktree
+     (`git worktree add /tmp/v010 v0.1.0 && cd /tmp/v010 && npm ci && BASE_PATH=/spacecraft/v0.1.0/ npm run build:pages`),
+     then installed with `--add 0.1.0=/tmp/v010/packages/client/dist`.
+5. Check it live: `npx tsx scripts/pages-check.ts https://fafa87.github.io/spacecraft/` (also run
+   it on `/v0.1.0/` and `/v0.2.0/`). It checks the menu, assets under the base path, local scores,
+   a P2P room, a solo run and the console.
+
+CI option: a `pages.yml` workflow that runs the same steps on `v*` tags
+(`npm ci`, assets, tests, `npm run deploy:pages -- --push` with `contents: write`) is kept on a
+local branch and not pushed yet. Repository variables `FIREBASE_API_KEY` / `FIREBASE_PROJECT_ID`
+override the defaults from `.env.production`, and `HIGHSCORE_URL` selects a hosted highscore
+server (its `CORS_ORIGIN` must allow `https://<owner>.github.io`).
+
+Locally, `npm run build:pages` builds with `/spacecraft/`.
 
 ## Repository layout
 
 ```
 packages/
   shared/   @sms/shared: everything both sides must agree on (no DOM, no Node APIs)
-    src/data/        content tables: weapons.ts, enemies.ts, director.ts (+ ContentRegistry & validation)
+    src/data/        content tables: weapons.ts, enemies.ts, director.ts, chapters.ts, naming.ts
+                     (+ ContentRegistry & validation)
     src/sim/         deterministic simulation: world, systems/ (movement, weapons, projectiles,
                      enemies, director, combat, pickups, players), snapshot builder, spatial hash
     src/session/     HostSession (authoritative lobby + game loop), ClientSession, Scheduler
@@ -162,13 +263,14 @@ packages/
   server/   @sms/server: Fastify highscore API, highscore repositories, PeerJS server, WS game host
   client/   @sms/client: Vite + Canvas2D (app/, game/, net/, render/, audio/, ui/, highscores/)
 tools/      @sms/tools: procedural sprites → atlas, sfxr-style SFX, chiptune music, manifest, preview
-scripts/    smoke.ts, browser-smoke.ts, balance-sim.ts
-docs/       ARCHITECTURE.md, ADDING_CONTENT.md, screenshots
+scripts/    smoke.ts, browser-smoke.ts, mobile-check.ts, balance-sim.ts, deploy-pages.ts, Firestore helpers
+docs/       ARCHITECTURE.md, ADDING_CONTENT.md, ART_PIPELINE.md, screenshots
 ```
 
 See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for the design in depth and
 **[docs/ADDING_CONTENT.md](docs/ADDING_CONTENT.md)** for step-by-step guides to adding a weapon,
-an enemy, a sprite, a sound or a music track.
+an enemy, a sprite, a sound or a music track. **[docs/ART_PIPELINE.md](docs/ART_PIPELINE.md)**
+covers sprite sizes, animation frames and how to drop in your own art.
 
 ## How multiplayer works
 
@@ -241,8 +343,20 @@ Like [Pulp Wars](https://nadbordrozd.github.io/pulp_wars/), the static build tal
 Firestore over its REST API**, straight from the browser: a public web `apiKey`, no auth and no
 SDK (`packages/client/src/highscores/FirestoreHighscoreStore.ts`, about 3 KB).
 
-- **Data:** collection `highscores`, document id = `runId`, with fields `teamSize`, `names[]`,
-  `survivalMs`, `kills`, `wave`, `mode`, `version` and `timestamp` (server `REQUEST_TIME`).
+- **Data:** one board per game **major.minor** version, at `boards/{board}/highscores/{runId}`
+  (for example `boards/0.2/highscores`). Fields: `teamSize`, `names[]`, `survivalMs`, `kills`,
+  `wave`, `mode`, `version`, `board` and `timestamp` (server `REQUEST_TIME`).
+- **Per-version boards:** a release that changes the game (a minor or major bump) starts with an
+  **empty** leaderboard, and nothing is ever deleted. Patch releases (0.2.1) share their minor's board.
+  - The frozen `/spacecraft/v0.1.0/` build still reads and writes the legacy top-level
+    `highscores` collection (8 fields, no `board`), so v0.1.0 keeps its own board and keeps working.
+  - The rules enforce `board ==` the path segment `==` major.minor of `version`, so a v0.2 client
+    can't post into another version's board.
+  - All boards use the collection id `highscores`, so the **one existing composite index**
+    (`teamSize` ASC, `survivalMs` DESC, scope Collection) serves every board. No new index is needed.
+  - Local fallback tables are namespaced in the same way (`sms.highscores.board-0.2`). The v0.1.0
+    table `sms.highscores.v1` on the same github.io origin is left alone. Name, mute and chapter
+    preferences are shared by all versions.
 - **Write:** `documents:commit` with `currentDocument.exists = false`, so writes are create-only and a
   re-submit returns 409, which counts as already saved. Only the host submits.
 - **Top N:** `documents:runQuery` with `teamSize == N` ordered by `survivalMs desc`. This needs one
@@ -263,7 +377,9 @@ SDK (`packages/client/src/highscores/FirestoreHighscoreStore.ts`, about 3 KB).
 2. Go to **Build → Firestore Database → Create database** (production mode, any location).
 3. **Rules:** open
    <https://console.firebase.google.com/project/spacecraft-5f703/firestore/databases/-default-/rules>,
-   paste the whole `firestore.rules` file and click **Publish**. Or run `npx firebase deploy --only firestore`
+   paste the whole `firestore.rules` file and click **Publish**. Re-publish it after every rules
+   change. Until v0.2's rules are published, v0.2 runs are rejected and kept locally, and the board
+   shows the local table. Or run `npx firebase deploy --only firestore`
    after `firebase login`, which uses `firebase.json` and `.firebaserc`.
 4. **Index:** open
    <https://console.firebase.google.com/project/spacecraft-5f703/firestore/databases/-default-/indexes>,
@@ -283,7 +399,7 @@ SDK (`packages/client/src/highscores/FirestoreHighscoreStore.ts`, about 3 KB).
    the bundle anyway. Put overrides in `.env.production.local` (gitignored) or in the repository
    variables `FIREBASE_API_KEY` and `FIREBASE_PROJECT_ID` for the Pages workflow.
 
-6. Run `npm run check:firestore`. It writes one hidden test run (`ZZ-test`, version `0.0.0-test`)
+6. Run `npm run check:firestore`. It writes one hidden test run on the current board (`ZZ-test`, version `<GAME_VERSION>-test`)
    and checks reads, the index, the duplicate rejection and the invalid-write rejection.
 
 The Spark (free) plan is plenty: 50k reads and 20k writes per day. Each game over costs 1 write
@@ -296,8 +412,10 @@ and enable App Check later.
 `firestore.rules` is **generated** (`npm run rules`) from the same constants the client uses, in
 `packages/shared/src/highscore/limits.ts` and `names.ts`:
 
-- Public read, create only (no update or delete), and only the `highscores/{runId}` collection.
-- Exactly the 8 fields, with the right types (ints are real ints).
+- Public read, create only (no update or delete). Only `boards/{major.minor}/highscores/{runId}`
+  and the legacy `highscores/{runId}` are reachable.
+- Exactly the 9 board fields (or the 8 legacy fields, without `board`), with the right types (ints are real ints).
+- `board` equals the path segment and the major.minor of `version`.
 - `teamSize` 1-4, and `names.length == teamSize`.
 - `survivalMs` between 1 s and 4 h. Kills at most 25/s per marine plus 50, and a wave cap that
   follows the surge schedule.
@@ -319,9 +437,10 @@ real fix).
 
 - `npm test`: payload, parsing and fallback tests against a mocked `fetch`, plus a check that
   `firestore.rules` is up to date.
-- `npm run test:rules`: 28 rules tests in the Firestore emulator (Java 11+). They cover valid
-  writes, denied updates and deletes, 21 bad payloads, name rules that match the client, and the
-  REST store end to end, including a forged write.
+- `npm run test:rules`: 42 rules tests in the Firestore emulator (Java 11+). They cover valid
+  writes, denied updates and deletes, 21 bad payloads, name rules that match the client, and
+  per-version boards: isolation from v0.1, board/version mismatches, and legacy v0.1.0 writes still
+  accepted. They also run the REST store end to end, including a forged write and a fresh v0.2 board.
 - `npm run check:firestore`: the live project.
 
 ## Asset pipeline
@@ -329,40 +448,56 @@ real fix).
 `npm run assets` (tools/src/generate.ts) writes the following to
 `packages/client/public/assets/generated/` (gitignored, always regenerated):
 
-- `atlas.png`: 45 procedurally drawn sprites (76 frames), drawn with `@napi-rs/canvas` and
-  shelf-packed into a 1024×512 atlas. They cover the marine (4 team colours plus a downed pose),
-  4 enemy types, projectiles, crates and weapon icons, floor tiles, decals and FX.
-- `sfx/*.wav`: 19 sound effects from a seeded **sfxr-style synthesizer** with layered presets.
-- `music/*.wav`: 3 tracks (`menu`, `battle`, `gameover`) from a small **chiptune sequencer**
-  (scale, chord progression, bass, arpeggio, lead and drums; seeded and deterministic).
-- `manifest.json`: the frame rects, anchors, volumes, voice limits and durations the client
-  loads.
+- `atlas.png`: 95 procedurally drawn sprites (236 frames), drawn at 2× with `@napi-rs/canvas`
+  and shelf-packed into a 2048×4096 atlas. It holds 5 chapter marines (walk, torso and downed
+  pose), 9 Tyranids with walk/attack/death strips, wargear icons, held weapons and crates, bolts
+  and plasma, flames, blood and ichor decals, Imperial floor tiles, hive ruins and creep, FX and
+  shoulder badges.
+- `ui/emblem.png` and `ui/parchment.png`: our own skull-and-wings emblem and a parchment texture
+  for the gothic UI.
+- `sfx/*.wav`: 38 heavier sound effects from a seeded synthesizer: bolt cracks and impacts, the
+  heavy bolter, flamer roar, plasma whine and overheat vent, chitin screeches, the Carnifex roar
+  and a boss horn.
+- `music/*.wav`: 3 procedural gothic tracks (`menu`, `battle`, `gameover`) with an additive pipe
+  organ, a formant "aah" choir, bells and war drums. They are seeded, deterministic and loop
+  seamlessly.
+- `manifest.json`: the frame rects, anchors, animation ranges, volumes, voice limits and
+  durations the client loads.
 - `preview.html`: a contact sheet to look at and listen to every asset.
 
-Every sprite carries a text **`prompt`**, which serves as a ready-made brief for AI/hand-made
-art. Dropping a file into `tools/assets-src/overrides/{sprites,sfx,music}/<key>.(png|wav)`
+No image generation is used. Every sprite carries a text **`prompt`**, which serves as a
+ready-made brief for an artist (see [docs/ART_PIPELINE.md](docs/ART_PIPELINE.md)). Dropping a file into `tools/assets-src/overrides/{sprites,sfx,music}/<key>.(png|wav)`
 replaces the procedural version on the next run. The generator also checks **coverage**: every
 sprite or sound referenced by the content data must exist, otherwise it fails. The same check
 runs in a unit test.
 
 ## Testing
 
-- `npm test`: 84 unit/integration tests.
+- `npm test`: 134 unit/integration tests (vitest).
   - Shared: rng, movement, swept projectile collision, determinism, director escalation,
     revive and game over, content and highscore validation, and a full HostSession over local
-    links with a ManualScheduler.
+    links with a ManualScheduler. `tyranids.test.ts` covers the Hive Siege content: weapon
+    unlock order, the roster and boss, chapters and naming presets, plasma supercharge and
+    overheat self-damage, ravener burrow and emerge, the warrior synapse buff, the carnifex
+    wind-up and charge, spore-mine bursts, boss waves, snapshot fields, and lobby chapter
+    selection (unique, honoured, switchable).
   - Server: API via `app.inject` (201/200/400/413/429, ordering, separate tables, CORS) and
     json/sqlite persistence across restarts.
   - Client: Predictor, SnapshotBuffer, Local/Fallback highscore stores, the joystick/deadzone
     math, touch intents and input merging, and join-URL building and parsing with a QR encode →
-    decode round trip.
+    decode round trip, and the versioned-site root (`versions.ts`).
   - Tools: asset coverage, packer overlap, WAV round-trip and song length.
+- `npm run test:rules`: 42 Firestore security-rules tests against the emulator (needs Java), covering
+  the per-version boards and the legacy v0.1 collection.
 - `npm run smoke`: headless, starts its own in-memory server on a random port.
 - `npm run smoke:browser`: needs `npm run dev` (for the Vite client) and Chrome at
   `/usr/bin/google-chrome` (or `CHROME_PATH`). It boots its **own in-memory API + PeerJS**
   (ports 8797/9007), so it never touches the real leaderboard. It saves `docs/menu.png`,
   `docs/screenshot.png`, `docs/gameover.png` and `docs/screenshot-coop-*.png`. Set
   `STRICT_P2P=1` to make a blocked WebRTC data channel fatal.
+- `npx tsx scripts/wh-shots.ts [clientUrl]`: needs `npm run dev`. It regenerates the README
+  screenshots `docs/wh-menu.png`, `docs/wh-gameplay.png` (`?demo=hive`) and `docs/wh-mobile.png`,
+  always with `?firestore=0`. `npm run contact-sheet -w @sms/tools` writes `docs/wh-sprites.png`.
 - `npm run check:mobile [clientUrl]`: headless mobile emulation (iPhone 14 and Pixel 5
   landscape, touch, via CDP multi-touch) against a running client (default
   `http://localhost:5173/`). It checks the responsive menu and the lobby QR (decoded with jsQR,
@@ -384,13 +519,13 @@ runs in a unit test.
   - TURN server config for strict NATs.
   - Host migration.
 - **Gameplay:**
-  - More enemy types: burrowers, flyers, a broodmother boss with spawns.
-  - Perks/upgrades between surges, grenades, turrets, a melee/dash.
+  - Flyers (Gargoyles), a Hive Tyrant / broodlord boss with spawns, Lictor ambushes.
+  - Perks/wargear upgrades between surges, a jump-pack dash, chapter-specific traits.
   - Obstacles and maps (the arena is open floor today).
 - **Balance:** tune with `npm run sim` (bots survive about 1-3 min today; humans who kite and
   revive do better).
-- **Assets:** an AI-art workflow through the override folder, animation states, a music
-  intensity layer tied to the director, and spatial audio.
+- **Assets:** hand-made art through the override folder, a music intensity layer tied to the
+  director, and spatial audio.
 - **Platform:**
   - Anti-cheat steps (above), accounts, seasons/weekly tables.
   - Postgres repository, Docker image, CI (lint + test + smoke).

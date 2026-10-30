@@ -72,7 +72,7 @@ async function coop(
   mode: 'p2p' | 'ws',
   allErrors: string[],
 ): Promise<'ok' | 'blocked'> {
-  const q = `api=${encodeURIComponent(API)}${mode === 'ws' ? '&ws=1' : ''}`;
+  const q = `firestore=0&api=${encodeURIComponent(API)}${mode === 'ws' ? '&ws=1' : ''}`;
   const label = mode === 'p2p' ? 'P2P (PeerJS)' : 'dedicated WS host';
   const a = await newPage(browser, `${mode}-hostA`);
   await a.page.goto(`${CLIENT}/?${q}`, { waitUntil: 'networkidle0' });
@@ -183,7 +183,9 @@ async function main(): Promise<void> {
     // 1. menu
     {
       const { page, errors } = await newPage(browser, 'menu');
-      await page.goto(`${CLIENT}/?api=${encodeURIComponent(API)}`, { waitUntil: 'networkidle0' });
+      await page.goto(`${CLIENT}/?firestore=0&api=${encodeURIComponent(API)}`, {
+        waitUntil: 'networkidle0',
+      });
       await page.waitForSelector('.menu #solo', { timeout: 10000 });
       await page.waitForFunction(
         () => !document.querySelector('#status')?.textContent?.includes('checking'),
@@ -200,9 +202,12 @@ async function main(): Promise<void> {
     {
       const { page, errors } = await newPage(browser, 'solo');
       const name = `Smoke${Date.now() % 10000}`;
-      await page.goto(`${CLIENT}/?autosolo=1&name=${name}&api=${encodeURIComponent(API)}`, {
-        waitUntil: 'networkidle0',
-      });
+      await page.goto(
+        `${CLIENT}/?firestore=0&autosolo=1&name=${name}&api=${encodeURIComponent(API)}`,
+        {
+          waitUntil: 'networkidle0',
+        },
+      );
       await page.waitForFunction(() => (window as any).__sms?.screen === 'game', {
         timeout: 10000,
       });

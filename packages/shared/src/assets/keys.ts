@@ -1,4 +1,3 @@
-import { MAX_PLAYERS } from '../constants.js';
 import type { ContentRegistry } from '../data/index.js';
 import type { ReferencedAssetKeys } from './manifest.js';
 
@@ -13,7 +12,46 @@ export const CORE_SOUNDS = [
   'crate_drop',
   'ui_click',
   'explosion',
+  'bolt_impact',
+  'overheat',
+  'boss_horn',
 ] as const;
+
+/** Terrain / prop / FX sprites the renderer uses regardless of content. */
+export const CORE_SPRITES = [
+  'medkit',
+  'shadow',
+  'fx_explosion',
+  'fx_muzzle',
+  'fx_particle',
+  'fx_ring',
+  'fx_slash',
+  'fx_burrow',
+  'fx_synapse',
+  'fx_spark',
+  'decal_scorch_0',
+  'decal_scorch_1',
+  'tile_floor_0',
+  'tile_floor_1',
+  'tile_floor_2',
+  'tile_floor_3',
+  'tile_grate',
+  'tile_hazard',
+  'tile_seal',
+  'prop_rubble_0',
+  'prop_rubble_1',
+  'prop_pillar',
+  'prop_skull_pile',
+  'prop_barricade',
+  'creep_0',
+  'creep_1',
+  'creep_2',
+  'ui_emblem',
+] as const;
+
+/** Animation names a sprite may define (manifest `anims`); see docs/ADDING_CONTENT.md. */
+export const ENEMY_ANIMS = ['walk', 'attack', 'death'] as const;
+export const MARINE_ANIMS = ['walk'] as const;
 
 /** Music tracks the client expects. */
 export const CORE_MUSIC = ['menu', 'battle', 'gameover'] as const;
@@ -22,24 +60,18 @@ export const DECAL_VARIANTS = 3;
 
 /** Collects every sprite / sound key the given content (plus the core client) references. */
 export function referencedAssetKeys(content: ContentRegistry): ReferencedAssetKeys {
-  const sprites = new Set<string>([
-    'medkit',
-    'shadow',
-    'fx_explosion',
-    'fx_muzzle',
-    'fx_particle',
-    'fx_ring',
-    'decal_scorch_0',
-  ]);
+  const sprites = new Set<string>(CORE_SPRITES);
   const sounds = new Set<string>(CORE_SOUNDS);
-  for (let i = 0; i < MAX_PLAYERS; i++) {
-    sprites.add(`marine_${i}`);
-    sprites.add(`marine_${i}_down`);
+  for (const c of content.chapters) {
+    sprites.add(`marine_${c.id}`);
+    sprites.add(`marine_${c.id}_top`);
+    sprites.add(`marine_${c.id}_down`);
+    sprites.add(`badge_${c.id}`);
   }
-  for (let i = 0; i < 4; i++) sprites.add(`tile_floor_${i}`);
   for (const w of content.weapons.values()) {
     sprites.add(w.sprites.icon);
     sprites.add(w.sprites.pickup);
+    sprites.add(w.sprites.held);
     sounds.add(w.sfx.fire);
     sounds.add(w.sfx.reload);
   }
@@ -48,6 +80,7 @@ export function referencedAssetKeys(content: ContentRegistry): ReferencedAssetKe
     sprites.add(e.sprite);
     sounds.add(e.sfx.death);
     if (e.sfx.attack) sounds.add(e.sfx.attack);
+    if (e.sfx.roar) sounds.add(e.sfx.roar);
     if (e.decal) for (let i = 0; i < DECAL_VARIANTS; i++) sprites.add(`decal_${e.decal}_${i}`);
   }
   return { sprites: [...sprites].sort(), sounds: [...sounds].sort() };

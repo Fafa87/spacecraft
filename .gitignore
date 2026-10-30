@@ -10,3 +10,4 @@ packages/server/data/
 .env.*.local
 packages/client/public/assets/generated/
 logs/
+.deploy/

@@ -92,7 +92,7 @@ export function explode(
     spec.damage * (1 - (1 - spec.edgeFactor) * Math.min(1, d / spec.radius));
   if (opts.hurtsEnemies) {
     for (const enemy of world.enemies) {
-      if (enemy.dead) continue;
+      if (enemy.dead || enemy.burrowed) continue;
       const def = world.content.enemy(enemy.type);
       const d = dist(x, y, enemy.x, enemy.y) - def.radius;
       if (d > spec.radius) continue;

@@ -1,5 +1,8 @@
 import type { Ctx } from './types.js';
 
+/** Anything canvas accepts as a fill style. */
+export type Fill = string | CanvasGradient | CanvasPattern;
+
 /** Small drawing helpers shared by sprite generators. */
 
 export function hexToRgb(hex: string): [number, number, number] {
@@ -25,7 +28,7 @@ export function ellipse(
   y: number,
   rx: number,
   ry: number,
-  fill: string,
+  fill: Fill,
   stroke?: string,
   lw = 1.5,
   rot = 0,
@@ -46,7 +49,7 @@ export function circle(
   x: number,
   y: number,
   r: number,
-  fill: string,
+  fill: Fill,
   stroke?: string,
   lw = 1.5,
 ): void {
@@ -60,7 +63,7 @@ export function roundRect(
   w: number,
   h: number,
   r: number,
-  fill: string,
+  fill: Fill,
   stroke?: string,
   lw = 1.5,
 ): void {
@@ -83,7 +86,7 @@ export function roundRect(
 export function poly(
   ctx: Ctx,
   pts: Array<[number, number]>,
-  fill: string,
+  fill: Fill,
   stroke?: string,
   lw = 1.5,
 ): void {

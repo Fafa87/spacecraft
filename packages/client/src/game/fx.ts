@@ -1,7 +1,12 @@
 import { DECAL_VARIANTS, type ContentRegistry, type GameEvent, type PlayerSnap } from '@sms/shared';
 import type { AudioEngine } from '../audio/AudioEngine.js';
 import type { Renderer } from '../render/Renderer.js';
-import { DEFAULT_ENEMY_VISUAL, ENEMY_VISUALS } from '../render/visuals.js';
+import {
+  DEFAULT_ENEMY_VISUAL,
+  DEFAULT_WEAPON_VISUAL,
+  ENEMY_VISUALS,
+  WEAPON_VISUALS,
+} from '../render/visuals.js';
 
 export type NoticeKind = 'info' | 'good' | 'bad' | 'warn';
 
@@ -23,8 +28,12 @@ export const isImmediate = (ev: GameEvent, myId: number): boolean =>
     ev.e === 'reload' ||
     ev.e === 'switch' ||
     ev.e === 'pickup' ||
-    ev.e === 'unlock') &&
+    ev.e === 'unlock' ||
+    ev.e === 'overheat') &&
   ev.p === myId;
+
+/** Throttle for the mass-reactive "crack" so a heavy bolter stream doesn't saturate audio. */
+let lastImpactSfx = 0;
 
 const decal = (prefix: string) => `decal_${prefix}_${Math.floor(Math.random() * DECAL_VARIANTS)}`;
 
@@ -35,53 +44,129 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
   switch (ev.e) {
     case 'shot': {
       const w = content.weapons.get(ev.w);
-      if (w) audio.play(w.sfx.fire, { x: ev.x, y: ev.y, volume: ev.p === fx.myId ? 1 : 0.6 });
+      const vis = WEAPON_VISUALS[ev.w] ?? DEFAULT_WEAPON_VISUAL;
+      const mine = ev.p === fx.myId;
+      if (w) audio.play(w.sfx.fire, { x: ev.x, y: ev.y, volume: mine ? 1 : 0.6 });
+      r.kick(ev.p, vis.recoil * (ev.s ? 1.6 : 1));
       // ev.x/ev.y is the muzzle position
       const mx = ev.x;
       const my = ev.y;
-      if (ev.w !== 'flamer') {
+      if (ev.w === 'flamer') {
+        P.burst(mx, my, 3, {
+          speed: 70,
+          dir: ev.a,
+          spread: 0.5,
+          color: '#ffb050',
+          maxLife: 0.22,
+          size: 4,
+          additive: true,
+        });
+        P.burst(mx, my, 1, {
+          speed: 40,
+          dir: ev.a,
+          color: '#3a2a20',
+          maxLife: 0.9,
+          size: 6,
+          grow: 3,
+          shape: 'smoke',
+        });
+      } else if (ev.w === 'power_sword') {
+        P.spawn({
+          x: mx,
+          y: my,
+          shape: 'sprite',
+          sprite: 'fx_slash',
+          maxLife: 0.16,
+          size: 1.2,
+          angle: ev.a,
+          additive: true,
+          drag: 0,
+          color: vis.muzzleColor,
+        });
+        P.burst(mx, my, 4, {
+          speed: 220,
+          dir: ev.a,
+          spread: 1.2,
+          color: '#bff4ff',
+          maxLife: 0.15,
+          size: 1.5,
+          shape: 'spark',
+          additive: true,
+        });
+      } else if (vis.muzzle > 0) {
+        const big = ev.s ? 1.6 : 1;
         P.spawn({
           x: mx,
           y: my,
           shape: 'sprite',
           sprite: 'fx_muzzle',
-          maxLife: 0.06,
-          size: ev.w === 'shotgun' || ev.w === 'rocket' ? 1.4 : 1,
+          maxLife: 0.07,
+          size: vis.muzzle * big,
           angle: ev.a,
           additive: true,
           drag: 0,
-          color: '#ffd070',
+          color: vis.muzzleColor,
         });
-        if (ev.w === 'rifle' || ev.w === 'shotgun') {
+        if (ev.w === 'plasma_gun' || ev.w === 'meltagun')
+          P.burst(mx, my, ev.s ? 10 : 5, {
+            speed: 120,
+            dir: ev.a,
+            spread: 0.8,
+            color: vis.muzzleColor,
+            maxLife: 0.25,
+            size: 2.5,
+            additive: true,
+          });
+        if (vis.casing) {
           const side = ev.a + Math.PI / 2;
           P.spawn({
-            x: ev.x,
-            y: ev.y,
-            vx: Math.cos(side) * 120 + (Math.random() - 0.5) * 40,
-            vy: Math.sin(side) * 120,
-            maxLife: 0.5,
-            size: 1.6,
-            color: '#d4a640',
+            x: mx - Math.cos(ev.a) * 10,
+            y: my - Math.sin(ev.a) * 10,
+            vx: Math.cos(side) * 130 + (Math.random() - 0.5) * 40,
+            vy: Math.sin(side) * 130,
+            maxLife: 0.55,
+            size: ev.w === 'heavy_bolter' ? 2.2 : 1.7,
+            color: '#c8962e',
             drag: 6,
           });
         }
-      } else {
-        P.burst(mx, my, 2, {
-          speed: 60,
-          dir: ev.a,
-          spread: 0.6,
-          color: '#ffb050',
-          maxLife: 0.2,
-          size: 4,
-          additive: true,
-        });
       }
-      if (ev.p === fx.myId && (ev.w === 'shotgun' || ev.w === 'rocket')) r.camera.addShake(2.5);
+      if (mine && vis.shake) r.camera.addShake(vis.shake * (ev.s ? 1.8 : 1));
       break;
     }
     case 'hit': {
       // k = projectile kind that hit
-      const color = ev.k === 'acid' ? '#9cff3a' : ev.k === 'plasma' ? '#7fe0ff' : '#7a2a9a';
+      const k = ev.k;
+      if (k === 'bolt' || k === 'heavy_bolt') {
+        // mass-reactive: tiny detonation inside the target
+        P.spawn({
+          x: ev.x,
+          y: ev.y,
+          shape: 'sprite',
+          sprite: 'fx_explosion',
+          maxLife: 0.18,
+          size: k === 'heavy_bolt' ? 0.38 : 0.26,
+          additive: true,
+          drag: 0,
+          color: '#ffb050',
+          angle: Math.random() * 6,
+        });
+        const now = performance.now();
+        if (now - lastImpactSfx > 45) {
+          lastImpactSfx = now;
+          audio.play('bolt_impact', { x: ev.x, y: ev.y, volume: 0.45 });
+        }
+      }
+      const color =
+        k === 'deathspitter' || k === 'spore'
+          ? '#9cff3a'
+          : k === 'plasma' || k === 'plasma_super'
+            ? '#7fe0ff'
+            : k === 'melta' || k === 'flame'
+              ? '#ff9040'
+              : k === 'fleshborer'
+                ? '#c08040'
+                : '#7a1020';
       P.burst(ev.x, ev.y, 4, { speed: 160, color, maxLife: 0.35, size: 2.5, drag: 5 });
       P.burst(ev.x, ev.y, 2, {
         speed: 260,
@@ -96,21 +181,33 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
     case 'die': {
       const def = content.enemies.get(ev.t);
       const vis = ENEMY_VISUALS[ev.t] ?? DEFAULT_ENEMY_VISUAL;
-      const big = (def?.radius ?? 16) > 24;
-      if (def) audio.play(def.sfx.death, { x: ev.x, y: ev.y, volume: 0.7 });
-      P.burst(ev.x, ev.y, big ? 26 : 12, {
-        speed: big ? 260 : 200,
+      const rad = def?.radius ?? 16;
+      const big = rad > 24;
+      if (def) audio.play(def.sfx.death, { x: ev.x, y: ev.y, volume: big ? 0.9 : 0.7 });
+      P.burst(ev.x, ev.y, big ? 30 : 12, {
+        speed: big ? 280 : 200,
         color: vis.ichor,
         maxLife: 0.6,
         size: big ? 4 : 3,
         drag: 4,
       });
-      r.addDecal(decal(def?.decal ?? 'blood'), ev.x, ev.y, big ? 1.6 : 0.9);
-      if (vis.deathShake) r.camera.addShake(vis.deathShake);
+      // chitin shards
+      P.burst(ev.x, ev.y, big ? 10 : 4, {
+        speed: 220,
+        color: '#2a2440',
+        maxLife: 0.5,
+        size: 2,
+        drag: 5,
+      });
+      r.addDecal(decal(def?.decal ?? 'blood'), ev.x, ev.y, Math.max(0.8, rad / 16) * 0.9);
+      if (vis.deathShake) {
+        const d = Math.hypot(ev.x - r.camera.x, ev.y - r.camera.y);
+        r.camera.addShake(Math.max(0, vis.deathShake - d / 120));
+      }
       break;
     }
     case 'boom': {
-      audio.play('explosion', { x: ev.x, y: ev.y });
+      audio.play('explosion', { x: ev.x, y: ev.y, volume: ev.r < 60 ? 0.6 : 1 });
       const scale = ev.r / 64;
       P.spawn({
         x: ev.x,
@@ -136,7 +233,7 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
         drag: 0,
         color: '#ffd080',
       });
-      P.burst(ev.x, ev.y, 24, {
+      P.burst(ev.x, ev.y, Math.round(10 + 14 * Math.min(1, scale)), {
         speed: 520,
         color: '#ffc060',
         maxLife: 0.35,
@@ -155,23 +252,89 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
         drag: 2,
       });
       r.addDecal('decal_scorch_0', ev.x, ev.y, scale, 0.7);
-      const d = Math.hypot(ev.x - r.camera.x, ev.y - r.camera.y);
-      r.camera.addShake(Math.max(0, 14 - d / 60));
+      // small blasts (spore mines, frag fragments) don't rattle the camera
+      if (ev.r >= 60) {
+        const d = Math.hypot(ev.x - r.camera.x, ev.y - r.camera.y);
+        r.camera.addShake(Math.max(0, Math.min(10, ev.r / 9) - d / 70));
+      }
       break;
     }
-    case 'spit':
-      audio.play('enemy_spit', { x: ev.x, y: ev.y, volume: 0.6 });
+    case 'spit': {
+      const def = ev.t ? content.enemies.get(ev.t) : undefined;
+      audio.play(def?.sfx.attack ?? 'nid_spit', { x: ev.x, y: ev.y, volume: 0.55 });
       P.burst(ev.x, ev.y, 5, {
         speed: 90,
-        color: '#9cff3a',
+        color: ev.t === 'termagant' ? '#c08040' : '#9cff3a',
         maxLife: 0.3,
         size: 2.5,
-        additive: true,
+        additive: ev.t !== 'termagant',
       });
       break;
+    }
     case 'bite': {
       const p = fx.players(ev.p);
-      if (p) audio.play('enemy_bite', { x: p.x, y: p.y, volume: 0.6 });
+      const def = ev.t ? content.enemies.get(ev.t) : undefined;
+      if (p) audio.play(def?.sfx.attack ?? 'nid_slash', { x: p.x, y: p.y, volume: 0.6 });
+      break;
+    }
+    case 'overheat': {
+      const p = fx.players(ev.p);
+      if (p) {
+        audio.play('overheat', { x: p.x, y: p.y, volume: ev.p === fx.myId ? 1 : 0.6 });
+        P.burst(p.x, p.y, 14, {
+          speed: 80,
+          color: '#cfefff',
+          maxLife: 1,
+          size: 6,
+          grow: 3,
+          shape: 'smoke',
+          drag: 2,
+        });
+        P.burst(p.x, p.y, 10, {
+          speed: 240,
+          color: '#7fe0ff',
+          maxLife: 0.3,
+          size: 1.5,
+          shape: 'spark',
+          additive: true,
+        });
+      }
+      if (ev.p === fx.myId) {
+        fx.notify('PLASMA OVERHEAT — coils venting!', 'bad');
+        r.camera.addShake(4);
+      }
+      break;
+    }
+    case 'emerge': {
+      const def = content.enemies.get(ev.t);
+      audio.play(def?.sfx.roar ?? 'nid_emerge', { x: ev.x, y: ev.y });
+      P.burst(ev.x, ev.y, 18, { speed: 200, color: '#5a4a38', maxLife: 0.7, size: 3, drag: 4 });
+      P.burst(ev.x, ev.y, 8, {
+        speed: 70,
+        color: '#4a3e30',
+        maxLife: 1.2,
+        size: 9,
+        grow: 2.5,
+        shape: 'smoke',
+        drag: 2,
+      });
+      r.addDecal('decal_scorch_1', ev.x, ev.y, 0.8, 0.6);
+      const d = Math.hypot(ev.x - r.camera.x, ev.y - r.camera.y);
+      r.camera.addShake(Math.max(0, 5 - d / 100));
+      break;
+    }
+    case 'charge': {
+      const def = content.enemies.get(ev.t);
+      audio.play(def?.sfx.roar ?? 'carnifex_roar', { x: ev.x, y: ev.y });
+      const d = Math.hypot(ev.x - r.camera.x, ev.y - r.camera.y);
+      r.camera.addShake(Math.max(0, 7 - d / 120));
+      break;
+    }
+    case 'boss': {
+      const def = content.enemies.get(ev.t);
+      audio.play('boss_horn');
+      fx.notify(`☠ A ${def?.name ?? 'monster'} approaches!`, 'warn');
+      r.camera.addShake(5);
       break;
     }
     case 'hurt': {
@@ -230,7 +393,7 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
       const p = fx.players(ev.p);
       audio.play('pickup', p ? { x: p.x, y: p.y } : {});
       if (ev.p === fx.myId) {
-        if (ev.k === 'medkit') fx.notify('+ Medkit', 'good');
+        if (ev.k === 'medkit') fx.notify('+ Medicae kit', 'good');
         else
           fx.notify(
             `${content.weapons.get(ev.w ?? '')?.name ?? 'Weapon'} acquired — ammo refilled`,
@@ -252,7 +415,7 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
       break;
     case 'surge':
       audio.play('surge');
-      fx.notify(`⚠ SURGE ${ev.n} — the swarm is coming!`, 'warn');
+      fx.notify(`⚠ SURGE ${ev.n} — the swarm descends!`, 'warn');
       r.camera.addShake(6);
       break;
     case 'reload': {

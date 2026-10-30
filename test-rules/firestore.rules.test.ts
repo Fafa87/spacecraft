@@ -153,6 +153,95 @@ describe('firestore.rules: highscores', () => {
   });
 });
 
+describe('firestore.rules: per-version boards (boards/{board}/highscores)', () => {
+  const v2 = (patch: Record<string, unknown> = {}) =>
+    good({ version: '0.2.0', board: '0.2', ...patch });
+  const putB = (data: Record<string, unknown>, board = '0.2', docId = id()) =>
+    setDoc(doc(db(), 'boards', board, 'highscores', docId), data);
+
+  it('accepts a well-formed run whose board matches path and version', async () => {
+    await assertSucceeds(putB(v2()));
+    await assertSucceeds(putB(v2({ version: '0.2.7-test' })));
+    await assertSucceeds(putB(good({ version: '1.10.0', board: '1.10' }), '1.10'));
+    const q = query(
+      collection(db(), 'boards', '0.2', 'highscores'),
+      where('teamSize', '==', 2),
+      orderBy('survivalMs', 'desc'),
+      limit(10),
+    );
+    expect((await assertSucceeds(getDocs(q))).size).toBe(2);
+  });
+
+  it('boards are isolated: the legacy v0.1 board does not see v0.2 runs and vice versa', async () => {
+    await assertSucceeds(put(good()));
+    await assertSucceeds(putB(v2()));
+    await assertSucceeds(putB(v2()));
+    const legacy = await getDocs(query(collection(db(), 'highscores'), where('teamSize', '==', 2)));
+    const b02 = await getDocs(
+      query(collection(db(), 'boards', '0.2', 'highscores'), where('teamSize', '==', 2)),
+    );
+    expect([legacy.size, b02.size]).toEqual([1, 2]);
+  });
+
+  const badB: [string, Record<string, unknown>, string?][] = [
+    ['missing board field', good({ version: '0.2.0' })],
+    ['board field != path', v2({ board: '0.3' })],
+    ['version from another board', v2({ version: '0.1.0' })],
+    ['version major differs', v2({ version: '1.2.0' })],
+    ['bad board path', v2({ board: 'abc' }), 'abc'],
+    ['board with patch', good({ version: '0.2.0', board: '0.2.0' }), '0.2.0'],
+    ['implausible run', v2({ survivalMs: 99_999_999 })],
+    ['extra field', v2({ cheat: true })],
+  ];
+  it.each(badB)('rejects: %s', async (_l, data, board) => {
+    await assertFails(putB(data, board ?? '0.2'));
+  });
+
+  it('legacy collection keeps accepting v0.1.0 writes but not the board field', async () => {
+    await assertSucceeds(put(good()));
+    await assertFails(put(good({ board: '0.1' })));
+  });
+
+  it('board runs are create-only', async () => {
+    const docId = id();
+    await assertSucceeds(putB(v2(), '0.2', docId));
+    const ref = doc(db(), 'boards', '0.2', 'highscores', docId);
+    await assertFails(updateDoc(ref, { survivalMs: 9_000_000 }));
+    await assertFails(deleteDoc(ref));
+    await assertFails(setDoc(doc(db(), 'boards', '0.2'), { a: 1 }));
+  });
+});
+
+describe('FirestoreHighscoreStore on a per-version board (REST)', () => {
+  const base = { apiKey: 'fake-api-key', projectId: PROJECT, baseUrl: `http://${host}:${port}/v1` };
+  const v1 = new FirestoreHighscoreStore(base);
+  const v2 = new FirestoreHighscoreStore({ ...base, board: '0.2' });
+  const run = (version: string, survivalMs: number): RunResult => ({
+    runId: id(),
+    teamSize: 1,
+    players: ['Filip'],
+    survivalMs,
+    kills: 10,
+    wave: 1,
+    endedAt: new Date().toISOString(),
+    version,
+    mode: 'local',
+  });
+
+  it('v0.2 starts empty, ranks within its board, and v0.1 keeps its own table', async () => {
+    await v1.submit(run('0.1.0', 300_000));
+    expect((await v2.top(1)).entries).toEqual([]);
+    expect(await v2.submit(run('0.2.0', 100_000))).toEqual({ status: 'server', rank: 1 });
+    expect(await v2.submit(run('0.2.0', 50_000))).toEqual({ status: 'server', rank: 2 });
+    expect((await v2.top(1)).entries.map((e) => e.survivalMs)).toEqual([100_000, 50_000]);
+    expect((await v1.top(1)).entries.map((e) => e.survivalMs)).toEqual([300_000]);
+  });
+
+  it('a v0.2 client cannot post a run tagged with another version', async () => {
+    await expect(v2.submit(run('0.1.0', 100_000))).rejects.toMatchObject({ status: 403 });
+  });
+});
+
 describe('FirestoreHighscoreStore against the emulator (REST, as in the browser)', () => {
   const cfg = { apiKey: 'fake-api-key', projectId: PROJECT, baseUrl: `http://${host}:${port}/v1` };
   const store = new FirestoreHighscoreStore(cfg);

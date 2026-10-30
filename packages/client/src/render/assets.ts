@@ -44,7 +44,28 @@ export class Assets {
     return this.manifest?.sprites[key]?.frames.length ?? 0;
   }
 
-  /** Draws a sprite frame centred on its anchor at (x, y) rotated by `angle`. */
+  /** Named animation range [start, count] (from SpriteDef.anims), if any. */
+  anim(key: string, name: string): [number, number] | undefined {
+    const a = this.manifest?.sprites[key]?.anims?.[name];
+    return a && a[1] > 0 ? a : undefined;
+  }
+
+  /**
+   * Frame index for animation `name` at time `t` seconds (looping or clamped).
+   * Falls back to frame 0 when the sprite has no such animation.
+   */
+  animFrame(key: string, name: string, t: number, fps: number, loop = true): number {
+    const a = this.anim(key, name);
+    if (!a) return 0;
+    const i = Math.floor(t * fps);
+    return a[0] + (loop ? ((i % a[1]) + a[1]) % a[1] : Math.max(0, Math.min(a[1] - 1, i)));
+  }
+
+  /**
+   * Draws a sprite frame centred on its anchor at (x, y) rotated by `angle`.
+   * Atlas frames may be stored at `scale`× world resolution (hi-res sprites);
+   * they are drawn at world size × `scale` argument.
+   */
   draw(
     ctx: CanvasRenderingContext2D,
     key: string,
@@ -58,7 +79,8 @@ export class Assets {
     if (!s || !this.atlas) return false;
     const [fx, fy] =
       s.frames[((Math.floor(frame) % s.frames.length) + s.frames.length) % s.frames.length];
-    if (angle === 0 && scale === 1) {
+    const k = scale / (s.scale ?? 1);
+    if (angle === 0 && k === 1) {
       ctx.drawImage(
         this.atlas,
         fx,
@@ -72,11 +94,14 @@ export class Assets {
       );
       return true;
     }
+    if (angle === 0) {
+      ctx.drawImage(this.atlas, fx, fy, s.w, s.h, x - s.ax * k, y - s.ay * k, s.w * k, s.h * k);
+      return true;
+    }
     ctx.save();
     ctx.translate(x, y);
-    if (angle) ctx.rotate(angle);
-    if (scale !== 1) ctx.scale(scale, scale);
-    ctx.drawImage(this.atlas, fx, fy, s.w, s.h, -s.ax, -s.ay, s.w, s.h);
+    ctx.rotate(angle);
+    ctx.drawImage(this.atlas, fx, fy, s.w, s.h, -s.ax * k, -s.ay * k, s.w * k, s.h * k);
     ctx.restore();
     return true;
   }

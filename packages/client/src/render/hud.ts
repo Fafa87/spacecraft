@@ -1,8 +1,8 @@
 import {
   ARENA,
   PLAYER,
-  PLAYER_COLORS,
   type ContentRegistry,
+  type EnemyDef,
   type PlayerSnap,
   type Snapshot,
 } from '@sms/shared';
@@ -10,6 +10,23 @@ import type { NoticeKind } from '../game/fx.js';
 import { formatTime } from '../ui/format.js';
 import type { StickView } from '../input/TouchInput.js';
 import type { Assets } from './assets.js';
+import { chapterUiColor } from './colors.js';
+
+/** Gothic HUD palette: smoked umber panels, brass frames, parchment text. */
+export const HUD = {
+  panel: 'rgba(18,12,7,0.78)',
+  brass: '#b08a3e',
+  brassDark: '#5a4520',
+  parchment: '#e8d9b0',
+  dim: '#a8956a',
+  gold: '#e0b850',
+  red: '#c83228',
+  heat: '#6fd0ff',
+  serif: "Georgia, 'Times New Roman', 'Liberation Serif', serif",
+  mono: 'ui-monospace, Menlo, Consolas, monospace',
+} as const;
+const F = (weight: number, px: number, mono = false) =>
+  `${weight} ${px}px ${mono ? HUD.mono : HUD.serif}`;
 
 export interface Notice {
   text: string;
@@ -62,10 +79,10 @@ interface SlotRect {
 }
 
 const NOTICE_COLORS: Record<NoticeKind, string> = {
-  info: '#cfe3ff',
-  good: '#7dffa0',
-  bad: '#ff7070',
-  warn: '#ffc04a',
+  info: '#e8d9b0',
+  good: '#9be07a',
+  bad: '#ff6a50',
+  warn: '#f0c050',
 };
 
 /** Screen-space HUD drawn on the game canvas. */
@@ -112,7 +129,8 @@ export class Hud {
       else this.weapons(ctx, w, h, s.me);
       this.stateBanner(ctx, w, h, s.me);
     }
-    this.notices(ctx, w, s.notices);
+    const boss = this.bossBar(ctx, w, s);
+    this.notices(ctx, w, s.notices, boss ? 136 : 110);
     this.footer(ctx, w, h, s);
     // convert slot rects to CSS px
     for (const r of this.slotRects) {
@@ -128,29 +146,97 @@ export class Hud {
     ctx.restore();
   }
 
+  /** Brass-framed smoked panel with rivets in the corners. */
   private panel(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
-    ctx.fillStyle = 'rgba(8,12,18,0.62)';
-    ctx.strokeStyle = 'rgba(120,170,220,0.25)';
+    ctx.fillStyle = HUD.panel;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = HUD.brassDark;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x + 1.5, y + 1.5, w - 3, h - 3);
+    ctx.strokeStyle = HUD.brass;
     ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(x, y, w, h, 6);
-    ctx.fill();
-    ctx.stroke();
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    ctx.strokeStyle = 'rgba(176,138,62,0.35)';
+    ctx.strokeRect(x + 4.5, y + 4.5, w - 9, h - 9);
+    ctx.fillStyle = HUD.brass;
+    for (const [rx, ry] of [
+      [x + 3, y + 3],
+      [x + w - 3, y + 3],
+      [x + 3, y + h - 3],
+      [x + w - 3, y + h - 3],
+    ])
+      ctx.fillRect(rx - 1.5, ry - 1.5, 3, 3);
+  }
+
+  /** Bar with a dark well and brass edge. */
+  private bar(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    frac: number,
+    color: string,
+  ): void {
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, w * Math.max(0, Math.min(1, frac)), h);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(x, y, w * Math.max(0, Math.min(1, frac)), Math.max(1, h / 3));
+    ctx.strokeStyle = HUD.brassDark;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x - 0.5, y - 0.5, w + 1, h + 1);
+  }
+
+  private chapterColor(c: number): string {
+    return chapterUiColor(this.content.chapter(c));
+  }
+
+  /** Boss health bar under the timer; returns true when drawn. */
+  private bossBar(ctx: CanvasRenderingContext2D, w: number, s: HudState): boolean {
+    let def: EnemyDef | undefined;
+    let hp = 0;
+    let count = 0;
+    for (const e of s.snap.enemies) {
+      const d = this.content.enemies.get(this.content.enemyIds[e[1]] ?? '');
+      if (!d?.boss) continue;
+      count++;
+      if (!def || e[5] > hp) {
+        def = d;
+        hp = e[5];
+      }
+    }
+    if (!def) return false;
+    const bw = 360;
+    const x = w / 2 - bw / 2;
+    const y = 80;
+    this.panel(ctx, x - 8, y - 4, bw + 16, 34);
+    ctx.textAlign = 'center';
+    ctx.font = F(700, 12);
+    ctx.fillStyle = HUD.parchment;
+    ctx.fillText(`☠ ${def.name.toUpperCase()}${count > 1 ? ` ×${count}` : ''} ☠`, w / 2, y + 10);
+    this.bar(ctx, x + 4, y + 15, bw - 8, 8, hp / 100, '#a01818');
+    return true;
   }
 
   private timer(ctx: CanvasRenderingContext2D, w: number, s: HudState): void {
-    this.panel(ctx, w / 2 - 110, 10, 220, 62);
+    this.panel(ctx, w / 2 - 125, 8, 250, 64);
+    // own skull-and-wings emblem flanking the clock
+    ctx.globalAlpha = 0.28;
+    this.assets.draw(ctx, 'ui_emblem', 0, w / 2, 38, 0, 1.1);
+    ctx.globalAlpha = 1;
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#fff';
-    ctx.font = '700 32px ui-monospace, Menlo, Consolas, monospace';
-    ctx.fillText(formatTime(s.snap.time * 1000), w / 2, 46);
-    ctx.font = '600 12px system-ui, sans-serif';
-    ctx.fillStyle = '#9fc4ff';
+    ctx.fillStyle = HUD.parchment;
+    ctx.font = F(700, 28, true);
+    ctx.fillText(formatTime(s.snap.time * 1000), w / 2, 48);
+    ctx.font = F(600, 11);
+    ctx.fillStyle = HUD.gold;
     const kills = s.snap.players.reduce((a, p) => a + p.k, 0);
     ctx.fillText(
-      `WAVE ${s.snap.wave}   ·   ${s.snap.enemies.length} HOSTILES   ·   ${kills} KILLS`,
+      `WAVE ${s.snap.wave}  ✠  ${s.snap.enemies.length} XENOS  ✠  ${kills} PURGED`,
       w / 2,
-      64,
+      65,
     );
   }
 
@@ -161,24 +247,27 @@ export class Hud {
     ctx.textAlign = 'left';
     players.forEach((p, i) => {
       const y = top + 12 + i * 26;
-      ctx.fillStyle = PLAYER_COLORS[p.c % 4];
-      ctx.fillRect(20, y, 6, 18);
-      ctx.font = '600 12px system-ui, sans-serif';
-      ctx.fillStyle = p.st === 'dead' ? '#777' : '#eee';
+      const ch = this.content.chapter(p.c);
+      if (!this.assets.draw(ctx, `badge_${ch.id}`, 0, 23, y + 9, 0, 0.55)) {
+        ctx.fillStyle = this.chapterColor(p.c);
+        ctx.fillRect(20, y, 6, 18);
+      }
+      ctx.font = F(600, 12);
+      ctx.fillStyle = p.st === 'dead' ? '#6a6050' : HUD.parchment;
       ctx.fillText(`${p.name}${p.id === s.me?.id ? ' (you)' : ''}`, 34, y + 10);
       const label = p.st === 'alive' ? '' : p.st === 'downed' ? `DOWN ${Math.ceil(p.bo)}s` : 'KIA';
-      ctx.fillStyle = p.st === 'downed' ? '#ff7070' : '#888';
+      ctx.fillStyle = p.st === 'downed' ? '#ff6a50' : HUD.dim;
       ctx.textAlign = 'right';
       ctx.fillText(label || `${p.k}`, 200, y + 10);
       ctx.textAlign = 'left';
-      ctx.fillStyle = 'rgba(255,255,255,0.12)';
-      ctx.fillRect(34, y + 14, 160, 3);
-      ctx.fillStyle = p.st === 'alive' ? '#5fe07a' : '#ff5050';
-      ctx.fillRect(
+      this.bar(
+        ctx,
         34,
         y + 14,
-        p.st === 'alive' ? (160 * p.hp) / p.mhp : (160 * p.bo) / PLAYER.bleedOutTime,
+        160,
         3,
+        p.st === 'alive' ? p.hp / p.mhp : p.bo / PLAYER.bleedOutTime,
+        p.st === 'alive' ? HUD.gold : HUD.red,
       );
     });
   }
@@ -190,48 +279,69 @@ export class Hud {
     const y0 = 12;
     const k = mw / ARENA.width;
     this.panel(ctx, x0 - 4, y0 - 4, mw + 8, mh + 8);
-    ctx.fillStyle = 'rgba(30,40,50,0.6)';
+    ctx.fillStyle = 'rgba(40,30,20,0.6)';
     ctx.fillRect(x0, y0, mw, mh);
-    ctx.fillStyle = '#e05050';
+    ctx.fillStyle = '#c05ad0';
     for (const e of s.snap.enemies) ctx.fillRect(x0 + e[2] * k - 1, y0 + e[3] * k - 1, 2, 2);
     for (const p of s.snap.pickups) {
-      ctx.fillStyle = p.k === 'medkit' ? '#6fff8a' : '#ffd040';
+      ctx.fillStyle = p.k === 'medkit' ? '#9be07a' : HUD.gold;
       ctx.fillRect(x0 + p.x * k - 2.5, y0 + p.y * k - 2.5, 5, 5);
     }
     for (const p of s.snap.players) {
       if (p.st === 'dead') continue;
       const pos = p.id === s.me?.id && s.myPos ? s.myPos : p;
-      ctx.fillStyle = PLAYER_COLORS[p.c % 4];
+      ctx.fillStyle = this.chapterColor(p.c);
       ctx.beginPath();
       ctx.arc(x0 + pos.x * k, y0 + pos.y * k, p.id === s.me?.id ? 4 : 3, 0, Math.PI * 2);
       ctx.fill();
+      if (p.id === s.me?.id) {
+        ctx.strokeStyle = HUD.parchment;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
     }
   }
 
   private health(ctx: CanvasRenderingContext2D, h: number, me: PlayerSnap): void {
+    const def = this.content.weapons.get(me.w);
+    const heat = !!def?.heat && me.st === 'alive';
     const x = 16;
-    const y = h - 64;
-    this.panel(ctx, x - 6, y - 22, 252, 58);
+    const y = h - 64 - (heat ? 22 : 0);
+    this.panel(ctx, x - 6, y - 22, 252, 58 + (heat ? 22 : 0));
     ctx.textAlign = 'left';
-    ctx.font = '600 11px system-ui, sans-serif';
-    ctx.fillStyle = '#9fc4ff';
-    ctx.fillText('ARMOUR INTEGRITY', x, y - 6);
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    ctx.fillRect(x, y, 240, 18);
+    ctx.font = F(700, 11);
+    ctx.fillStyle = HUD.gold;
+    ctx.fillText('ARMOUR INTEGRITY', x + 2, y - 6);
     const frac = me.st === 'alive' ? Math.max(0, me.hp / me.mhp) : 0;
-    ctx.fillStyle = frac > 0.5 ? '#5fe07a' : frac > 0.25 ? '#ffc04a' : '#ff4a4a';
-    ctx.fillRect(x, y, 240 * frac, 18);
-    ctx.font = '700 13px ui-monospace, monospace';
-    ctx.fillStyle = '#fff';
+    this.bar(ctx, x, y, 240, 18, frac, frac > 0.5 ? '#c9a040' : frac > 0.25 ? '#d07a28' : HUD.red);
+    ctx.font = F(700, 13, true);
+    ctx.fillStyle = '#fff6e0';
     ctx.fillText(`${Math.max(0, me.hp)} / ${me.mhp}`, x + 6, y + 14);
     ctx.textAlign = 'right';
-    ctx.fillStyle = '#ccc';
+    ctx.fillStyle = HUD.parchment;
     ctx.fillText(`☠ ${me.k}`, x + 236, y + 14);
+    if (heat && def?.heat) {
+      const ht = me.ht ?? 0;
+      const venting = !!me.vt;
+      const hot = ht >= def.heat.superchargeAt;
+      ctx.textAlign = 'left';
+      ctx.font = F(700, 10);
+      ctx.fillStyle = venting ? '#ff6a50' : hot ? '#bff0ff' : HUD.dim;
+      ctx.fillText(
+        venting ? 'VENTING — COILS CRITICAL' : hot ? 'SUPERCHARGED' : 'PLASMA HEAT',
+        x + 2,
+        y + 32,
+      );
+      this.bar(ctx, x + 120, y + 25, 120, 8, ht, venting ? HUD.red : hot ? '#bff0ff' : HUD.heat);
+      // supercharge threshold tick
+      ctx.fillStyle = HUD.parchment;
+      ctx.fillRect(x + 120 + 120 * def.heat.superchargeAt, y + 23, 1, 12);
+    }
   }
 
   private weapons(ctx: CanvasRenderingContext2D, w: number, h: number, me: PlayerSnap): void {
     const order = this.content.weaponOrder;
-    const cell = 86;
+    const cell = order.length > 6 ? 80 : 86;
     const total = order.length * (cell + 6) - 6;
     let x = w / 2 - total / 2;
     const y = h - 78;
@@ -241,21 +351,21 @@ export class Hud {
       ctx.globalAlpha = owned ? 1 : 0.35;
       this.panel(ctx, x, y, cell, 64);
       if (active) {
-        ctx.strokeStyle = '#ffc04a';
+        ctx.strokeStyle = HUD.gold;
         ctx.lineWidth = 2;
         ctx.strokeRect(x + 1, y + 1, cell - 2, 62);
       }
       ctx.textAlign = 'left';
-      ctx.font = '700 11px system-ui, sans-serif';
-      ctx.fillStyle = active ? '#ffc04a' : '#9fc4ff';
+      ctx.font = F(700, 11);
+      ctx.fillStyle = active ? HUD.gold : HUD.dim;
       ctx.fillText(String(def.slot), x + 5, y + 13);
       if (!this.assets.draw(ctx, def.sprites.icon, 0, x + cell / 2, y + 30)) {
         ctx.fillStyle = '#ccc';
         ctx.fillRect(x + cell / 2 - 24, y + 26, 48, 8);
       }
       ctx.textAlign = 'center';
-      ctx.font = '600 10px system-ui, sans-serif';
-      ctx.fillStyle = '#ddd';
+      ctx.font = F(600, 9);
+      ctx.fillStyle = HUD.parchment;
       ctx.fillText(
         owned
           ? def.name.toUpperCase()
@@ -270,15 +380,20 @@ export class Hud {
         const by = y - 14;
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
         ctx.fillRect(x, by, cell, 8);
-        if (me.rl > 0) {
-          ctx.fillStyle = '#ffc04a';
+        if (me.vt) {
+          ctx.fillStyle = HUD.red;
+          ctx.fillRect(x, by, cell * (me.ht ?? 1), 8);
+          ctx.font = F(700, 11);
+          ctx.fillText('VENTING', x + cell / 2, by - 4);
+        } else if (me.rl > 0) {
+          ctx.fillStyle = HUD.gold;
           ctx.fillRect(x, by, cell * (1 - me.rl / def.reloadTime), 8);
-          ctx.font = '700 11px system-ui';
+          ctx.font = F(700, 11);
           ctx.fillText('RELOADING', x + cell / 2, by - 4);
         } else {
-          ctx.fillStyle = me.ammo / def.magazine < 0.25 ? '#ff5050' : '#e8e8e8';
+          ctx.fillStyle = me.ammo / def.magazine < 0.25 ? '#ff6a50' : HUD.parchment;
           ctx.fillRect(x, by, (cell * me.ammo) / def.magazine, 8);
-          ctx.font = '700 12px ui-monospace, monospace';
+          ctx.font = F(700, 12, true);
           ctx.fillText(`${me.ammo}/${def.magazine}`, x + cell / 2, by - 4);
         }
       }
@@ -291,23 +406,29 @@ export class Hud {
   /** Touch layout: big tappable weapon slots stacked under the minimap on the right. */
   private weaponColumn(ctx: CanvasRenderingContext2D, w: number, me: PlayerSnap): void {
     const order = this.content.weaponOrder;
-    const cw = 92;
+    const cols = order.length > 5 ? 2 : 1;
+    const rows = Math.ceil(order.length / cols);
+    const cw = cols > 1 ? 84 : 92;
     const chh = 56;
-    const x = w - cw - 12;
-    let y = 164;
-    for (const def of order) {
+    const y0 = 164;
+    order.forEach((def, i) => {
+      const col = cols > 1 ? i % cols : 0;
+      const row = cols > 1 ? Math.floor(i / cols) : i;
+      const x = w - 12 - (cols - col) * (cw + 6) + 6;
+      const y = y0 + row * (chh + 6);
+      void rows;
       const owned = me.ws.includes(def.id);
       const active = me.w === def.id;
       ctx.globalAlpha = owned ? 1 : 0.3;
       this.panel(ctx, x, y, cw, chh);
       if (active) {
-        ctx.strokeStyle = '#ffc04a';
+        ctx.strokeStyle = HUD.gold;
         ctx.lineWidth = 2;
         ctx.strokeRect(x + 1, y + 1, cw - 2, chh - 2);
       }
       ctx.textAlign = 'left';
-      ctx.font = '700 11px system-ui, sans-serif';
-      ctx.fillStyle = active ? '#ffc04a' : '#9fc4ff';
+      ctx.font = F(700, 11);
+      ctx.fillStyle = active ? HUD.gold : HUD.dim;
       ctx.fillText(String(def.slot), x + 5, y + 13);
       if (!this.assets.draw(ctx, def.sprites.icon, 0, x + cw / 2, y + 24)) {
         ctx.fillStyle = '#ccc';
@@ -319,14 +440,35 @@ export class Hud {
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
         ctx.fillRect(x + 4, by, cw - 8, 5);
         const reloading = me.rl > 0;
-        const frac = reloading ? 1 - me.rl / def.reloadTime : me.ammo / def.magazine;
-        ctx.fillStyle = reloading ? '#ffc04a' : frac < 0.25 ? '#ff5050' : '#e8e8e8';
+        const venting = !!me.vt;
+        const heat = def.heat ? (me.ht ?? 0) : -1;
+        const frac = venting
+          ? (me.ht ?? 1)
+          : reloading
+            ? 1 - me.rl / def.reloadTime
+            : me.ammo / def.magazine;
+        ctx.fillStyle = venting
+          ? HUD.red
+          : reloading
+            ? HUD.gold
+            : frac < 0.25
+              ? '#ff6a50'
+              : HUD.parchment;
         ctx.fillRect(x + 4, by, (cw - 8) * frac, 5);
-        ctx.font = '700 11px ui-monospace, monospace';
-        ctx.fillText(reloading ? 'RELOAD' : `${me.ammo}/${def.magazine}`, x + cw / 2, by - 3);
+        if (heat >= 0 && !venting) {
+          ctx.fillStyle = HUD.heat;
+          ctx.fillRect(x + 4, by + 6, (cw - 8) * heat, 3);
+        }
+        ctx.font = F(700, 11, true);
+        ctx.fillStyle = HUD.parchment;
+        ctx.fillText(
+          venting ? 'VENT' : reloading ? 'RELOAD' : `${me.ammo}/${def.magazine}`,
+          x + cw / 2,
+          by - 3,
+        );
       } else {
-        ctx.font = '600 10px system-ui, sans-serif';
-        ctx.fillStyle = '#ddd';
+        ctx.font = F(600, 9);
+        ctx.fillStyle = HUD.parchment;
         ctx.fillText(
           owned
             ? def.name.toUpperCase()
@@ -339,8 +481,7 @@ export class Hud {
       }
       ctx.globalAlpha = 1;
       this.slotRects.push({ slot: def.slot, owned, x, y, w: cw, h: chh });
-      y += chh + 6;
-    }
+    });
   }
 
   /** Floating stick bases/knobs (engaged) or faint hints where to put thumbs (idle). */
@@ -353,7 +494,7 @@ export class Hud {
   ): void {
     if (!alive) return;
     for (const st of sticks) {
-      const color = st.kind === 'move' ? '120,190,255' : '255,190,90';
+      const color = st.kind === 'move' ? '232,217,176' : '224,184,80';
       if (!st.engaged) {
         const hx = st.kind === 'move' ? 110 : w - 230;
         const hy = h - 100;
@@ -363,8 +504,8 @@ export class Hud {
         ctx.arc(hx, hy, st.radius, 0, Math.PI * 2);
         ctx.stroke();
         ctx.textAlign = 'center';
-        ctx.font = '600 11px system-ui, sans-serif';
-        ctx.fillStyle = `rgba(${color},0.45)`;
+        ctx.font = F(600, 11);
+        ctx.fillStyle = `rgba(${color},0.5)`;
         ctx.fillText(st.kind === 'move' ? 'MOVE' : 'AIM · FIRE', hx, hy + 4);
         continue;
       }
@@ -385,40 +526,43 @@ export class Hud {
   private stateBanner(ctx: CanvasRenderingContext2D, w: number, h: number, me: PlayerSnap): void {
     if (me.st === 'alive') return;
     ctx.textAlign = 'center';
-    ctx.font = '800 34px system-ui, sans-serif';
-    ctx.fillStyle = me.st === 'downed' ? '#ff5a5a' : '#bbb';
-    ctx.fillText(me.st === 'downed' ? 'YOU ARE DOWN' : 'KILLED IN ACTION', w / 2, h / 2 - 90);
-    ctx.font = '600 16px system-ui, sans-serif';
-    ctx.fillStyle = '#eee';
+    ctx.font = F(800, 34);
+    ctx.fillStyle = me.st === 'downed' ? '#e04a30' : HUD.dim;
+    ctx.fillText(
+      me.st === 'downed' ? 'BATTLE-BROTHER DOWN' : 'FALLEN IN SERVICE',
+      w / 2,
+      h / 2 - 90,
+    );
+    ctx.font = F(600, 16);
+    ctx.fillStyle = HUD.parchment;
     ctx.fillText(
       me.st === 'downed'
         ? me.rv > 0
           ? `Being revived… ${Math.round(me.rv * 100)}%`
-          : `Bleeding out in ${Math.ceil(me.bo)}s — a teammate must stand next to you`
-        : 'Spectating your squad',
+          : `Bleeding out in ${Math.ceil(me.bo)}s — a battle-brother must stand next to you`
+        : 'Your squad fights on. Spectating…',
       w / 2,
       h / 2 - 62,
     );
   }
 
-  private notices(ctx: CanvasRenderingContext2D, w: number, notices: Notice[]): void {
+  private notices(ctx: CanvasRenderingContext2D, w: number, notices: Notice[], top: number): void {
     ctx.textAlign = 'center';
     notices.slice(-5).forEach((n, i) => {
       ctx.globalAlpha = Math.min(1, n.ttl);
-      ctx.font =
-        n.kind === 'warn' ? '800 22px system-ui, sans-serif' : '700 16px system-ui, sans-serif';
-      ctx.fillStyle = 'rgba(0,0,0,0.7)';
-      ctx.fillText(n.text, w / 2 + 1, 111 + i * 26);
+      ctx.font = n.kind === 'warn' ? F(800, 22) : F(700, 16);
+      ctx.fillStyle = 'rgba(0,0,0,0.75)';
+      ctx.fillText(n.text, w / 2 + 1, top + 1 + i * 26);
       ctx.fillStyle = NOTICE_COLORS[n.kind];
-      ctx.fillText(n.text, w / 2, 110 + i * 26);
+      ctx.fillText(n.text, w / 2, top + i * 26);
     });
     ctx.globalAlpha = 1;
   }
 
   private footer(ctx: CanvasRenderingContext2D, w: number, h: number, s: HudState): void {
     ctx.textAlign = 'right';
-    ctx.font = '500 11px ui-monospace, monospace';
-    ctx.fillStyle = 'rgba(200,220,255,0.6)';
+    ctx.font = F(500, 11, true);
+    ctx.fillStyle = 'rgba(232,217,176,0.55)';
     const room = s.mode === 'local' ? 'SOLO' : `ROOM ${s.roomCode}`;
     ctx.fillText(
       `${room} · ${s.mode.toUpperCase()} · ping ${Math.round(s.ping)}ms · ${Math.round(s.fps)} fps${s.muted ? (s.touch ? ' · MUTED' : ' · MUTED (M)') : ''}`,
@@ -433,7 +577,12 @@ export class Hud {
 
   private crosshair(ctx: CanvasRenderingContext2D, pos: { x: number; y: number }): void {
     const { x, y } = pos;
-    ctx.strokeStyle = '#ffe9a8';
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(x, y, 9, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = '#f0d890';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(x, y, 9, 0, Math.PI * 2);

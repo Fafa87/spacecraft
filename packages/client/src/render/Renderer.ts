@@ -2,12 +2,15 @@ import {
   ARENA,
   defaultContent,
   PLAYER,
-  PLAYER_COLORS,
+  ENEMY_FLAG,
+  type ChapterDef,
   type ContentRegistry,
+  type EnemyDef,
   type PlayerSnap,
   type Snapshot,
 } from '@sms/shared';
 import { lerp, lerpAngle } from '../game/interpolation.js';
+import { chapterUiColor } from './colors.js';
 import type { Assets } from './assets.js';
 import { Camera } from './camera.js';
 import { Particles } from './particles.js';
@@ -16,6 +19,7 @@ import {
   DEFAULT_PROJECTILE_VISUAL,
   ENEMY_VISUALS,
   PROJECTILE_VISUALS,
+  type EnemyVisual,
 } from './visuals.js';
 
 /** Everything the renderer needs for one frame. */
@@ -32,6 +36,38 @@ export interface RenderFrame {
 
 const DECAL_SCALE = 0.5;
 const TILE = 64;
+
+/** Per-enemy client-side animation state. */
+interface EnemyTrack {
+  x: number;
+  y: number;
+  ang: number;
+  dist: number;
+  key: string;
+  vis: EnemyVisual;
+  r: number;
+  /** Time the current attack animation started, or -1. */
+  atk0: number;
+  burrowed: boolean;
+}
+
+interface Corpse {
+  key: string;
+  x: number;
+  y: number;
+  ang: number;
+  t0: number;
+  vis: EnemyVisual;
+  r: number;
+}
+
+interface Prop {
+  key: string;
+  x: number;
+  y: number;
+  ang: number;
+  scale: number;
+}
 
 const hash2 = (x: number, y: number) => {
   let h = (x * 374761393 + y * 668265263) | 0;
@@ -52,6 +88,12 @@ export class Renderer {
   private walk = new Map<number, { x: number; y: number; dist: number }>();
   private trailAcc = new Map<number, number>();
   private vignette: CanvasGradient | null = null;
+  private tracks = new Map<number, EnemyTrack>();
+  private corpses: Corpse[] = [];
+  private recoil = new Map<number, number>();
+  private props: Prop[] = [];
+  private creep: { x: number; y: number; v: number; ang: number; s: number }[] = [];
+  private time = 0;
 
   constructor(
     readonly canvas: HTMLCanvasElement,
@@ -63,7 +105,55 @@ export class Renderer {
     this.decals.width = ARENA.width * DECAL_SCALE;
     this.decals.height = ARENA.height * DECAL_SCALE;
     this.decalCtx = this.decals.getContext('2d')!;
+    this.buildScenery();
     this.resize();
+  }
+
+  /** Ruined hive-city dressing around the arena + creep patches (deterministic). */
+  private buildScenery(): void {
+    const W = ARENA.width;
+    const H = ARENA.height;
+    const props: Prop[] = [];
+    // gothic pillars along the arena wall
+    for (let x = 0; x <= W; x += 200) {
+      props.push({ key: 'prop_pillar', x, y: -40, ang: 0, scale: 1 });
+      props.push({ key: 'prop_pillar', x, y: H + 40, ang: Math.PI, scale: 1 });
+    }
+    for (let y = 200; y < H; y += 200) {
+      props.push({ key: 'prop_pillar', x: -40, y, ang: -Math.PI / 2, scale: 1 });
+      props.push({ key: 'prop_pillar', x: W + 40, y, ang: Math.PI / 2, scale: 1 });
+    }
+    // rubble, skull piles and barricades in the ruined band outside + hugging the edge
+    const kinds = ['prop_rubble_0', 'prop_rubble_1', 'prop_skull_pile', 'prop_barricade'];
+    for (let i = 0; i < 150; i++) {
+      const h = hash2(i, 991);
+      const side = h % 4;
+      const along = (hash2(i, 17) % 10000) / 10000;
+      const depth = -150 + (hash2(i, 31) % 190); // -150..+40 (slightly inside)
+      const x = side < 2 ? along * W : side === 2 ? -depth : W + depth;
+      const y = side >= 2 ? along * H : side === 0 ? -depth : H + depth;
+      const key = kinds[hash2(i, 5) % (depth > 0 ? 3 : 4)]!;
+      props.push({ key, x, y, ang: (hash2(i, 7) % 628) / 100, scale: 0.8 + (h % 40) / 100 });
+    }
+    this.props = props;
+    for (let gy = 0; gy < H; gy += 256) {
+      for (let gx = 0; gx < W; gx += 256) {
+        const h = hash2(gx + 7, gy + 13);
+        if (h % 100 > 30) continue;
+        this.creep.push({
+          x: gx + (h % 256),
+          y: gy + ((h >>> 8) % 256),
+          v: h % 3,
+          ang: ((h >>> 4) % 628) / 100,
+          s: 0.9 + ((h >>> 12) % 60) / 100,
+        });
+      }
+    }
+  }
+
+  /** Kick the held weapon back (recoil) — called by the FX layer on shots. */
+  kick(playerId: number, px: number): void {
+    this.recoil.set(playerId, px);
   }
 
   resize(): void {
@@ -84,6 +174,15 @@ export class Renderer {
     this.hitFlash.clear();
     this.lastHp.clear();
     this.walk.clear();
+    this.tracks.clear();
+    this.corpses = [];
+    this.recoil.clear();
+  }
+
+  /** Sprite world width (atlas px / scale). */
+  private spriteWorldW(key: string): number {
+    const m = this.assets.manifest?.sprites[key];
+    return m ? m.w / (m.scale ?? 1) : 0;
   }
 
   /** Paints a persistent decal (blood, acid, scorch) onto the floor layer. */
@@ -106,8 +205,9 @@ export class Renderer {
   render(f: RenderFrame): void {
     const { ctx, camera } = this;
     this.particles.update(f.dt);
+    this.time = f.nowMs / 1000;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = '#07090c';
+    ctx.fillStyle = '#0a0806';
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     const s = this.dpr * camera.zoom;
     ctx.setTransform(
@@ -121,13 +221,16 @@ export class Renderer {
     ctx.imageSmoothingEnabled = true;
 
     this.drawFloor();
+    this.drawCreep(f.b.time);
     ctx.drawImage(this.decals, 0, 0, ARENA.width, ARENA.height);
     this.drawArenaEdge();
     this.drawPickups(f);
+    this.drawCorpses();
     this.drawEnemies(f);
     this.drawPlayers(f);
     this.drawProjectiles(f);
     this.drawParticles();
+    this.drawProps();
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.drawVignette();
@@ -144,10 +247,21 @@ export class Renderer {
     for (let ty = ty0; ty < ty1; ty++) {
       for (let tx = tx0; tx < tx1; tx++) {
         const h = hash2(tx, ty);
-        const variant = h % 100 < 70 ? 0 : 1 + (h % 3);
         const cx = tx * TILE + TILE / 2;
         const cy = ty * TILE + TILE / 2;
-        if (hasTiles) this.assets.draw(ctx, `tile_floor_${variant}`, 0, cx, cy);
+        const roll = h % 1000;
+        // Imperial deck: plain plates, worn plates, drain grates, hazard strips,
+        // and a seal plate in the very centre.
+        const centre =
+          Math.abs(cx - ARENA.width / 2) < TILE && Math.abs(cy - ARENA.height / 2) < TILE;
+        const key = centre
+          ? 'tile_seal'
+          : roll < 25
+            ? 'tile_grate'
+            : roll < 33
+              ? 'tile_hazard'
+              : `tile_floor_${roll < 680 ? 0 : 1 + (h % 3)}`;
+        if (hasTiles) this.assets.draw(ctx, key, 0, cx, cy);
         else {
           ctx.fillStyle = (tx + ty) % 2 ? '#1a2026' : '#1d242b';
           ctx.fillRect(tx * TILE, ty * TILE, TILE, TILE);
@@ -158,16 +272,45 @@ export class Renderer {
 
   private drawArenaEdge(): void {
     const { ctx } = this;
+    const W = ARENA.width;
+    const H = ARENA.height;
     ctx.save();
-    ctx.lineWidth = 10;
-    ctx.strokeStyle = '#d8a01a';
-    ctx.setLineDash([40, 30]);
-    ctx.strokeRect(-5, -5, ARENA.width + 10, ARENA.height + 10);
-    ctx.setLineDash([]);
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = 'rgba(255,190,60,0.35)';
-    ctx.strokeRect(-14, -14, ARENA.width + 28, ARENA.height + 28);
+    // broken hab-block wall: dark masonry band + brass-capped parapet
+    ctx.fillStyle = '#17130f';
+    ctx.fillRect(-260, -260, W + 520, 236);
+    ctx.fillRect(-260, H + 24, W + 520, 236);
+    ctx.fillRect(-260, -24, 236, H + 48);
+    ctx.fillRect(W + 24, -24, 236, H + 48);
+    ctx.lineWidth = 18;
+    ctx.strokeStyle = '#2b241c';
+    ctx.strokeRect(-12, -12, W + 24, H + 24);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(176,138,62,0.55)';
+    ctx.strokeRect(-3, -3, W + 6, H + 6);
     ctx.restore();
+  }
+
+  /** Tyranid creep: organic carpet that thickens and spreads as the siege goes on. */
+  private drawCreep(simTime: number): void {
+    if (!this.assets.has('creep_0')) return;
+    const { ctx } = this;
+    const v = this.camera.view(200);
+    const grow = Math.min(1, simTime / 420);
+    ctx.globalAlpha = 0.35 + 0.5 * grow;
+    for (const c of this.creep) {
+      if (c.x < v.x0 || c.x > v.x1 || c.y < v.y0 || c.y > v.y1) continue;
+      this.assets.draw(ctx, `creep_${c.v}`, 0, c.x, c.y, c.ang, c.s * (0.55 + 0.75 * grow));
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  private drawProps(): void {
+    const { ctx } = this;
+    const v = this.camera.view(120);
+    for (const p of this.props) {
+      if (p.x < v.x0 || p.x > v.x1 || p.y < v.y0 || p.y > v.y1) continue;
+      this.assets.draw(ctx, p.key, 0, p.x, p.y, p.ang, p.scale);
+    }
   }
 
   private drawShadow(x: number, y: number, r: number): void {
@@ -214,14 +357,50 @@ export class Renderer {
     }
   }
 
+  /** Death animations play out, then the carcass is baked into the decal layer. */
+  private drawCorpses(): void {
+    const keep: Corpse[] = [];
+    for (const c of this.corpses) {
+      const a = this.assets.anim(c.key, 'death');
+      const dur = a ? a[1] / c.vis.deathFps : 0.4;
+      const age = this.time - c.t0;
+      const frame = this.assets.animFrame(c.key, 'death', age, c.vis.deathFps, false);
+      if (age >= dur + 0.05) {
+        if (c.vis.corpse && a) this.bakeSprite(c.key, a[0] + a[1] - 1, c.x, c.y, c.ang, 0.8);
+        continue;
+      }
+      if (!this.assets.draw(this.ctx, c.key, frame, c.x, c.y, c.ang)) continue;
+      keep.push(c);
+    }
+    this.corpses = keep;
+  }
+
+  private bakeSprite(
+    key: string,
+    frame: number,
+    x: number,
+    y: number,
+    ang: number,
+    alpha: number,
+  ): void {
+    const c = this.decalCtx;
+    c.save();
+    c.globalAlpha = alpha;
+    c.translate(x * DECAL_SCALE, y * DECAL_SCALE);
+    c.scale(DECAL_SCALE, DECAL_SCALE);
+    this.assets.draw(c, key, frame, 0, 0, ang);
+    c.restore();
+  }
+
   private drawEnemies(f: RenderFrame): void {
     const { ctx } = this;
     const prev = new Map(f.a.enemies.map((e) => [e[0], e]));
-    const time = f.nowMs / 1000;
-    const v = this.camera.view(80);
+    const time = this.time;
+    const v = this.camera.view(140);
     const seen = new Set<number>();
+    const synapseAuras: { x: number; y: number; r: number }[] = [];
     for (const e of f.b.enemies) {
-      const [id, typeIdx, bx, by, ba, hp, fuse] = e;
+      const [id, typeIdx, bx, by, ba, hp, flags] = e;
       seen.add(id);
       const pa = prev.get(id);
       const x = pa ? lerp(pa[2], bx, f.t) : bx;
@@ -230,22 +409,104 @@ export class Renderer {
       const last = this.lastHp.get(id);
       if (last !== undefined && hp < last) this.hitFlash.set(id, 0.08);
       this.lastHp.set(id, hp);
-      if (x < v.x0 || x > v.x1 || y < v.y0 || y > v.y1) continue;
       const typeId = this.content.enemyIds[typeIdx] ?? '';
-      const def = this.content.enemies.get(typeId);
+      const def: EnemyDef | undefined = this.content.enemies.get(typeId);
       const vis = ENEMY_VISUALS[typeId] ?? DEFAULT_ENEMY_VISUAL;
       const r = def?.radius ?? 16;
+      const key = def?.sprite ?? '';
+      let tr = this.tracks.get(id);
+      if (!tr) {
+        tr = { x, y, ang, dist: (id * 37) % 50, key, vis, r, atk0: -1, burrowed: false };
+        this.tracks.set(id, tr);
+      }
+      tr.dist += Math.hypot(x - tr.x, y - tr.y);
+      tr.x = x;
+      tr.y = y;
+      tr.ang = ang;
+      const burrowed = (flags & ENEMY_FLAG.burrowed) !== 0;
+      tr.burrowed = burrowed;
+      const attacking = (flags & ENEMY_FLAG.attacking) !== 0;
+      if (attacking && tr.atk0 < 0) tr.atk0 = time;
+      else if (!attacking) tr.atk0 = -1;
+      if (x < v.x0 || x > v.x1 || y < v.y0 || y > v.y1) continue;
+
+      if (burrowed) {
+        // tunnelling ravener: only a moving mound of broken deck plates
+        if (!this.assets.draw(ctx, 'fx_burrow', Math.floor(time * 10 + id), x, y, ang, r / 22)) {
+          ctx.fillStyle = '#3a2e22';
+          ctx.beginPath();
+          ctx.ellipse(x, y, r, r * 0.6, ang, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (Math.random() < f.dt * 14)
+          this.particles.spawn({
+            x: x + (Math.random() - 0.5) * r,
+            y: y + (Math.random() - 0.5) * r,
+            vx: (Math.random() - 0.5) * 40,
+            vy: (Math.random() - 0.5) * 40,
+            maxLife: 0.6,
+            size: 4,
+            grow: 2.5,
+            color: '#5a4a38',
+            shape: 'smoke',
+            additive: false,
+          });
+        continue;
+      }
+      if (def?.synapse) synapseAuras.push({ x, y, r: def.synapse.radius });
       this.drawShadow(x, y, r);
-      const frame = Math.floor(time * vis.animFps + id * 0.37);
+      if (flags & ENEMY_FLAG.synapse) {
+        // driven by a nearby synapse beast: faint violet halo
+        ctx.strokeStyle = `rgba(190,110,255,${0.35 + 0.15 * Math.sin(time * 6 + id)})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(x, y, r + 4, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      const fuse = (flags & ENEMY_FLAG.fuse) !== 0;
+      const windup = (flags & ENEMY_FLAG.windup) !== 0;
       const pulse = fuse ? 1 + Math.sin(time * 30) * 0.08 : 1;
       if (fuse) {
         const g = ctx.createRadialGradient(x, y, 2, x, y, r * 2.4);
-        g.addColorStop(0, 'rgba(255,80,40,0.6)');
-        g.addColorStop(1, 'rgba(255,80,40,0)');
+        g.addColorStop(0, 'rgba(200,255,60,0.55)');
+        g.addColorStop(1, 'rgba(200,255,60,0)');
         ctx.fillStyle = g;
         ctx.fillRect(x - r * 2.4, y - r * 2.4, r * 4.8, r * 4.8);
       }
-      const key = def?.sprite ?? '';
+      if (windup) {
+        // charge telegraph: pulsing red lane in the facing direction
+        const len = 320;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(ang);
+        const g = ctx.createLinearGradient(r, 0, len, 0);
+        const al = 0.25 + 0.2 * Math.sin(time * 20);
+        g.addColorStop(0, `rgba(255,40,20,${al})`);
+        g.addColorStop(1, 'rgba(255,40,20,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(r, -r * 0.7, len, r * 1.4);
+        ctx.restore();
+      }
+      let frame: number;
+      if (tr.atk0 >= 0) frame = this.assets.animFrame(key, 'attack', time - tr.atk0, vis.attackFps);
+      else if (windup) frame = this.assets.animFrame(key, 'attack', 0, 1, false);
+      else {
+        const a = this.assets.anim(key, 'walk');
+        frame = a ? a[0] + (Math.floor(tr.dist / vis.stride) % a[1]) : Math.floor(time * 8 + id);
+      }
+      if (flags & ENEMY_FLAG.dashing) {
+        ctx.globalAlpha = 0.25;
+        for (let k = 1; k <= 2; k++)
+          this.assets.draw(
+            ctx,
+            key,
+            frame,
+            x - Math.cos(ang) * 14 * k,
+            y - Math.sin(ang) * 14 * k,
+            ang,
+          );
+        ctx.globalAlpha = 1;
+      }
       if (!this.assets.draw(ctx, key, frame, x, y, ang, pulse)) {
         ctx.fillStyle = vis.color;
         ctx.beginPath();
@@ -271,19 +532,50 @@ export class Renderer {
         }
         ctx.restore();
       }
-      // HP bar for damaged big enemies
-      if (hp < 100 && (def?.hp ?? 0) >= 150) {
+      // HP bar for damaged big enemies (bosses get the HUD bar instead)
+      if (hp < 100 && (def?.hp ?? 0) >= 150 && !def?.boss) {
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
         ctx.fillRect(x - r, y - r - 10, r * 2, 4);
-        ctx.fillStyle = '#e04040';
+        ctx.fillStyle = '#b02020';
         ctx.fillRect(x - r, y - r - 10, (r * 2 * hp) / 100, 4);
       }
     }
-    for (const id of this.lastHp.keys()) {
+    // synapse auras drawn additively on top so the "commander" reads at a glance
+    if (synapseAuras.length) {
+      const w = this.spriteWorldW('fx_synapse') || 128;
+      ctx.globalCompositeOperation = 'lighter';
+      for (const a of synapseAuras) {
+        ctx.globalAlpha = 0.16 + 0.06 * Math.sin(time * 3);
+        this.assets.draw(
+          ctx,
+          'fx_synapse',
+          Math.floor(time * 8),
+          a.x,
+          a.y,
+          time * 0.3,
+          ((a.r * 2) / w) * 0.5,
+        );
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    for (const [id, tr] of this.tracks) {
       if (seen.has(id)) continue;
+      this.tracks.delete(id);
       this.lastHp.delete(id);
       this.hitFlash.delete(id);
+      if (!tr.burrowed && this.assets.anim(tr.key, 'death'))
+        this.corpses.push({
+          key: tr.key,
+          x: tr.x,
+          y: tr.y,
+          ang: tr.ang,
+          t0: time,
+          vis: tr.vis,
+          r: tr.r,
+        });
     }
+    if (this.corpses.length > 120) this.corpses.splice(0, this.corpses.length - 120);
   }
 
   private playerPose(f: RenderFrame, p: PlayerSnap): { x: number; y: number; a: number } {
@@ -295,62 +587,76 @@ export class Renderer {
 
   private drawPlayers(f: RenderFrame): void {
     const { ctx } = this;
-    const time = f.nowMs / 1000;
+    const time = this.time;
     for (const p of f.b.players) {
       if (p.st === 'dead') continue;
       const { x, y, a } = this.playerPose(f, p);
-      const color = PLAYER_COLORS[p.c % PLAYER_COLORS.length];
+      const ch: ChapterDef = this.content.chapter(p.c);
+      const color = chapterUiColor(ch);
       const w = this.walk.get(p.id) ?? { x, y, dist: 0 };
       w.dist += Math.hypot(x - w.x, y - w.y);
       w.x = x;
       w.y = y;
       this.walk.set(p.id, w);
 
-      this.drawShadow(x, y, PLAYER.radius + 4);
-      // team colour ring
+      this.drawShadow(x, y, PLAYER.radius + 6);
       ctx.strokeStyle = color;
       ctx.globalAlpha = 0.55;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.ellipse(x, y + 4, 22, 14, 0, 0, Math.PI * 2);
+      ctx.ellipse(x, y + 4, 25, 16, 0, 0, Math.PI * 2);
       ctx.stroke();
       ctx.globalAlpha = 1;
 
       if (p.st === 'downed') {
-        if (!this.assets.draw(ctx, `marine_${p.c % 4}_down`, 0, x, y, 0)) {
-          ctx.fillStyle = color;
+        if (!this.assets.draw(ctx, `marine_${ch.id}_down`, 0, x, y, 0)) {
+          ctx.fillStyle = ch.primary;
           ctx.globalAlpha = 0.6;
           ctx.beginPath();
           ctx.arc(x, y, PLAYER.radius, 0, Math.PI * 2);
           ctx.fill();
           ctx.globalAlpha = 1;
         }
-        // bleed-out ring + revive progress
         const bleed = Math.max(0, p.bo / PLAYER.bleedOutTime);
         ctx.lineWidth = 4;
         ctx.strokeStyle = `rgba(255,60,60,${0.5 + 0.5 * Math.sin(time * 8)})`;
         ctx.beginPath();
-        ctx.arc(x, y, 30, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * bleed);
+        ctx.arc(x, y, 32, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * bleed);
         ctx.stroke();
         if (p.rv > 0) {
-          ctx.strokeStyle = '#6fff8a';
+          ctx.strokeStyle = '#e8c46a';
           ctx.lineWidth = 6;
           ctx.beginPath();
-          ctx.arc(x, y, 38, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, p.rv));
+          ctx.arc(x, y, 40, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, p.rv));
           ctx.stroke();
         }
-        ctx.font = 'bold 12px system-ui, sans-serif';
+        ctx.font = 'bold 12px Georgia, "Times New Roman", serif';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#ff6a6a';
-        ctx.fillText('REVIVE ME', x, y - 46);
+        ctx.fillText('REVIVE ME', x, y - 48);
       } else {
-        const frame = Math.floor(w.dist / 14) % 4;
-        if (!this.assets.draw(ctx, `marine_${p.c % 4}`, frame, x, y, a)) {
-          ctx.fillStyle = color;
+        // three layers: legs/torso/backpack → weapon + gauntlets (with recoil) → pauldrons/helmet
+        const body = `marine_${ch.id}`;
+        const walkA = this.assets.anim(body, 'walk');
+        const frame = walkA
+          ? walkA[0] + (Math.floor(w.dist / 9) % walkA[1])
+          : Math.floor(w.dist / 14) % 4;
+        const rec = this.recoil.get(p.id) ?? 0;
+        if (rec !== 0) {
+          const next = rec * Math.exp(-f.dt * 22);
+          if (Math.abs(next) < 0.1) this.recoil.delete(p.id);
+          else this.recoil.set(p.id, next);
+        }
+        const held = this.content.weapons.get(p.w)?.sprites.held ?? '';
+        if (this.assets.draw(ctx, body, frame, x, y, a)) {
+          this.assets.draw(ctx, held, 0, x - Math.cos(a) * rec, y - Math.sin(a) * rec, a);
+          this.assets.draw(ctx, `${body}_top`, 0, x, y, a);
+        } else {
+          ctx.fillStyle = ch.primary;
           ctx.beginPath();
           ctx.arc(x, y, PLAYER.radius, 0, Math.PI * 2);
           ctx.fill();
-          ctx.strokeStyle = '#ddd';
+          ctx.strokeStyle = ch.trim;
           ctx.lineWidth = 5;
           ctx.beginPath();
           ctx.moveTo(x, y);
@@ -358,20 +664,24 @@ export class Renderer {
           ctx.stroke();
         }
       }
-      // name + hp
       if (p.id !== f.myId) {
-        ctx.font = '600 12px system-ui, sans-serif';
+        ctx.font = '600 12px Georgia, "Times New Roman", serif';
         ctx.textAlign = 'center';
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.fillText(p.name, x + 1, y - 33);
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillText(p.name, x + 1, y - 37);
         ctx.fillStyle = color;
-        ctx.fillText(p.name, x, y - 34);
+        ctx.fillText(p.name, x, y - 38);
       }
       if (p.st === 'alive') {
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.fillRect(x - 18, y - 30, 36, 4);
-        ctx.fillStyle = p.hp / p.mhp > 0.35 ? '#5fe07a' : '#ff5050';
-        ctx.fillRect(x - 18, y - 30, (36 * p.hp) / p.mhp, 4);
+        ctx.fillRect(x - 18, y - 33, 36, 4);
+        ctx.fillStyle = p.hp / p.mhp > 0.35 ? '#c8a64a' : '#d03030';
+        ctx.fillRect(x - 18, y - 33, (36 * p.hp) / p.mhp, 4);
+        if (p.ht !== undefined && p.ht > 0) {
+          // plasma coil heat
+          ctx.fillStyle = p.vt ? '#ff5030' : '#6fd8ff';
+          ctx.fillRect(x - 18, y - 28, 36 * Math.min(1, p.ht), 2);
+        }
       }
     }
   }
@@ -399,15 +709,25 @@ export class Renderer {
             vx: (Math.random() - 0.5) * 20,
             vy: (Math.random() - 0.5) * 20,
             maxLife: 0.35,
-            size: kind === 'rocket' ? 5 : 3,
-            grow: kind === 'rocket' ? 3 : 0.3,
+            size: vis.trailShape === 'smoke' ? 5 : 2.5,
+            grow: vis.trailShape === 'smoke' ? 3 : 0.3,
             color: vis.trailColor ?? vis.color,
-            shape: kind === 'rocket' ? 'smoke' : 'dot',
-            additive: kind !== 'rocket',
+            shape: vis.trailShape ?? 'dot',
+            additive: vis.trailShape !== 'smoke',
           });
       }
       if (vis.glow) ctx.globalCompositeOperation = 'lighter';
-      if (!this.assets.draw(ctx, `proj_${kind}`, 0, x, y, ang)) {
+      if (
+        !this.assets.draw(
+          ctx,
+          `proj_${kind}`,
+          Math.floor(this.time * 12 + id),
+          x,
+          y,
+          ang,
+          vis.scale ?? 1,
+        )
+      ) {
         ctx.fillStyle = vis.color;
         ctx.beginPath();
         ctx.arc(x, y, vis.fallbackRadius, 0, Math.PI * 2);

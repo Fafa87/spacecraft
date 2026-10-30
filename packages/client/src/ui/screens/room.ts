@@ -1,4 +1,6 @@
-import { PLAYER_COLORS, type ClientSession, type LobbyInfo } from '@sms/shared';
+import type { ClientSession, ContentRegistry, LobbyInfo } from '@sms/shared';
+import { chapterBadgeSvg, createChapterPicker } from '../chapters.js';
+import { prefs } from '../prefs.js';
 import { escapeHtml } from '../format.js';
 import { config } from '../../config.js';
 import { buildJoinUrl } from '../../net/joinUrl.js';
@@ -14,6 +16,7 @@ export function createRoomScreen(
   session: ClientSession,
   roomCode: string,
   mode: string,
+  content: ContentRegistry,
   actions: RoomActions,
 ): { el: HTMLElement; dispose(): void } {
   const link = buildJoinUrl({
@@ -34,8 +37,10 @@ export function createRoomScreen(
           <div class="row"><input id="link" readonly value="${escapeHtml(link)}"><button id="copy">COPY LINK</button></div>
         </div>
       </div>
-      <p class="muted small">Up to 4 marines. Each squad size has its own leaderboard.</p>
+      <p class="muted small">Up to 4 battle-brothers, one chapter each. Each squad size has its own leaderboard.</p>
       <ul class="players" id="players"></ul>
+      <label>YOUR CHAPTER</label>
+      <div id="chapters"></div>
       <div class="row">
         <button id="leave">LEAVE</button>
         <button id="start" class="primary">START MISSION</button>
@@ -52,13 +57,25 @@ export function createRoomScreen(
   const players = $(el, '#players');
   const start = $<HTMLButtonElement>(el, '#start');
   const hint = $(el, '#hint');
+  const picker = createChapterPicker(content, prefs.chapter(), (id) => {
+    prefs.setChapter(id);
+    session.selectChapter(id);
+  });
+  $(el, '#chapters').append(picker.el);
   const render = (l: LobbyInfo | null) => {
     if (!l) return;
     players.innerHTML = Array.from({ length: l.maxPlayers }, (_, i) => {
       const p = l.players[i];
       if (!p) return `<li class="empty">— open slot —</li>`;
-      return `<li><span class="dot" style="background:${PLAYER_COLORS[p.colorIndex % 4]}"></span>${escapeHtml(p.name)}${p.id === l.ownerId ? ' <span class="tag">LEADER</span>' : ''}${p.id === session.playerId ? ' <span class="tag you">YOU</span>' : ''}</li>`;
+      const ch = content.chapter(p.chapter);
+      return `<li>${chapterBadgeSvg(ch)}${escapeHtml(p.name)} <span class="muted small">${escapeHtml(ch.name)}</span>${p.id === l.ownerId ? ' <span class="tag">LEADER</span>' : ''}${p.id === session.playerId ? ' <span class="tag you">YOU</span>' : ''}</li>`;
     }).join('');
+    const mine = l.players.find((p) => p.id === session.playerId)?.chapter ?? null;
+    picker.setTaken(
+      new Set(l.players.filter((p) => p.id !== session.playerId).map((p) => p.chapter)),
+      mine,
+    );
+    picker.el.style.pointerEvents = l.phase === 'lobby' ? '' : 'none';
     const owner = session.isOwner;
     start.style.display = owner ? '' : 'none';
     start.disabled = l.phase === 'playing';

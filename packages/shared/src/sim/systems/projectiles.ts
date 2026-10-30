@@ -61,7 +61,7 @@ function hitEnemies(
   const halfLen = Math.hypot(pr.x - x0, pr.y - y0) / 2;
   const hits: { enemy: Enemy; t: number }[] = [];
   hash.query((pr.x + x0) / 2, (pr.y + y0) / 2, halfLen + pr.radius + QUERY_PAD, (enemy) => {
-    if (enemy.dead || pr.hit.includes(enemy.id)) return;
+    if (enemy.dead || enemy.burrowed || pr.hit.includes(enemy.id)) return;
     const r = world.content.enemy(enemy.type).radius + pr.radius;
     if (segmentDist2(x0, y0, pr.x, pr.y, enemy.x, enemy.y) > r * r) return;
     hits.push({ enemy, t: dist2(x0, y0, enemy.x, enemy.y) });
@@ -72,6 +72,16 @@ function hitEnemies(
     if (pr.dead) return;
     pr.hit.push(enemy.id);
     if (pr.explosion) {
+      // Mass-reactive: direct hit (if any) and then the blast on the target.
+      if (pr.damage > 0) {
+        damageEnemy(world, enemy, pr.damage, {
+          armorPierce: pr.armorPierce,
+          sourcePlayerId: pr.ownerId,
+          kx: pr.vx,
+          ky: pr.vy,
+          knockback: pr.knockback,
+        });
+      }
       pr.x = enemy.x;
       pr.y = enemy.y;
       detonate(world, pr);
@@ -84,7 +94,7 @@ function hitEnemies(
       ky: pr.vy,
       knockback: pr.knockback,
     });
-    if (pr.kind !== 'flame')
+    if (pr.kind !== 'flame' && pr.kind !== 'slash')
       world.events.push({ e: 'hit', x: Math.round(enemy.x), y: Math.round(enemy.y), k: pr.kind });
     if (pr.pierceLeft-- <= 0) pr.dead = true;
   }
@@ -95,7 +105,11 @@ function hitPlayers(world: World, pr: Projectile, x0: number, y0: number): void 
     if (p.state !== 'alive') continue;
     const r = PLAYER.radius + pr.radius;
     if (segmentDist2(x0, y0, pr.x, pr.y, p.x, p.y) <= r * r) {
-      damagePlayer(world, p, pr.damage);
+      if (pr.damage > 0) damagePlayer(world, p, pr.damage);
+      if (pr.explosion) {
+        detonate(world, pr);
+        return;
+      }
       world.events.push({ e: 'hit', x: Math.round(pr.x), y: Math.round(pr.y), k: pr.kind });
       pr.dead = true;
       return;

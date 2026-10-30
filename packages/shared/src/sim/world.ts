@@ -6,6 +6,8 @@ import { emptyInput, type Player, type World } from './types.js';
 export interface PlayerSetup {
   id: number;
   name: string;
+  /** Chapter index; defaults to the player's position in the list. */
+  chapter?: number;
 }
 
 export function createWorld(
@@ -31,6 +33,7 @@ export function createWorld(
       surgeUntil: -1,
       nextSurgeAt: d.surge.firstAtSec,
       nextCrateAt: d.crates.firstAtSec,
+      bossWaves: 0,
     },
     events: [],
     teamSize: players.length,
@@ -43,7 +46,13 @@ export function createWorld(
     const a = (i / Math.max(1, players.length)) * Math.PI * 2;
     const offset = players.length > 1 ? 50 : 0;
     world.players.push(
-      createPlayer(content, setup, i, cx + Math.cos(a) * offset, cy + Math.sin(a) * offset),
+      createPlayer(
+        content,
+        setup,
+        setup.chapter ?? i,
+        cx + Math.cos(a) * offset,
+        cy + Math.sin(a) * offset,
+      ),
     );
   });
   return world;
@@ -52,7 +61,7 @@ export function createWorld(
 export function createPlayer(
   content: ContentRegistry,
   setup: PlayerSetup,
-  colorIndex: number,
+  chapter: number,
   x: number,
   y: number,
 ): Player {
@@ -62,7 +71,7 @@ export function createPlayer(
   return {
     id: setup.id,
     name: setup.name,
-    colorIndex,
+    chapter,
     x,
     y,
     aim: 0,
@@ -78,6 +87,8 @@ export function createPlayer(
     fireCooldown: 0,
     reloadTimer: 0,
     triggerWasDown: false,
+    heat: {},
+    venting: false,
     input: emptyInput(),
     lastInputSeq: 0,
     connected: true,

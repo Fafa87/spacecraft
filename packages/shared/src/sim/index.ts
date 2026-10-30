@@ -7,3 +7,4 @@ export { stepPlayerMovement, playerMoveSpeed } from './systems/movement.js';
 export { budgetRate, maxAlive, waveEntryAt, enemyHpScale } from './systems/director.js';
 export { damageEnemy, damagePlayer, explode } from './systems/combat.js';
 export { grantWeapon } from './systems/weapons.js';
+export { spawnEnemy } from './systems/director.js';

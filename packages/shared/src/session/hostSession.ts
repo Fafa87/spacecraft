@@ -45,7 +45,7 @@ interface Member {
   link: Link;
   playerId: number;
   name: string;
-  colorIndex: number;
+  chapter: number;
   inputs: PlayerInput[];
 }
 
@@ -113,10 +113,19 @@ export class HostSession {
     const msg: ClientMessage = raw;
     const member = this.members.get(link.id);
     if (!member) {
-      if (msg.t === 'join') this.handleJoin(link, msg.name, msg.protocol);
+      if (msg.t === 'join') this.handleJoin(link, msg.name, msg.protocol, msg.chapter);
       return;
     }
     switch (msg.t) {
+      case 'chapter': {
+        if (this.phase === 'playing') break;
+        const idx = this.content.chapterIndex(msg.id);
+        if (idx < 0 || idx === member.chapter) break;
+        if ([...this.members.values()].some((o) => o !== member && o.chapter === idx)) break;
+        member.chapter = idx;
+        this.broadcastLobby();
+        break;
+      }
       case 'input':
         member.inputs.push(msg.i);
         if (member.inputs.length > MAX_QUEUED_INPUTS)
@@ -140,7 +149,7 @@ export class HostSession {
     }
   }
 
-  private handleJoin(link: Link, rawName: string, protocol: number): void {
+  private handleJoin(link: Link, rawName: string, protocol: number, chapterId?: string): void {
     if (protocol !== PROTOCOL_VERSION) {
       this.send(link, {
         t: 'error',
@@ -169,14 +178,15 @@ export class HostSession {
       return;
     }
     this.pending.delete(link);
-    const used = new Set([...this.members.values()].map((m) => m.colorIndex));
-    let colorIndex = 0;
-    while (used.has(colorIndex)) colorIndex++;
+    const used = new Set([...this.members.values()].map((m) => m.chapter));
+    const wanted = chapterId === undefined ? -1 : this.content.chapterIndex(chapterId);
+    let chapter = wanted >= 0 && !used.has(wanted) ? wanted : 0;
+    while (used.has(chapter)) chapter++;
     const member: Member = {
       link,
       playerId: this.nextPlayerId++,
       name: sanitizeName(rawName) || `Marine ${this.nextPlayerId - 1}`,
-      colorIndex,
+      chapter,
       inputs: [],
     };
     this.members.set(link.id, member);
@@ -220,7 +230,7 @@ export class HostSession {
     return [...this.members.values()].map((m) => ({
       id: m.playerId,
       name: m.name,
-      colorIndex: m.colorIndex,
+      chapter: m.chapter,
     }));
   }
 
@@ -240,7 +250,6 @@ export class HostSession {
     const seed = (this.opts.seed ?? randomSeed)();
     const players = this.lobbyPlayers();
     this.world = createWorld(players, seed, this.content);
-    this.world.players.forEach((p, i) => (p.colorIndex = players[i].colorIndex));
     for (const m of this.members.values()) m.inputs = [];
     this.phase = 'playing';
     this.broadcast({ t: 'start', seed, players });

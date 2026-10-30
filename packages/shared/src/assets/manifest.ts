@@ -6,10 +6,17 @@
 export type AssetSource = 'procedural' | 'override';
 
 export interface SpriteEntry {
-  /** Frame size in px. */
+  /** Frame size in atlas px. */
   w: number;
   h: number;
-  /** Anchor in px within the frame. */
+  /**
+   * Atlas px per world px (default 1). Hi-res sprites are rendered at 2x and drawn at 1/2,
+   * so they stay crisp when the camera zooms or on high-DPI screens.
+   */
+  scale?: number;
+  /** Named frame ranges [firstFrame, frameCount], e.g. walk / attack / death. */
+  anims?: Record<string, [number, number]>;
+  /** Anchor in atlas px within the frame. */
   ax: number;
   ay: number;
   /** Top-left of each frame inside the atlas image. */

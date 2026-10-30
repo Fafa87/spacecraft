@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { RunResult } from '@sms/shared';
+import { GAME_VERSION, leaderboardBoard, type RunResult } from '@sms/shared';
 
 // config.ts reads location at import time (index.ts → config.ts).
 vi.hoisted(() => {
@@ -24,6 +24,7 @@ import { FirestoreHighscoreStore } from '../src/highscores/FirestoreHighscoreSto
 import { FallbackHighscoreStore } from '../src/highscores/FallbackHighscoreStore.js';
 import { LocalHighscoreStore } from '../src/highscores/LocalHighscoreStore.js';
 import { createHighscoreStore, pickBackend } from '../src/highscores/index.js';
+import { config } from '../src/config.js';
 
 class MemStorage {
   private m = new Map<string, string>();
@@ -130,6 +131,33 @@ describe('Firestore REST payloads', () => {
       op: 'GREATER_THAN',
       value: { integerValue: '9000' },
     });
+  });
+});
+
+describe('per-version boards', () => {
+  const bcfg = { ...cfg, board: '0.2' };
+  it('commits into boards/{board}/highscores with a board field', () => {
+    const r = run({ version: '0.2.0' });
+    const [w] = commitBody(bcfg, r).writes;
+    expect(w.update.name).toBe(`${DOCS}/boards/0.2/highscores/${r.runId}`);
+    expect(w.update.fields.board).toEqual({ stringValue: '0.2' });
+    expect(endpoint(bcfg, 'commit')).toBe(endpoint(cfg, 'commit'));
+  });
+  it('queries run under the board parent document (legacy stays at the root)', () => {
+    expect(endpoint(bcfg, 'runQuery')).toBe(
+      `https://firestore.googleapis.com/v1/${DOCS}/boards/0.2:runQuery?key=AIza-test%20key`,
+    );
+    expect(endpoint(bcfg, 'runAggregationQuery')).toContain(`${DOCS}/boards/0.2:runAggregation`);
+    expect(topQuery(bcfg, 1, 10).structuredQuery.from).toEqual([{ collectionId: 'highscores' }]);
+  });
+  it('board id is major.minor of the version', () => {
+    expect(leaderboardBoard('0.2.0')).toBe('0.2');
+    expect(leaderboardBoard('12.30.4-beta.1')).toBe('12.30');
+    expect(leaderboardBoard(GAME_VERSION)).toBe('0.2');
+    expect(() => leaderboardBoard('x')).toThrow();
+  });
+  it('the game build uses its own board', () => {
+    expect(config.firebase === null || config.firebase.board === '0.2').toBe(true);
   });
 });
 

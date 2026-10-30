@@ -21,6 +21,7 @@ import { stripJoinParams } from '../net/joinUrl.js';
 import { createJoinScreen } from '../ui/screens/join.js';
 import { createMenuScreen } from '../ui/screens/menu.js';
 import { createRoomScreen } from '../ui/screens/room.js';
+import { stageHiveDemo } from '../game/demo.js';
 
 type Screen = 'boot' | 'menu' | 'join' | 'room' | 'game' | 'over';
 
@@ -33,7 +34,9 @@ export class App {
   private readonly assets = new Assets();
   private audio!: AudioEngine;
   private readonly store: FallbackHighscoreStore = createHighscoreStore();
-  private readonly content: ContentRegistry = defaultContent;
+  private readonly content: ContentRegistry = config.names
+    ? defaultContent.withNames(config.names)
+    : defaultContent;
   private conn: GameConnection | null = null;
   private game: GameClient | null = null;
   private cleanup: Array<() => void> = [];
@@ -51,7 +54,13 @@ export class App {
     this.audio = new AudioEngine(this.assets.manifest, this.assets.baseUrl);
     void this.store.flushPending();
     (window as unknown as { __sms: App }).__sms = this; // debugging / smoke tests
-    if (config.autoSolo) this.solo(config.autoName || 'Smoke');
+    document.title = this.content.title;
+    document.documentElement.style.setProperty(
+      '--parchment',
+      `url(${this.assets.baseUrl}ui/parchment.png)`,
+    );
+    if (config.demo) this.solo(config.autoName || 'Brother-Sergeant', true);
+    else if (config.autoSolo) this.solo(config.autoName || 'Smoke');
     else if (config.joinCode) this.showJoin(config.joinCode);
     else this.showMenu();
   }
@@ -132,6 +141,8 @@ export class App {
             ),
         },
         {
+          content: this.content,
+          baseUrl: this.assets.baseUrl,
           store: this.store,
           joinCode: config.joinCode,
           error,
@@ -146,9 +157,17 @@ export class App {
     return this.store.submit(r);
   }
 
-  private solo(name: string): void {
-    const conn = createLocalGame(name, (r) => this.submit(r));
+  private solo(name: string, demo = false): void {
+    const conn = createLocalGame(name, (r) =>
+      demo ? Promise.resolve({ status: 'local' as const }) : this.submit(r),
+    );
     this.attach(conn);
+    if (demo) {
+      const off = conn.session.on('start', () => {
+        if (conn.host?.world) stageHiveDemo(conn.host.world, this.content);
+      });
+      this.connCleanup.push(off);
+    }
     // Solo skips the room screen: start as soon as the lobby exists.
     const off = conn.session.on('lobby', (l) => {
       if (l.phase === 'lobby' && conn.session.isOwner) conn.session.requestStart();
@@ -222,7 +241,7 @@ export class App {
     this.game = null;
     this.screen = 'room';
     this.audio.playMusic('menu');
-    const room = createRoomScreen(conn.session, conn.roomCode, conn.mode, {
+    const room = createRoomScreen(conn.session, conn.roomCode, conn.mode, this.content, {
       leave: () => this.showMenu(),
     });
     this.setUi(room.el);
@@ -250,7 +269,9 @@ export class App {
     const conn = this.conn;
     if (!conn || this.screen !== 'game') return;
     this.screen = 'over';
-    const colors = new Map((conn.session.lobby?.players ?? []).map((p) => [p.id, p.colorIndex]));
+    const colors = new Map(
+      (conn.session.lobby?.players ?? []).map((p) => [p.id, this.content.chapter(p.chapter)]),
+    );
     const ui = createGameOverScreen(
       result,
       summary,

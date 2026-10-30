@@ -1,4 +1,5 @@
-import { PLAYER_COLORS, type PlayerSummary, type RunResult } from '@sms/shared';
+import type { ChapterDef, PlayerSummary, RunResult } from '@sms/shared';
+import { chapterBadgeSvg } from '../chapters.js';
 import type { HighscoreStore } from '../../highscores/index.js';
 import { $, html } from '../dom.js';
 import { escapeHtml, formatTime } from '../format.js';
@@ -17,12 +18,12 @@ export interface SubmitInfo {
 export function createGameOverScreen(
   result: RunResult,
   summary: PlayerSummary[],
-  opts: { store: HighscoreStore; canRestart: boolean; colors: Map<number, number> },
+  opts: { store: HighscoreStore; canRestart: boolean; colors: Map<number, ChapterDef> },
   actions: GameOverActions,
 ): { el: HTMLElement; setSubmit(s: SubmitInfo): void } {
   const el = html(`<div class="screen gameover">
     <div class="card">
-      <h1 class="dead">SQUAD WIPED</h1>
+      <h1 class="dead">THE LINE HAS FALLEN</h1>
       <div class="survived"><span class="muted">SURVIVED</span><div class="big">${formatTime(result.survivalMs)}</div>
         <div class="muted">wave ${result.wave} · ${result.kills} kills · ${result.teamSize}-marine squad</div></div>
       <div class="submit" id="submit">Submitting score…</div>
@@ -30,7 +31,10 @@ export function createGameOverScreen(
         ${summary
           .map(
             (p) =>
-              `<tr><td><span class="dot" style="background:${PLAYER_COLORS[(opts.colors.get(p.id) ?? 0) % 4]}"></span></td><td>${escapeHtml(p.name)}</td><td class="num">${p.kills}</td><td class="num">${Math.round(p.damage)}</td><td class="num">${p.diedAtMs === null ? '—' : formatTime(p.diedAtMs)}</td></tr>`,
+              `<tr><td>${(() => {
+                const ch = opts.colors.get(p.id);
+                return ch ? chapterBadgeSvg(ch, 18) : '';
+              })()}</td><td>${escapeHtml(p.name)}</td><td class="num">${p.kills}</td><td class="num">${Math.round(p.damage)}</td><td class="num">${p.diedAtMs === null ? '—' : formatTime(p.diedAtMs)}</td></tr>`,
           )
           .join('')}
       </tbody></table>

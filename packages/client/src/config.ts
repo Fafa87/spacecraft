@@ -4,7 +4,10 @@
  *   ?api=http://host:8787   override highscore server
  *   ?join=CODE              open the join flow for a room (QR / share link)
  *   ?ws=1                   use the experimental dedicated WebSocket host instead of P2P
+ *   ?names=generic          display-name preset (content data/naming.ts), e.g. IP-neutral names
+ *   ?demo=hive              solo showcase: staged late-game fight, nothing is submitted
  */
+import { GAME_VERSION, leaderboardBoard } from '@sms/shared';
 import type { FirestoreConfig } from './highscores/firestore.js';
 import { parseJoinCode } from './net/joinUrl.js';
 
@@ -36,6 +39,7 @@ function resolveApiUrl(): string | null {
  * enforcing). Set VITE_FIREBASE_API_KEY + VITE_FIREBASE_PROJECT_ID at build time, e.g. in
  * .env.production (committed public defaults) or .env.production.local (repo root, gitignored).
  * VITE_FIRESTORE_URL points at an emulator. `?firestore=0` disables it for one session.
+ * Each major.minor release has its own board (boards/0.2/highscores): new rules, fresh table.
  */
 function resolveFirebase(): FirestoreConfig | null {
   if (params.get('firestore') === '0') return null;
@@ -43,7 +47,7 @@ function resolveFirebase(): FirestoreConfig | null {
   const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID?.trim();
   if (!apiKey || !projectId) return null;
   const baseUrl = import.meta.env.VITE_FIRESTORE_URL?.trim() || undefined;
-  return { apiKey, projectId, baseUrl };
+  return { apiKey, projectId, baseUrl, board: leaderboardBoard(GAME_VERSION) };
 }
 
 const apiUrl = resolveApiUrl();
@@ -66,6 +70,10 @@ export const config = {
   /** Auto-start a solo run (used by the headless browser smoke test). */
   autoSolo: params.get('autosolo') === '1',
   autoName: params.get('name') ?? '',
+  /** Display-name preset id (see shared data/naming.ts); '' = content defaults. */
+  names: params.get('names')?.trim() || import.meta.env.VITE_NAMES?.trim() || '',
+  /** `?demo=hive` staged showcase fight (solo, never submitted). */
+  demo: params.get('demo') === 'hive',
   peerOverride: import.meta.env.VITE_PEER_HOST
     ? {
         host: import.meta.env.VITE_PEER_HOST,

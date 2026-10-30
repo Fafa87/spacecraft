@@ -12,7 +12,8 @@ export type SessionPhase = 'lobby' | 'playing' | 'over';
 export interface LobbyPlayer {
   id: number;
   name: string;
-  colorIndex: number;
+  /** Chapter index (content.chapters). Unique within a room. */
+  chapter: number;
 }
 
 export interface PlayerSummary {
@@ -24,7 +25,10 @@ export interface PlayerSummary {
 }
 
 export type ClientMessage =
-  | { t: 'join'; name: string; protocol: number }
+  /** `chapter` = preferred chapter id; the host picks a free one if taken. */
+  | { t: 'join'; name: string; protocol: number; chapter?: string }
+  /** Change chapter in the lobby (ignored if taken or not in the lobby). */
+  | { t: 'chapter'; id: string }
   | { t: 'input'; i: PlayerInput }
   | { t: 'start' }
   | { t: 'toLobby' }
@@ -50,7 +54,7 @@ export type HostMessage =
 export type ErrorCode =
   'full' | 'in_progress' | 'protocol' | 'not_owner' | 'bad_message' | 'closed';
 
-const CLIENT_TYPES = new Set(['join', 'input', 'start', 'toLobby', 'ping']);
+const CLIENT_TYPES = new Set(['join', 'chapter', 'input', 'start', 'toLobby', 'ping']);
 
 /** Cheap structural check for untrusted client messages. */
 export function isClientMessage(m: unknown): m is ClientMessage {
@@ -69,6 +73,10 @@ export function isClientMessage(m: unknown): m is ClientMessage {
       Number.isFinite(i.aim as number)
     );
   }
-  if (t === 'join') return typeof (m as { name?: unknown }).name === 'string';
+  if (t === 'join') {
+    const j = m as { name?: unknown; chapter?: unknown };
+    return typeof j.name === 'string' && (j.chapter === undefined || typeof j.chapter === 'string');
+  }
+  if (t === 'chapter') return typeof (m as { id?: unknown }).id === 'string';
   return true;
 }

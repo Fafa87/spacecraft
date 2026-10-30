@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RunResult } from '@sms/shared';
 import { FallbackHighscoreStore } from '../src/highscores/FallbackHighscoreStore.js';
 import { HttpError, type HttpHighscoreStore } from '../src/highscores/HttpHighscoreStore.js';
-import { LocalHighscoreStore } from '../src/highscores/LocalHighscoreStore.js';
+import {
+  LOCAL_KEY,
+  LOCAL_SUBMITTED_KEY,
+  LocalHighscoreStore,
+} from '../src/highscores/LocalHighscoreStore.js';
 
 class MemStorage {
   private m = new Map<string, string>();
@@ -49,6 +53,20 @@ describe('LocalHighscoreStore', () => {
     expect((await s.top(1)).entries.map((e) => e.survivalMs)).toEqual([20_000, 10_000]);
     expect((await s.top(2)).entries).toHaveLength(1);
     expect(s.pending()).toHaveLength(3);
+  });
+});
+
+describe('local storage is per leaderboard board', () => {
+  it('uses board-namespaced keys and ignores the v0.1 table on the same origin', async () => {
+    expect(LOCAL_KEY).toBe('sms.highscores.board-0.2');
+    expect(LOCAL_SUBMITTED_KEY).toBe('sms.highscores.submitted.board-0.2');
+    const old = { '1': [{ ...run(999_000), id: 'x', submittedAt: '2026-01-01T00:00:00Z' }] };
+    localStorage.setItem('sms.highscores.v1', JSON.stringify(old));
+    const s = new LocalHighscoreStore();
+    expect((await s.top(1)).entries).toEqual([]);
+    await s.submit(run(10_000));
+    expect(JSON.parse(localStorage.getItem('sms.highscores.v1')!)).toEqual(old);
+    expect(localStorage.getItem(LOCAL_KEY)).toContain('10000');
   });
 });
 

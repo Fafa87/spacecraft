@@ -4,10 +4,14 @@
  *
  * Override pipeline: any file in tools/assets-src/overrides/{sprites,sfx,music}
  * named after an asset key replaces the procedural version:
- *   sprites/<key>.png  — a horizontal strip of `frames` frames (any size; scaled to frame size)
+ *   sprites/<key>.png  — a horizontal strip of `frames` frames (any size; scaled to frame size,
+ *                        frame order = the sprite's `anims` layout, see docs/ART_PIPELINE.md)
  *   sfx/<key>.wav      — copied as-is
  *   music/<key>.wav    — copied as-is
- * This is the hook for AI-generated or hand-drawn assets.
+ * This is the hook for AI-generated or hand-painted assets.
+ *
+ * Options: --only=sprites|audio, --fleet=behemoth|leviathan (Tyranid palette).
+ * Also writes ui/emblem.png + ui/parchment.png (DOM menu art) and preview.html.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -18,13 +22,14 @@ import { SONGS, renderSong } from './audio/music.js';
 import { SFX, renderSfx } from './audio/sfxPresets.js';
 import { decodeWav, encodeWav } from './audio/wav.js';
 import { OUT_DIR, OVERRIDES_DIR } from './paths.js';
-import { SPRITES } from './sprites/index.js';
+import { SPRITES, UI_IMAGES, type SpriteDef } from './sprites/index.js';
 import { writePreview } from './preview.js';
 
 const args = new Set(process.argv.slice(2));
 const only = [...args].find((a) => a.startsWith('--only='))?.slice(7);
 const doSprites = !only || only === 'sprites';
 const doAudio = !only || only === 'audio';
+const ATLAS_WIDTH = 2048;
 
 function hashKey(s: string): number {
   let h = 2166136261;
@@ -45,9 +50,12 @@ function loadExistingManifest(): AssetManifest | null {
 async function buildSprites(manifest: AssetManifest): Promise<void> {
   const t0 = Date.now();
   const items: Array<{ id: string; w: number; h: number }> = [];
-  for (const s of SPRITES)
-    for (let f = 0; f < s.frames; f++) items.push({ id: `${s.key}#${f}`, w: s.w, h: s.h });
-  const packed = packShelves(items, 1024, 2);
+  const px = (s: SpriteDef) => [Math.ceil(s.w * (s.scale ?? 1)), Math.ceil(s.h * (s.scale ?? 1))];
+  for (const s of SPRITES) {
+    const [w, h] = px(s);
+    for (let f = 0; f < s.frames; f++) items.push({ id: `${s.key}#${f}`, w, h });
+  }
+  const packed = packShelves(items, ATLAS_WIDTH, 2);
   const atlas = createCanvas(packed.width, packed.height);
   const actx = atlas.getContext('2d');
   let overrides = 0;
@@ -69,26 +77,47 @@ async function buildSprites(manifest: AssetManifest): Promise<void> {
         actx.drawImage(override, fw * f, 0, fw, override.height, r.x, r.y, r.w, r.h);
       } else {
         actx.translate(r.x, r.y);
+        if (s.scale && s.scale !== 1) actx.scale(s.scale, s.scale);
         s.draw(actx, f, new Rng(hashKey(s.key) + f * 7919));
       }
       actx.restore();
     }
     const [ax, ay] = s.anchor ?? [0.5, 0.5];
+    const [w, h] = px(s);
     manifest.sprites[s.key] = {
-      w: s.w,
-      h: s.h,
-      ax: s.w * ax,
-      ay: s.h * ay,
+      w,
+      h,
+      ...(s.scale && s.scale !== 1 ? { scale: s.scale } : {}),
+      ...(s.anims ? { anims: s.anims } : {}),
+      ax: w * ax,
+      ay: h * ay,
       frames,
       source: override ? 'override' : 'procedural',
       group: s.group,
     };
   }
   fs.writeFileSync(path.join(OUT_DIR, 'atlas.png'), await atlas.encode('png'));
+  await writeUiImages();
   manifest.atlas = { image: 'atlas.png', width: packed.width, height: packed.height };
   console.log(
     `  sprites: ${SPRITES.length} sprites / ${items.length} frames -> atlas ${packed.width}x${packed.height} (${overrides} overrides) in ${Date.now() - t0} ms`,
   );
+}
+
+/** Larger standalone images for the DOM menu (emblem + parchment texture). */
+async function writeUiImages(): Promise<void> {
+  fs.mkdirSync(path.join(OUT_DIR, 'ui'), { recursive: true });
+  for (const img of UI_IMAGES) {
+    const ov = path.join(OVERRIDES_DIR, 'ui', `${img.key}.png`);
+    const out = path.join(OUT_DIR, 'ui', `${img.key}.png`);
+    if (fs.existsSync(ov)) {
+      fs.copyFileSync(ov, out);
+      continue;
+    }
+    const c = createCanvas(img.w, img.h);
+    img.draw(c.getContext('2d'), new Rng(hashKey(img.key)));
+    fs.writeFileSync(out, await c.encode('png'));
+  }
 }
 
 function buildAudio(manifest: AssetManifest): void {

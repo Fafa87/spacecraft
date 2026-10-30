@@ -2,6 +2,7 @@ import { PLAYER } from '../../constants.js';
 import type { WeaponDef } from '../../data/index.js';
 import { allocId } from '../world.js';
 import type { Player, World } from '../types.js';
+import { damagePlayer } from './combat.js';
 
 /** Grants a weapon to a player (no-op if owned). Returns true if newly granted. */
 export function grantWeapon(world: World, player: Player, weaponId: string): boolean {
@@ -38,6 +39,7 @@ export function updatePlayerWeapon(world: World, p: Player, dt: number): void {
     if (target && target !== p.current) {
       p.current = target;
       p.reloadTimer = 0;
+      p.venting = false;
       p.fireCooldown = Math.max(p.fireCooldown, 0.15);
       world.events.push({ e: 'switch', p: p.id, w: target });
     }
@@ -45,12 +47,15 @@ export function updatePlayerWeapon(world: World, p: Player, dt: number): void {
 
   const def = world.content.weapon(p.current);
   p.fireCooldown = Math.max(0, p.fireCooldown - dt);
+  coolWeapons(world, p, dt);
 
   if (p.reloadTimer > 0) {
     p.reloadTimer -= dt;
     if (p.reloadTimer <= 0) {
       p.reloadTimer = 0;
-      p.ammo[def.id] = def.magazine;
+      // A vent only clears heat; the magazine is untouched (unless it was empty).
+      if (!p.venting || p.ammo[def.id] <= 0) p.ammo[def.id] = def.magazine;
+      p.venting = false;
     }
   } else if (input.reload && p.ammo[def.id] < def.magazine) {
     startReload(world, p, def);
@@ -70,6 +75,7 @@ export function updatePlayerWeapon(world: World, p: Player, dt: number): void {
     fireWeapon(world, p, def);
     p.ammo[def.id]--;
     p.fireCooldown += def.fireInterval;
+    if (def.heat && addHeat(world, p, def)) return;
     if (!def.automatic) break;
   }
   if (p.ammo[def.id] <= 0) startReload(world, p, def);
@@ -81,8 +87,43 @@ function startReload(world: World, p: Player, def: WeaponDef): void {
   world.events.push({ e: 'reload', p: p.id, w: def.id });
 }
 
+/** Heat bleeds off every weapon over time (also while holstered). */
+function coolWeapons(world: World, p: Player, dt: number): void {
+  for (const id in p.heat) {
+    const heat = world.content.weapon(id).heat;
+    if (heat) p.heat[id] = Math.max(0, p.heat[id] - heat.coolPerSec * dt);
+  }
+}
+
+/** Adds one shot of heat; on overheat burns the marine and starts a vent. Returns true on overheat. */
+function addHeat(world: World, p: Player, def: WeaponDef): boolean {
+  const heat = def.heat!;
+  const h = (p.heat[def.id] ?? 0) + heat.perShot;
+  if (h < heat.max) {
+    p.heat[def.id] = h;
+    return false;
+  }
+  p.heat[def.id] = heat.max * 0.35;
+  p.venting = true;
+  p.reloadTimer = heat.ventTime;
+  world.events.push({ e: 'overheat', p: p.id });
+  // Bypasses hurt-invulnerability: overheating always hurts.
+  const inv = p.invuln;
+  p.invuln = 0;
+  damagePlayer(world, p, heat.selfDamage);
+  if (p.state === 'alive') p.invuln = inv;
+  return true;
+}
+
+/** True when the next shot of this weapon would be supercharged. */
+export function isSupercharged(p: Player, def: WeaponDef): boolean {
+  return !!def.heat && (p.heat[def.id] ?? 0) >= def.heat.superchargeAt * def.heat.max;
+}
+
 export function fireWeapon(world: World, p: Player, def: WeaponDef): void {
   const spec = def.projectile;
+  const sc = isSupercharged(p, def);
+  const dmgMul = sc ? def.heat!.superchargeDamageMul : 1;
   const muzzle = PLAYER.radius + 10;
   const mx = p.x + Math.cos(p.aim) * muzzle;
   const my = p.y + Math.sin(p.aim) * muzzle;
@@ -94,6 +135,7 @@ export function fireWeapon(world: World, p: Player, def: WeaponDef): void {
     x: Math.round(mx),
     y: Math.round(my),
     a: Math.round(p.aim * 100) / 100,
+    ...(sc ? { s: 1 as const } : {}),
   });
   for (let i = 0; i < def.pellets; i++) {
     const a = p.aim + (world.rng.next() - 0.5) * def.spread;
@@ -104,14 +146,14 @@ export function fireWeapon(world: World, p: Player, def: WeaponDef): void {
       ownerId: p.id,
       sx: p.x,
       sy: p.y,
-      kind: spec.kind,
+      kind: sc ? `${spec.kind}_super` : spec.kind,
       x: mx,
       y: my,
       vx: Math.cos(a) * speed,
       vy: Math.sin(a) * speed,
       life: spec.lifetime,
-      radius: spec.radius,
-      damage: spec.damage,
+      radius: sc ? spec.radius * 1.35 : spec.radius,
+      damage: spec.damage * dmgMul,
       pierceLeft: spec.pierce,
       armorPierce: !!spec.armorPierce,
       drag: spec.drag ?? 0,

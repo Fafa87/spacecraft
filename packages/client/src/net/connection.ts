@@ -1,3 +1,4 @@
+import { prefs } from '../ui/prefs.js';
 import Peer, { type PeerOptions } from 'peerjs';
 import {
   ClientSession,
@@ -40,7 +41,7 @@ export function createLocalGame(name: string, submit: SubmitFn): GameConnection 
   });
   const [hostSide, clientSide] = createLocalLinkPair('local');
   host.addLink(hostSide);
-  const session = new ClientSession(clientSide, name);
+  const session = new ClientSession(clientSide, name, prefs.chapter());
   session.join();
   return {
     mode: 'local',
@@ -117,7 +118,7 @@ export async function hostPeerGame(name: string, submit: SubmitFn): Promise<Game
   });
   const [hostSide, clientSide] = createLocalLinkPair('host-local');
   host.addLink(hostSide);
-  const session = new ClientSession(clientSide, name);
+  const session = new ClientSession(clientSide, name, prefs.chapter());
   session.join();
   return {
     mode: 'p2p',
@@ -156,7 +157,7 @@ export async function joinPeerGame(rawCode: string, name: string): Promise<GameC
     peer.destroy();
     throw err;
   });
-  const session = new ClientSession(new PeerLink(conn), name);
+  const session = new ClientSession(new PeerLink(conn), name, prefs.chapter());
   session.join();
   return {
     mode: 'p2p',
@@ -185,7 +186,7 @@ export async function connectDedicated(name: string, rawCode?: string): Promise<
       { once: true },
     );
   });
-  const session = new ClientSession(new BrowserWsLink(ws), name);
+  const session = new ClientSession(new BrowserWsLink(ws), name, prefs.chapter());
   const welcomed = new Promise<string>((resolve) => session.on('welcome', (w) => resolve(w.room)));
   session.join();
   const roomCode = await welcomed;

@@ -42,6 +42,8 @@ export class ClientSession extends Emitter<ClientSessionEvents> {
   constructor(
     readonly link: Link,
     readonly name: string,
+    /** Preferred chapter id (the host picks a free one if it's taken). */
+    readonly chapter?: string,
   ) {
     super();
     link.onMessage((m) => this.handle(m as HostMessage));
@@ -50,7 +52,12 @@ export class ClientSession extends Emitter<ClientSessionEvents> {
 
   /** Send the join request (call after the link is open). */
   join(): void {
-    this.link.send({ t: 'join', name: this.name, protocol: PROTOCOL_VERSION });
+    this.link.send({
+      t: 'join',
+      name: this.name,
+      protocol: PROTOCOL_VERSION,
+      ...(this.chapter ? { chapter: this.chapter } : {}),
+    });
   }
 
   get isOwner(): boolean {
@@ -62,6 +69,11 @@ export class ClientSession extends Emitter<ClientSessionEvents> {
     const full: PlayerInput = { ...input, seq: this.nextSeq++ };
     this.link.send({ t: 'input', i: full });
     return full;
+  }
+
+  /** Asks the host for another chapter (lobby only; ignored if taken). */
+  selectChapter(id: string): void {
+    this.link.send({ t: 'chapter', id });
   }
 
   requestStart(): void {

@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly VITE_HIGHSCORE_URL?: string;
   /** Firebase web config for the Firestore leaderboard (public by design). */
   readonly VITE_FIREBASE_API_KEY?: string;
+  /** Default display-name preset (see shared data/naming.ts). */
+  readonly VITE_NAMES?: string;
   readonly VITE_FIREBASE_PROJECT_ID?: string;
   /** Firestore REST root override, e.g. http://127.0.0.1:8080/v1 (emulator). */
   readonly VITE_FIRESTORE_URL?: string;

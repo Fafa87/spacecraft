@@ -5,6 +5,8 @@ import { renderSong, SONGS } from '../src/audio/music.js';
 import { renderSfx, SFX } from '../src/audio/sfxPresets.js';
 import { decodeWav, encodeWav, normalize } from '../src/audio/wav.js';
 import { SPRITES } from '../src/sprites/index.js';
+import { animAt, animLayout } from '../src/sprites/types.js';
+import { CHAPTERS } from '@sms/shared';
 
 describe('asset coverage', () => {
   const refs = referencedAssetKeys(defaultContent);
@@ -81,5 +83,57 @@ describe('audio', () => {
     const pcm = renderSong(spec, sr);
     const expected = ((spec.bars * 4 * 60) / spec.bpm) * sr;
     expect(Math.abs(pcm.length - expected) / expected).toBeLessThan(0.05);
+  });
+});
+
+describe('hive siege sprites', () => {
+  const byKey = new Map(SPRITES.map((s) => [s.key, s]));
+  it('every chapter has body, top layer, downed pose and badge', () => {
+    for (const ch of CHAPTERS)
+      for (const k of [
+        `marine_${ch.id}`,
+        `marine_${ch.id}_top`,
+        `marine_${ch.id}_down`,
+        `badge_${ch.id}`,
+      ])
+        expect(byKey.has(k), k).toBe(true);
+  });
+  it('every Tyranid has walk + death animations and is 36-136 px', () => {
+    for (const e of defaultContent.enemies.values()) {
+      const s = byKey.get(e.sprite)!;
+      expect(s.anims?.walk, e.id).toBeDefined();
+      expect(s.anims?.death, e.id).toBeDefined();
+      expect(s.w).toBeGreaterThanOrEqual(36);
+      expect(s.w).toBeLessThanOrEqual(136);
+      const n = Object.values(s.anims!).reduce((t, [, c]) => t + c, 0);
+      expect(n).toBe(s.frames);
+    }
+  });
+  it('melee + ranged gaunts have attack frames', () => {
+    for (const id of ['hormagaunt', 'termagant', 'genestealer', 'carnifex'])
+      expect(byKey.get(`enemy_${id}`)!.anims?.attack?.[1]).toBeGreaterThan(0);
+  });
+  it('animLayout / animAt agree', () => {
+    const { frames, anims } = animLayout([
+      ['walk', 6],
+      ['attack', 3],
+      ['death', 4],
+    ]);
+    expect(frames).toBe(13);
+    expect(anims.attack).toEqual([6, 3]);
+    expect(animAt(anims, 7)).toEqual(['attack', 1, 3]);
+    expect(animAt(anims, 12)).toEqual(['death', 3, 4]);
+  });
+  it('the hive siege sound set has the signature sounds', () => {
+    const keys = new Set(SFX.map((s) => s.key));
+    for (const k of [
+      'shoot_heavy_bolter',
+      'shoot_flamer',
+      'shoot_plasma',
+      'nid_shriek',
+      'nid_chitter',
+      'boss_horn',
+    ])
+      expect(keys.has(k)).toBe(true);
   });
 });

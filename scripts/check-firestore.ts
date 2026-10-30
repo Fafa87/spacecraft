@@ -2,7 +2,8 @@
  * Smoke test against the LIVE Firestore project used by the deployed game:
  *   npm run check:firestore
  *
- * 1. creates one obvious test run (name "ZZ-test", version "0.0.0-test" — hidden from the board)
+ * 1. creates one obvious test run on the current board (boards/<major.minor>/highscores; name
+ *    "ZZ-test", version "<GAME_VERSION>-test" — hidden from the board)
  * 2. reads it back, runs the top-N query and the rank count (both need the composite index)
  * 3. checks that re-creating the same id is rejected (create-only → 409)
  * 4. checks that an implausible run is rejected by the rules (403)
@@ -13,13 +14,14 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { RunResult } from '../packages/shared/src/index.js';
+import { GAME_VERSION, leaderboardBoard, type RunResult } from '../packages/shared/src/index.js';
 import {
   commitBody,
   endpoint,
   parseCount,
   parseTop,
   rankQuery,
+  runDocName,
   topQuery,
   type FirestoreConfig,
 } from '../packages/client/src/highscores/firestore.js';
@@ -42,7 +44,12 @@ if (!apiKey || !projectId) {
   console.error('Missing VITE_FIREBASE_API_KEY / VITE_FIREBASE_PROJECT_ID');
   process.exit(2);
 }
-const cfg: FirestoreConfig = { apiKey, projectId, baseUrl: process.env.VITE_FIRESTORE_URL };
+const cfg: FirestoreConfig = {
+  apiKey,
+  projectId,
+  baseUrl: process.env.VITE_FIRESTORE_URL,
+  board: leaderboardBoard(GAME_VERSION),
+};
 console.log(`Firestore check against project "${projectId}"\n`);
 
 type Res = { status: number; json: unknown };
@@ -75,7 +82,7 @@ const testRun: RunResult = {
   kills: 0,
   wave: 0,
   endedAt: new Date().toISOString(),
-  version: '0.0.0-test',
+  version: `${GAME_VERSION}-test`,
   mode: 'local',
 };
 
@@ -86,7 +93,7 @@ report(
   'create valid test run',
   createOk,
   createOk
-    ? `highscores/${runId}`
+    ? `boards/${cfg.board}/highscores/${runId}`
     : created.status === 403
       ? `${errText(created)} → the security rules are not deployed (production mode denies all). Publish firestore.rules.`
       : errText(created),
@@ -94,7 +101,8 @@ report(
 
 // 2. read back + queries (index)
 if (createOk) {
-  const getUrl = endpoint(cfg, 'commit').replace(':commit', `/highscores/${runId}`);
+  const base = (cfg.baseUrl ?? 'https://firestore.googleapis.com/v1').replace(/\/$/, '');
+  const getUrl = `${base}/${runDocName(cfg, runId)}?key=${encodeURIComponent(apiKey)}`;
   const got = await fetch(getUrl);
   report('read test doc back', got.ok, got.ok ? 'fields stored' : `HTTP ${got.status}`);
 }

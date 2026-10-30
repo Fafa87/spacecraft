@@ -1,10 +1,13 @@
+import { CHAPTERS } from './chapters.js';
 import { DIRECTOR } from './director.js';
 import { ENEMIES } from './enemies.js';
-import type { DirectorConfig, EnemyDef, WeaponDef } from './types.js';
+import { applyNamePreset, DEFAULT_SUBTITLE, DEFAULT_TITLE, NAME_PRESETS } from './naming.js';
+import type { ChapterDef, DirectorConfig, EnemyDef, WeaponDef } from './types.js';
 import { WEAPONS } from './weapons.js';
 
 export * from './types.js';
-export { WEAPONS, ENEMIES, DIRECTOR };
+export * from './naming.js';
+export { WEAPONS, ENEMIES, DIRECTOR, CHAPTERS };
 
 /**
  * Content registry: indexed lookups + validation. Gameplay code should go
@@ -18,18 +21,28 @@ export class ContentRegistry {
   /** Enemy ids in wire order. */
   readonly enemyIds: readonly string[];
   readonly projectileKinds: readonly string[];
+  /** Player colour schemes in wire order. */
+  readonly chapters: readonly ChapterDef[];
 
   constructor(
     weapons: WeaponDef[],
     enemies: EnemyDef[],
     readonly director: DirectorConfig,
+    chapters: ChapterDef[] = CHAPTERS,
+    readonly title = DEFAULT_TITLE,
+    readonly subtitle = DEFAULT_SUBTITLE,
   ) {
+    this.chapters = chapters;
     this.weapons = new Map(weapons.map((w) => [w.id, w]));
     this.enemies = new Map(enemies.map((e) => [e.id, e]));
     this.weaponOrder = [...weapons].sort((a, b) => a.slot - b.slot);
     this.enemyIds = enemies.map((e) => e.id);
     const kinds = new Set<string>();
-    for (const w of weapons) kinds.add(w.projectile.kind);
+    for (const w of weapons) {
+      kinds.add(w.projectile.kind);
+      // Supercharged heat-weapon shots get their own visual.
+      if (w.heat) kinds.add(`${w.projectile.kind}_super`);
+    }
     for (const e of enemies) if (e.ranged) kinds.add(e.ranged.projectile.kind);
     this.projectileKinds = [...kinds];
   }
@@ -44,6 +57,38 @@ export class ContentRegistry {
     const e = this.enemies.get(id);
     if (!e) throw new Error(`Unknown enemy '${id}'`);
     return e;
+  }
+
+  /** Chapter by wire index (wraps, so it never throws). */
+  chapter(index: number): ChapterDef {
+    const n = this.chapters.length;
+    return this.chapters[((index % n) + n) % n]!;
+  }
+
+  chapterIndex(id: string): number {
+    return this.chapters.findIndex((c) => c.id === id);
+  }
+
+  /** Same content with display names from a preset (see data/naming.ts). Unknown = unchanged. */
+  withNames(presetId: string): ContentRegistry {
+    const preset = NAME_PRESETS[presetId];
+    if (!preset) return this;
+    const t = applyNamePreset(
+      {
+        weapons: [...this.weapons.values()],
+        enemies: [...this.enemies.values()],
+        chapters: [...this.chapters],
+      },
+      preset,
+    );
+    return new ContentRegistry(
+      t.weapons,
+      t.enemies,
+      this.director,
+      t.chapters,
+      preset.title ?? this.title,
+      preset.subtitle ?? this.subtitle,
+    );
   }
 
   startingWeapons(): string[] {
@@ -76,6 +121,21 @@ export class ContentRegistry {
         errors.push(`enemy ${e.id} is ranged but has no ranged spec`);
       if (e.behavior === 'kamikaze' && !e.explode)
         errors.push(`enemy ${e.id} is kamikaze but has no explode spec`);
+      if (e.group && (e.group[0] < 1 || e.group[1] < e.group[0]))
+        errors.push(`enemy ${e.id} group must be [min>=1, max>=min]`);
+      if (e.charge && e.charge.minDistance >= e.charge.triggerDistance)
+        errors.push(`enemy ${e.id} charge.minDistance must be < triggerDistance`);
+    }
+    for (const w of this.weaponOrder) {
+      if (w.heat && (w.heat.superchargeAt <= 0 || w.heat.superchargeAt >= 1))
+        errors.push(`weapon ${w.id} heat.superchargeAt must be within (0, 1)`);
+    }
+    if (!this.enemies.has(this.director.bosses.enemy))
+      errors.push(`director.bosses.enemy '${this.director.bosses.enemy}' is unknown`);
+    const cids = new Set<string>();
+    for (const c of this.chapters) {
+      if (cids.has(c.id)) errors.push(`duplicate chapter id ${c.id}`);
+      cids.add(c.id);
     }
     let prev = -1;
     for (const entry of this.director.waveTable) {

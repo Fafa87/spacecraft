@@ -1,19 +1,17 @@
 :root {
-  --bg: #07090c;
-  --panel: rgba(10, 16, 24, 0.86);
-  --line: rgba(120, 170, 220, 0.25);
-  --text: #e6eef8;
-  --muted: #8a9bb0;
-  --accent: #ffc04a;
-  --accent2: #4fa3ff;
-  --bad: #ff5a5a;
-  --good: #6fff8a;
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
+  --bg: #0a0806;
+  --panel: rgba(22, 15, 9, 0.9);
+  --line: rgba(176, 138, 62, 0.45);
+  --text: #eadcb6;
+  --muted: #a8956a;
+  --accent: #e0b850;
+  --accent2: #d8a84a;
+  --bad: #e04a30;
+  --good: #9be07a;
+  --brass: #b08a3e;
+  --brass-dark: #5a4520;
+  --serif: Georgia, 'Times New Roman', 'Liberation Serif', serif;
+  font-family: var(--serif);
   color: var(--text);
 }
 * {
@@ -28,8 +26,8 @@ body {
 }
 body {
   background:
-    radial-gradient(ellipse at 50% 120%, rgba(160, 40, 60, 0.35), transparent 60%),
-    radial-gradient(ellipse at 20% -10%, rgba(40, 90, 160, 0.3), transparent 55%),
+    radial-gradient(ellipse at 50% 120%, rgba(170, 50, 20, 0.38), transparent 60%),
+    radial-gradient(ellipse at 20% -10%, rgba(110, 60, 140, 0.22), transparent 55%),
     repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 64px),
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 64px),
     var(--bg);
@@ -94,7 +92,7 @@ h1 {
   font-weight: 900;
   text-shadow:
     0 4px 0 #000,
-    0 0 30px rgba(79, 163, 255, 0.35);
+    0 0 30px rgba(224, 120, 40, 0.35);
 }
 h1 span {
   color: var(--accent);
@@ -129,18 +127,18 @@ input {
   color: var(--text);
   padding: 10px 12px;
   border-radius: 6px;
-  font: 600 16px system-ui;
+  font: 600 16px var(--serif);
 }
 input:focus {
   outline: 2px solid var(--accent2);
 }
 button {
-  background: rgba(79, 163, 255, 0.12);
+  background: linear-gradient(rgba(90, 69, 32, 0.45), rgba(40, 28, 14, 0.6));
   color: var(--text);
-  border: 1px solid rgba(79, 163, 255, 0.45);
+  border: 1px solid var(--brass);
   border-radius: 6px;
   padding: 10px 14px;
-  font: 700 13px system-ui;
+  font: 700 13px var(--serif);
   letter-spacing: 0.08em;
   cursor: pointer;
   transition:
@@ -148,7 +146,7 @@ button {
     transform 0.05s;
 }
 button:hover:not(:disabled) {
-  background: rgba(79, 163, 255, 0.25);
+  background: linear-gradient(rgba(130, 100, 45, 0.55), rgba(60, 42, 20, 0.7));
 }
 button:active:not(:disabled) {
   transform: translateY(1px);
@@ -158,12 +156,12 @@ button:disabled {
   cursor: default;
 }
 button.primary {
-  background: linear-gradient(#ffc04a, #e09a20);
-  color: #1a1200;
-  border-color: #ffd27a;
+  background: linear-gradient(#d8b050, #9a6e24);
+  color: #1a1004;
+  border-color: #f0d890;
 }
 button.primary:hover:not(:disabled) {
-  background: linear-gradient(#ffd070, #f0aa30);
+  background: linear-gradient(#ecc868, #b08030);
 }
 .play > button.primary {
   width: 100%;
@@ -589,4 +587,111 @@ body.touch-mode .tb {
   .gameover {
     grid-template-columns: minmax(300px, 380px) 1fr;
   }
+}
+
+/* ---- Hive Siege gothic restyle ---- */
+.card {
+  border: 1px solid var(--brass);
+  border-radius: 2px;
+  box-shadow:
+    inset 0 0 0 3px rgba(20, 12, 6, 0.9),
+    inset 0 0 0 4px var(--brass-dark),
+    0 20px 60px rgba(0, 0, 0, 0.6);
+}
+h1,
+h2 {
+  font-family: var(--serif);
+}
+h1 {
+  letter-spacing: 0.1em;
+  color: #eadcb6;
+}
+h2 {
+  color: var(--accent);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 6px;
+}
+.title .emblem {
+  display: block;
+  margin: 0 auto 6px;
+  width: min(256px, 60vw);
+  height: auto;
+  image-rendering: auto;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.8));
+}
+.title .tagline {
+  font-style: italic;
+}
+.title .scroll {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 6px 26px;
+  color: #2a1a0a;
+  font-style: italic;
+  font-size: 14px;
+  background:
+    var(--parchment, none) center / cover,
+    #d8c69a;
+  border: 1px solid var(--brass-dark);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+}
+input:focus {
+  outline: 2px solid var(--brass);
+}
+.chapters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 10px;
+}
+.chapter-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 30%;
+  min-width: 0;
+  padding: 6px 8px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chapter-chip.selected {
+  outline: 2px solid var(--accent);
+  background: linear-gradient(rgba(150, 115, 50, 0.6), rgba(70, 50, 22, 0.8));
+}
+.chapter-chip svg {
+  flex: 0 0 auto;
+}
+.chapter-motto {
+  font-style: italic;
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 1.3em;
+  margin: -4px 0 8px;
+}
+.versions-link {
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+.versions-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.versions-list li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.versions-list a {
+  color: var(--text);
+}
+.disclaimer {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
 }

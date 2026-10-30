@@ -31,7 +31,8 @@ export const emptyInput = (): PlayerInput => ({
 export interface Player {
   id: number;
   name: string;
-  colorIndex: number;
+  /** Chapter (colour scheme) index into content.chapters. */
+  chapter: number;
   x: number;
   y: number;
   aim: number;
@@ -51,6 +52,10 @@ export interface Player {
   reloadTimer: number;
   /** For semi-automatic weapons. */
   triggerWasDown: boolean;
+  /** Heat per weapon id (heat weapons only), 0..heat.max. */
+  heat: Record<string, number>;
+  /** True while the current reload is an overheat vent. */
+  venting: boolean;
   input: PlayerInput;
   lastInputSeq: number;
   connected: boolean;
@@ -75,6 +80,21 @@ export interface Enemy {
   fuse: number;
   /** Lateral strafing direction for ranged enemies. */
   strafe: number;
+  /** Charge state: 0 idle, 1 winding up, 2 dashing. */
+  chargePhase: 0 | 1 | 2;
+  /** Seconds left in the current charge phase. */
+  chargeTimer: number;
+  chargeCooldown: number;
+  /** Locked dash direction. */
+  chargeDx: number;
+  chargeDy: number;
+  /** Underground (untargetable) until it emerges. */
+  burrowed: boolean;
+  /** Synapse buff this tick (1 = none). */
+  synSpeed: number;
+  synDamage: number;
+  /** > 0 for a moment after attacking (animation). */
+  attackAnim: number;
   dead: boolean;
 }
 
@@ -122,12 +142,17 @@ export interface Pickup {
 
 /** Things that happened this tick; drive client FX/audio and HUD notifications. */
 export type GameEvent =
-  | { e: 'shot'; p: number; w: string; x: number; y: number; a: number }
+  /** `s` = supercharged (heat weapons). */
+  | { e: 'shot'; p: number; w: string; x: number; y: number; a: number; s?: 1 }
   | { e: 'hit'; x: number; y: number; k: string }
   | { e: 'die'; t: string; x: number; y: number }
   | { e: 'boom'; x: number; y: number; r: number }
-  | { e: 'spit'; x: number; y: number }
-  | { e: 'bite'; p: number }
+  | { e: 'spit'; x: number; y: number; t?: string }
+  | { e: 'bite'; p: number; t?: string }
+  | { e: 'overheat'; p: number }
+  | { e: 'emerge'; x: number; y: number; t: string }
+  | { e: 'charge'; x: number; y: number; t: string }
+  | { e: 'boss'; t: string; n: number }
   | { e: 'hurt'; p: number; d: number }
   | { e: 'down'; p: number }
   | { e: 'revive'; p: number; by: number }
@@ -145,6 +170,8 @@ export interface DirectorState {
   surgeUntil: number;
   nextSurgeAt: number;
   nextCrateAt: number;
+  /** How many boss waves have arrived. */
+  bossWaves: number;
 }
 
 export interface World {

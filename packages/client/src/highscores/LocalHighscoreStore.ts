@@ -1,10 +1,24 @@
-import { HIGHSCORE_LIMITS, type HighscoreEntry, type RunResult } from '@sms/shared';
+import {
+  GAME_VERSION,
+  HIGHSCORE_LIMITS,
+  leaderboardBoard,
+  type HighscoreEntry,
+  type RunResult,
+} from '@sms/shared';
 import { storage } from '../util/storage.js';
 import type { HighscoreStore, SubmitOutcome, TopResult } from './HighscoreStore.js';
 
-const KEY = 'sms.highscores.v1';
+/**
+ * Keys are namespaced by leaderboard board (major.minor) — every deployed version shares the
+ * github.io origin, so the frozen /v0.1.0/ build keeps its own `sms.highscores.v1` table and its
+ * pending runs are never flushed into the 0.2 board. Name / mute / chapter prefs stay shared.
+ */
+export const LOCAL_BOARD = leaderboardBoard(GAME_VERSION);
+export const LOCAL_KEY = `sms.highscores.board-${LOCAL_BOARD}`;
+export const LOCAL_SUBMITTED_KEY = `sms.highscores.submitted.board-${LOCAL_BOARD}`;
+const KEY = LOCAL_KEY;
 const KEEP_PER_TABLE = 50;
-const SUBMITTED_KEY = 'sms.highscores.submitted.v1';
+const SUBMITTED_KEY = LOCAL_SUBMITTED_KEY;
 const KEEP_SUBMITTED = 50;
 
 /** A run this browser got onto the global board (like Pulp Wars' "submitted" list). */

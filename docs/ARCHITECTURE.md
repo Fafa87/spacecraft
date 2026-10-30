@@ -121,6 +121,44 @@ client validation and server-side enforcement can't drift. A test fails if `fire
 stale. Permanent rejections (4xx) are kept in local scores and not retried. Network errors are
 queued and retried.
 
+Leaderboards are **per game version (major.minor)**. Firestore writes go to
+`boards/{major.minor}/highscores/{runId}` (`leaderboardBoard(GAME_VERSION)` in shared), and the
+local fallback uses `sms.highscores.board-<major.minor>`. The frozen v0.1.0 build keeps the
+legacy top-level `highscores` collection. Because all boards share the collection id, one
+composite index serves every board.
+
+## Hive Siege (40k) systems
+
+- **Chapters.** `ContentRegistry.chapters` comes from `data/chapters.ts`. The lobby stores a
+  chapter index per member: `join {chapter?}` requests one, `chapter {id}` switches, and the host
+  keeps them unique and falls back to the first free one. The index travels in `LobbyPlayer.chapter`
+  and `PlayerSnap.c` and selects the `marine_<id>` sprites, the HUD colour and the badge.
+- **Heat weapons.** `WeaponDef.heat` (plasma) is simulated in `sim/systems/weapons.ts`.
+  `Player.heat[weaponId]` cools every tick. Past `superchargeAt` shots are supercharged (`shot.s = 1`);
+  at `max` the weapon overheats: it vents (`Player.venting`), the marine takes self-damage and
+  the `overheat` event fires. Snapshots carry `ht` and `vt` for the HUD heat bar.
+- **Enemy traits.** These are composable on any behaviour in `sim/systems/enemies.ts`:
+  - `charge`: an idle → wind-up → dash state machine, with the `charge` event.
+  - `burrow`: spawns underground and untargetable, moves faster, and erupts within
+    `emergeDistance` with the `emerge` event.
+  - `synapse`: each tick, buffs the speed and damage of non-synapse Tyranids in its radius.
+  - `explode`: fuse and death bursts, for spore mines.
+
+  Each state is a bit in `EnemySnap[6]` (`ENEMY_FLAG`), so the client can animate wind-ups,
+  dust trails and synapse halos without extra messages.
+
+- **Boss waves.** `director.bosses` spawns the boss on surge `firstSurge` and every `everySurge`
+  after it. The count depends on team size and grows by `extraPerAppearance`. The `boss` event drives
+  the horn and the banner.
+- **Presentation** is client-only and data-keyed: `render/visuals.ts` (`WEAPON_VISUALS`,
+  `ENEMY_VISUALS`, `PROJECTILE_VISUALS`), `game/fx.ts` (muzzle flashes, ichor, decals, distance-
+  attenuated screen shake, sounds per event) and `render/hud.ts` (the brass-and-parchment HUD).
+- **Names** are data: `withNames(preset)` returns a registry with the display names replaced and
+  ids untouched (`?names=`).
+- **Versioned site.** `scripts/deploy-pages.ts` publishes the latest build at the root and frozen
+  `/vX.Y.Z/` builds next to `versions.json`. `ui/versions.ts` derives the site root from
+  `BASE_URL`.
+
 ## Extension points (where to start)
 
 | Want to…                               | Touch                                                                                          |
@@ -131,5 +169,6 @@ queued and retried.
 | change the wire format                 | `net/codec.ts` (binary/delta), bump `PROTOCOL_VERSION`                                         |
 | add a transport                        | implement `Link` (see `client/src/net/PeerLink.ts`, `server/src/gamehost/wsLink.ts`)           |
 | change highscore storage               | implement `HighscoreRepository`, register in `createRepository.ts`                             |
-| replace procedural art/audio           | drop files in `tools/assets-src/overrides/…`                                                   |
+| replace procedural art/audio           | drop files in `tools/assets-src/overrides/…` (see ART_PIPELINE.md)                             |
+| add a chapter / rename everything      | `data/chapters.ts` / `NAME_PRESETS` in `data/naming.ts`                                        |
 | balance                                | `npm run sim`, then edit `data/director.ts` / `data/weapons.ts`                                |

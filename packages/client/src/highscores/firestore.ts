@@ -5,6 +5,7 @@
  * safe: create-only, exact field set, types and ranges.
  */
 import {
+  FIRESTORE_BOARDS,
   FIRESTORE_COLLECTION,
   HIGHSCORE_LIMITS,
   validateRunResult,
@@ -18,6 +19,11 @@ export interface FirestoreConfig {
   /** REST root; override for the emulator, e.g. http://127.0.0.1:8080/v1 */
   baseUrl?: string;
   collection?: string;
+  /**
+   * Per-version board ("0.2" = major.minor): runs go to boards/{board}/highscores, so each
+   * release starts with an empty table. Unset = the legacy top-level collection (v0.1.x).
+   */
+  board?: string;
 }
 
 export const FIRESTORE_DEFAULTS = {
@@ -36,19 +42,24 @@ const collectionOf = (cfg: FirestoreConfig) => cfg.collection ?? FIRESTORE_DEFAU
 export const documentsPath = (projectId: string) =>
   `projects/${projectId}/databases/(default)/documents`;
 
+/** Parent document path of the leaderboard collection ("" = database root). */
+const parentOf = (cfg: FirestoreConfig) => (cfg.board ? `/${FIRESTORE_BOARDS}/${cfg.board}` : '');
+
 export type FirestoreMethod = 'commit' | 'runQuery' | 'runAggregationQuery';
 
 export function endpoint(cfg: FirestoreConfig, method: FirestoreMethod) {
   const base = (cfg.baseUrl ?? FIRESTORE_DEFAULTS.baseUrl).replace(/\/$/, '');
-  return `${base}/${documentsPath(cfg.projectId)}:${method}?key=${encodeURIComponent(cfg.apiKey)}`;
+  // runQuery/runAggregationQuery run under the board's parent doc; commit is database-wide.
+  const parent = method === 'commit' ? '' : parentOf(cfg);
+  return `${base}/${documentsPath(cfg.projectId)}${parent}:${method}?key=${encodeURIComponent(cfg.apiKey)}`;
 }
 
 const int = (n: number): Value => ({ integerValue: String(n) });
 const str = (s: string): Value => ({ stringValue: s });
 
 /** The stored document: exactly the field set firestore.rules allows (+ server timestamp). */
-export function runFields(run: RunResult): Fields {
-  return {
+export function runFields(run: RunResult, board?: string): Fields {
+  const fields: Fields = {
     teamSize: int(run.teamSize),
     names: { arrayValue: { values: run.players.map(str) } },
     survivalMs: int(run.survivalMs),
@@ -57,7 +68,13 @@ export function runFields(run: RunResult): Fields {
     mode: str(run.mode),
     version: str(run.version),
   };
+  if (board) fields.board = str(board);
+  return fields;
 }
+
+/** Full document name of a run. */
+export const runDocName = (cfg: FirestoreConfig, runId: string) =>
+  `${documentsPath(cfg.projectId)}${parentOf(cfg)}/${collectionOf(cfg)}/${runId}`;
 
 /**
  * Create-only write (`currentDocument.exists = false`), so resubmitting the same runId can't
@@ -68,8 +85,8 @@ export function commitBody(cfg: FirestoreConfig, run: RunResult) {
     writes: [
       {
         update: {
-          name: `${documentsPath(cfg.projectId)}/${collectionOf(cfg)}/${run.runId}`,
-          fields: runFields(run),
+          name: runDocName(cfg, run.runId),
+          fields: runFields(run, cfg.board),
         },
         updateTransforms: [{ fieldPath: 'timestamp', setToServerValue: 'REQUEST_TIME' }],
         currentDocument: { exists: false },

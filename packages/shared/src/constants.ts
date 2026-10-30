@@ -1,8 +1,8 @@
 /** Global tunables. Gameplay content (weapons, enemies, waves) lives in `data/`. */
 
-export const GAME_VERSION = '0.1.0';
+export const GAME_VERSION = '0.2.0';
 /** Bump whenever the wire protocol or data tables change incompatibly. */
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 
 export const TICK_RATE = 30;
 export const TICK_DT = 1 / TICK_RATE;
@@ -35,5 +35,3 @@ export const PICKUP = {
   lifetime: 35,
   medkitHeal: 40,
 } as const;
-
-export const PLAYER_COLORS = ['#4fa3ff', '#ffb02e', '#5fe07a', '#e05fd5'] as const;

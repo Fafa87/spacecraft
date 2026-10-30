@@ -1,0 +1,59 @@
+import type { ChapterDef } from './types.js';
+
+/**
+ * Player colour schemes. Index order is used on the wire (PlayerSnap.c / LobbyPlayer.chapter).
+ * Icons are simple geometric shapes of our own, deliberately not replicas of official chapter
+ * badges. Names are display-only and can be renamed via data/naming.ts.
+ */
+export const CHAPTERS: ChapterDef[] = [
+  {
+    id: 'ultramarines',
+    name: 'Ultramarines',
+    primary: '#1f4196',
+    trim: '#d8a93a',
+    detail: '#e9e4d4',
+    lens: '#ff3b2f',
+    icon: 'chevron',
+    motto: 'Discipline is the sharpest blade.',
+  },
+  {
+    id: 'blood_angels',
+    name: 'Blood Angels',
+    primary: '#a3191c',
+    trim: '#1b1717',
+    detail: '#e0b44a',
+    lens: '#8fe3ff',
+    icon: 'drop',
+    motto: 'Hold the thirst, hold the line.',
+  },
+  {
+    id: 'dark_angels',
+    name: 'Dark Angels',
+    primary: '#1d4a2c',
+    trim: '#d9cda4',
+    detail: '#b8222a',
+    lens: '#ff4a2a',
+    icon: 'blade',
+    motto: 'Secrets are armour too.',
+  },
+  {
+    id: 'imperial_fists',
+    name: 'Imperial Fists',
+    primary: '#e3b51e',
+    trim: '#181614',
+    detail: '#c0241f',
+    lens: '#69ff7a',
+    icon: 'tower',
+    motto: 'Every wall is a promise.',
+  },
+  {
+    id: 'space_wolves',
+    name: 'Space Wolves',
+    primary: '#6d88a3',
+    trim: '#d9b34c',
+    detail: '#b52e24',
+    lens: '#ffd23a',
+    icon: 'fang',
+    motto: 'The hunt never ends.',
+  },
+];
