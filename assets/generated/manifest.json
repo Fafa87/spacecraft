@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-30T17:08:31.106Z",
+  "generatedAt": "2026-10-30T17:53:42.153Z",
   "atlas": {
     "image": "atlas.png",
     "width": 2048,
@@ -2125,271 +2125,866 @@
     }
   },
   "sounds": {
-    "explosion": {
-      "file": "sfx/explosion.wav",
-      "volume": 0.6,
-      "maxVoices": 5,
-      "durationSec": 0.89,
-      "source": "procedural"
-    },
-    "player_hurt": {
-      "file": "sfx/player_hurt.wav",
-      "volume": 0.45,
-      "maxVoices": 2,
-      "durationSec": 0.064,
-      "source": "procedural"
-    },
-    "player_down": {
-      "file": "sfx/player_down.wav",
-      "volume": 0.55,
-      "maxVoices": 2,
-      "durationSec": 0.771,
-      "source": "procedural"
-    },
-    "revive": {
-      "file": "sfx/revive.wav",
-      "volume": 0.5,
-      "maxVoices": 2,
-      "durationSec": 0.295,
-      "source": "procedural"
-    },
-    "pickup": {
-      "file": "sfx/pickup.wav",
-      "volume": 0.45,
-      "maxVoices": 3,
-      "durationSec": 0.099,
-      "source": "procedural"
-    },
-    "unlock": {
-      "file": "sfx/unlock.wav",
-      "volume": 0.5,
-      "maxVoices": 2,
-      "durationSec": 0.482,
-      "source": "procedural"
-    },
-    "surge": {
-      "file": "sfx/surge.wav",
-      "volume": 0.5,
-      "maxVoices": 1,
-      "durationSec": 1.02,
-      "source": "procedural"
-    },
-    "crate_drop": {
-      "file": "sfx/crate_drop.wav",
-      "volume": 0.45,
-      "maxVoices": 2,
-      "durationSec": 0.177,
-      "source": "procedural"
-    },
-    "ui_click": {
-      "file": "sfx/ui_click.wav",
-      "volume": 0.3,
-      "maxVoices": 2,
-      "durationSec": 0.009,
-      "source": "procedural"
-    },
     "shoot_bolt_rifle": {
-      "file": "sfx/shoot_bolt_rifle.wav",
-      "volume": 0.36,
+      "file": "sfx/shoot_bolt_rifle_0.wav",
+      "variants": [
+        "sfx/shoot_bolt_rifle_0.wav",
+        "sfx/shoot_bolt_rifle_1.wav",
+        "sfx/shoot_bolt_rifle_2.wav",
+        "sfx/shoot_bolt_rifle_3.wav"
+      ],
+      "volume": 0.62,
       "maxVoices": 6,
-      "durationSec": 0.062,
-      "source": "procedural"
+      "durationSec": 0.509,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 6
     },
     "shoot_heavy_bolter": {
-      "file": "sfx/shoot_heavy_bolter.wav",
-      "volume": 0.42,
-      "maxVoices": 5,
-      "durationSec": 0.118,
-      "source": "procedural"
+      "file": "sfx/shoot_heavy_bolter_0.wav",
+      "variants": [
+        "sfx/shoot_heavy_bolter_0.wav",
+        "sfx/shoot_heavy_bolter_1.wav",
+        "sfx/shoot_heavy_bolter_2.wav",
+        "sfx/shoot_heavy_bolter_3.wav"
+      ],
+      "volume": 0.58,
+      "maxVoices": 8,
+      "durationSec": 0.43,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 6
     },
-    "bolt_impact": {
-      "file": "sfx/bolt_impact.wav",
-      "volume": 0.3,
-      "maxVoices": 6,
-      "durationSec": 0.034,
-      "source": "procedural"
+    "flamer_ignite": {
+      "file": "sfx/flamer_ignite_0.wav",
+      "variants": [
+        "sfx/flamer_ignite_0.wav",
+        "sfx/flamer_ignite_1.wav",
+        "sfx/flamer_ignite_2.wav"
+      ],
+      "volume": 0.6,
+      "maxVoices": 4,
+      "durationSec": 0.639,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 6
     },
-    "swing_power_sword": {
-      "file": "sfx/swing_power_sword.wav",
-      "volume": 0.4,
-      "maxVoices": 3,
-      "durationSec": 0.041,
-      "source": "procedural"
+    "flamer_loop": {
+      "file": "sfx/flamer_loop_0.wav",
+      "variants": [
+        "sfx/flamer_loop_0.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 4,
+      "durationSec": 2,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 6,
+      "loop": true
     },
-    "power_field": {
-      "file": "sfx/power_field.wav",
-      "volume": 0.35,
-      "maxVoices": 2,
-      "durationSec": 0.142,
-      "source": "procedural"
-    },
-    "shoot_flamer": {
-      "file": "sfx/shoot_flamer.wav",
-      "volume": 0.26,
-      "maxVoices": 3,
-      "durationSec": 0.139,
-      "source": "procedural"
+    "flamer_tail": {
+      "file": "sfx/flamer_tail_0.wav",
+      "variants": [
+        "sfx/flamer_tail_0.wav",
+        "sfx/flamer_tail_1.wav",
+        "sfx/flamer_tail_2.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 4,
+      "durationSec": 0.572,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 5
     },
     "shoot_plasma": {
-      "file": "sfx/shoot_plasma.wav",
-      "volume": 0.4,
-      "maxVoices": 4,
-      "durationSec": 0.242,
-      "source": "procedural"
+      "file": "sfx/shoot_plasma_0.wav",
+      "variants": [
+        "sfx/shoot_plasma_0.wav",
+        "sfx/shoot_plasma_1.wav",
+        "sfx/shoot_plasma_2.wav",
+        "sfx/shoot_plasma_3.wav"
+      ],
+      "volume": 0.58,
+      "maxVoices": 5,
+      "durationSec": 0.869,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 7
     },
-    "reload_plasma": {
-      "file": "sfx/reload_plasma.wav",
-      "volume": 0.35,
-      "maxVoices": 2,
-      "durationSec": 0.346,
-      "source": "procedural"
+    "shoot_plasma_super": {
+      "file": "sfx/shoot_plasma_super_0.wav",
+      "variants": [
+        "sfx/shoot_plasma_super_0.wav",
+        "sfx/shoot_plasma_super_1.wav",
+        "sfx/shoot_plasma_super_2.wav"
+      ],
+      "volume": 0.7,
+      "maxVoices": 3,
+      "durationSec": 1.696,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 8,
+      "duck": 0.2
+    },
+    "plasma_whine": {
+      "file": "sfx/plasma_whine_0.wav",
+      "variants": [
+        "sfx/plasma_whine_0.wav"
+      ],
+      "volume": 0.3,
+      "maxVoices": 1,
+      "durationSec": 1.5,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 4,
+      "loop": true
     },
     "overheat": {
-      "file": "sfx/overheat.wav",
-      "volume": 0.5,
+      "file": "sfx/overheat_0.wav",
+      "variants": [
+        "sfx/overheat_0.wav",
+        "sfx/overheat_1.wav",
+        "sfx/overheat_2.wav"
+      ],
+      "volume": 0.6,
       "maxVoices": 2,
-      "durationSec": 0.449,
-      "source": "procedural"
+      "durationSec": 1.196,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 7
+    },
+    "plasma_impact": {
+      "file": "sfx/plasma_impact_0.wav",
+      "variants": [
+        "sfx/plasma_impact_0.wav",
+        "sfx/plasma_impact_1.wav",
+        "sfx/plasma_impact_2.wav"
+      ],
+      "volume": 0.4,
+      "maxVoices": 4,
+      "durationSec": 0.188,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 3
     },
     "shoot_melta": {
-      "file": "sfx/shoot_melta.wav",
+      "file": "sfx/shoot_melta_0.wav",
+      "variants": [
+        "sfx/shoot_melta_0.wav",
+        "sfx/shoot_melta_1.wav",
+        "sfx/shoot_melta_2.wav"
+      ],
+      "volume": 0.72,
+      "maxVoices": 3,
+      "durationSec": 1.354,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 8,
+      "duck": 0.15
+    },
+    "melta_impact": {
+      "file": "sfx/melta_impact_0.wav",
+      "variants": [
+        "sfx/melta_impact_0.wav",
+        "sfx/melta_impact_1.wav",
+        "sfx/melta_impact_2.wav"
+      ],
       "volume": 0.5,
       "maxVoices": 3,
-      "durationSec": 0.227,
-      "source": "procedural"
+      "durationSec": 0.3,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 4
+    },
+    "swing_power_sword": {
+      "file": "sfx/swing_power_sword_0.wav",
+      "variants": [
+        "sfx/swing_power_sword_0.wav",
+        "sfx/swing_power_sword_1.wav",
+        "sfx/swing_power_sword_2.wav",
+        "sfx/swing_power_sword_3.wav"
+      ],
+      "volume": 0.6,
+      "maxVoices": 4,
+      "durationSec": 0.593,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 6
+    },
+    "sword_impact": {
+      "file": "sfx/sword_impact_0.wav",
+      "variants": [
+        "sfx/sword_impact_0.wav",
+        "sfx/sword_impact_1.wav",
+        "sfx/sword_impact_2.wav",
+        "sfx/sword_impact_3.wav"
+      ],
+      "volume": 0.55,
+      "maxVoices": 4,
+      "durationSec": 0.162,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 5
+    },
+    "power_field": {
+      "file": "sfx/power_field_0.wav",
+      "variants": [
+        "sfx/power_field_0.wav",
+        "sfx/power_field_1.wav",
+        "sfx/power_field_2.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 2,
+      "durationSec": 1.037,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 3
     },
     "throw_grenade": {
-      "file": "sfx/throw_grenade.wav",
-      "volume": 0.35,
+      "file": "sfx/throw_grenade_0.wav",
+      "variants": [
+        "sfx/throw_grenade_0.wav",
+        "sfx/throw_grenade_1.wav",
+        "sfx/throw_grenade_2.wav"
+      ],
+      "volume": 0.5,
       "maxVoices": 3,
-      "durationSec": 0.056,
-      "source": "procedural"
+      "durationSec": 0.404,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 4
+    },
+    "explosion": {
+      "file": "sfx/explosion_0.wav",
+      "variants": [
+        "sfx/explosion_0.wav",
+        "sfx/explosion_1.wav",
+        "sfx/explosion_2.wav"
+      ],
+      "volume": 0.85,
+      "maxVoices": 4,
+      "durationSec": 2.216,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 9,
+      "duck": 0.4
+    },
+    "bolt_impact": {
+      "file": "sfx/bolt_impact_0.wav",
+      "variants": [
+        "sfx/bolt_impact_0.wav",
+        "sfx/bolt_impact_1.wav",
+        "sfx/bolt_impact_2.wav",
+        "sfx/bolt_impact_3.wav"
+      ],
+      "volume": 0.42,
+      "maxVoices": 4,
+      "durationSec": 0.107,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 3
+    },
+    "heavy_bolt_impact": {
+      "file": "sfx/heavy_bolt_impact_0.wav",
+      "variants": [
+        "sfx/heavy_bolt_impact_0.wav",
+        "sfx/heavy_bolt_impact_1.wav",
+        "sfx/heavy_bolt_impact_2.wav",
+        "sfx/heavy_bolt_impact_3.wav"
+      ],
+      "volume": 0.45,
+      "maxVoices": 4,
+      "durationSec": 0.147,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 3
     },
     "reload_bolter": {
-      "file": "sfx/reload_bolter.wav",
-      "volume": 0.42,
+      "file": "sfx/reload_bolter_0.wav",
+      "variants": [
+        "sfx/reload_bolter_0.wav",
+        "sfx/reload_bolter_1.wav",
+        "sfx/reload_bolter_2.wav"
+      ],
+      "volume": 0.5,
       "maxVoices": 2,
-      "durationSec": 0.435,
-      "source": "procedural"
+      "durationSec": 0.978,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 4
     },
     "reload_heavy": {
-      "file": "sfx/reload_heavy.wav",
-      "volume": 0.42,
+      "file": "sfx/reload_heavy_0.wav",
+      "variants": [
+        "sfx/reload_heavy_0.wav",
+        "sfx/reload_heavy_1.wav",
+        "sfx/reload_heavy_2.wav"
+      ],
+      "volume": 0.55,
       "maxVoices": 2,
-      "durationSec": 0.474,
-      "source": "procedural"
+      "durationSec": 1.25,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 4
+    },
+    "reload_flamer": {
+      "file": "sfx/reload_flamer_0.wav",
+      "variants": [
+        "sfx/reload_flamer_0.wav",
+        "sfx/reload_flamer_1.wav",
+        "sfx/reload_flamer_2.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 2,
+      "durationSec": 1.017,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 4
+    },
+    "reload_plasma": {
+      "file": "sfx/reload_plasma_0.wav",
+      "variants": [
+        "sfx/reload_plasma_0.wav",
+        "sfx/reload_plasma_1.wav",
+        "sfx/reload_plasma_2.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 2,
+      "durationSec": 1.314,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 4
+    },
+    "reload_melta": {
+      "file": "sfx/reload_melta_0.wav",
+      "variants": [
+        "sfx/reload_melta_0.wav",
+        "sfx/reload_melta_1.wav",
+        "sfx/reload_melta_2.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 2,
+      "durationSec": 1.094,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 4
     },
     "reload_grenade": {
-      "file": "sfx/reload_grenade.wav",
-      "volume": 0.35,
-      "maxVoices": 2,
-      "durationSec": 0.158,
-      "source": "procedural"
-    },
-    "boss_horn": {
-      "file": "sfx/boss_horn.wav",
-      "volume": 0.6,
-      "maxVoices": 1,
-      "durationSec": 1.434,
-      "source": "procedural"
-    },
-    "nid_die_small": {
-      "file": "sfx/nid_die_small.wav",
-      "volume": 0.3,
-      "maxVoices": 6,
-      "durationSec": 0.062,
-      "source": "procedural"
-    },
-    "nid_die_mid": {
-      "file": "sfx/nid_die_mid.wav",
-      "volume": 0.38,
-      "maxVoices": 4,
-      "durationSec": 0.118,
-      "source": "procedural"
-    },
-    "nid_die_big": {
-      "file": "sfx/nid_die_big.wav",
-      "volume": 0.5,
-      "maxVoices": 3,
-      "durationSec": 0.369,
-      "source": "procedural"
-    },
-    "nid_die_huge": {
-      "file": "sfx/nid_die_huge.wav",
-      "volume": 0.7,
-      "maxVoices": 2,
-      "durationSec": 1.276,
-      "source": "procedural"
-    },
-    "nid_slash": {
-      "file": "sfx/nid_slash.wav",
-      "volume": 0.4,
-      "maxVoices": 4,
-      "durationSec": 0.019,
-      "source": "procedural"
-    },
-    "nid_spit": {
-      "file": "sfx/nid_spit.wav",
-      "volume": 0.35,
-      "maxVoices": 4,
-      "durationSec": 0.036,
-      "source": "procedural"
-    },
-    "nid_squish": {
-      "file": "sfx/nid_squish.wav",
-      "volume": 0.25,
-      "maxVoices": 6,
-      "durationSec": 0.024,
-      "source": "procedural"
-    },
-    "nid_chitter": {
-      "file": "sfx/nid_chitter.wav",
-      "volume": 0.28,
-      "maxVoices": 3,
-      "durationSec": 0.079,
-      "source": "procedural"
-    },
-    "nid_shriek": {
-      "file": "sfx/nid_shriek.wav",
+      "file": "sfx/reload_grenade_0.wav",
+      "variants": [
+        "sfx/reload_grenade_0.wav",
+        "sfx/reload_grenade_1.wav",
+        "sfx/reload_grenade_2.wav"
+      ],
       "volume": 0.45,
       "maxVoices": 2,
-      "durationSec": 0.348,
-      "source": "procedural"
+      "durationSec": 0.263,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 3
     },
-    "nid_emerge": {
-      "file": "sfx/nid_emerge.wav",
+    "armour_hit": {
+      "file": "sfx/armour_hit_0.wav",
+      "variants": [
+        "sfx/armour_hit_0.wav",
+        "sfx/armour_hit_1.wav",
+        "sfx/armour_hit_2.wav",
+        "sfx/armour_hit_3.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 3,
+      "durationSec": 0.634,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 6
+    },
+    "player_hurt": {
+      "file": "sfx/player_hurt_0.wav",
+      "variants": [
+        "sfx/player_hurt_0.wav",
+        "sfx/player_hurt_1.wav",
+        "sfx/player_hurt_2.wav",
+        "sfx/player_hurt_3.wav"
+      ],
+      "volume": 0.55,
+      "maxVoices": 2,
+      "durationSec": 0.515,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 7
+    },
+    "player_down": {
+      "file": "sfx/player_down_0.wav",
+      "variants": [
+        "sfx/player_down_0.wav",
+        "sfx/player_down_1.wav",
+        "sfx/player_down_2.wav"
+      ],
+      "volume": 0.65,
+      "maxVoices": 2,
+      "durationSec": 1.823,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 8
+    },
+    "revive": {
+      "file": "sfx/revive_0.wav",
+      "variants": [
+        "sfx/revive_0.wav",
+        "sfx/revive_1.wav",
+        "sfx/revive_2.wav"
+      ],
       "volume": 0.5,
       "maxVoices": 2,
-      "durationSec": 0.329,
-      "source": "procedural"
+      "durationSec": 1.642,
+      "source": "procedural",
+      "bus": "ui",
+      "priority": 6
     },
-    "nid_spore": {
-      "file": "sfx/nid_spore.wav",
+    "ui_click": {
+      "file": "sfx/ui_click_0.wav",
+      "variants": [
+        "sfx/ui_click_0.wav",
+        "sfx/ui_click_1.wav"
+      ],
       "volume": 0.4,
-      "maxVoices": 2,
-      "durationSec": 0.099,
-      "source": "procedural"
+      "maxVoices": 3,
+      "durationSec": 0.05,
+      "source": "procedural",
+      "bus": "ui",
+      "priority": 2
     },
-    "nid_spore_burst": {
-      "file": "sfx/nid_spore_burst.wav",
+    "pickup": {
+      "file": "sfx/pickup_0.wav",
+      "variants": [
+        "sfx/pickup_0.wav",
+        "sfx/pickup_1.wav"
+      ],
       "volume": 0.5,
-      "maxVoices": 4,
-      "durationSec": 0.329,
-      "source": "procedural"
+      "maxVoices": 3,
+      "durationSec": 0.636,
+      "source": "procedural",
+      "bus": "ui",
+      "priority": 5
     },
-    "nid_crush": {
-      "file": "sfx/nid_crush.wav",
+    "unlock": {
+      "file": "sfx/unlock_0.wav",
+      "variants": [
+        "sfx/unlock_0.wav"
+      ],
+      "volume": 0.55,
+      "maxVoices": 2,
+      "durationSec": 1.756,
+      "source": "procedural",
+      "bus": "ui",
+      "priority": 6
+    },
+    "surge": {
+      "file": "sfx/surge_0.wav",
+      "variants": [
+        "sfx/surge_0.wav"
+      ],
+      "volume": 0.55,
+      "maxVoices": 1,
+      "durationSec": 2.475,
+      "source": "procedural",
+      "bus": "ui",
+      "priority": 7
+    },
+    "crate_drop": {
+      "file": "sfx/crate_drop_0.wav",
+      "variants": [
+        "sfx/crate_drop_0.wav",
+        "sfx/crate_drop_1.wav"
+      ],
       "volume": 0.6,
       "maxVoices": 2,
-      "durationSec": 0.15,
-      "source": "procedural"
+      "durationSec": 1.493,
+      "source": "procedural",
+      "bus": "ui",
+      "priority": 6
+    },
+    "boss_horn": {
+      "file": "sfx/boss_horn_0.wav",
+      "variants": [
+        "sfx/boss_horn_0.wav"
+      ],
+      "volume": 0.75,
+      "maxVoices": 1,
+      "durationSec": 3.045,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 9,
+      "duck": 0.5
+    },
+    "nid_die_small": {
+      "file": "sfx/nid_die_small_0.wav",
+      "variants": [
+        "sfx/nid_die_small_0.wav",
+        "sfx/nid_die_small_1.wav",
+        "sfx/nid_die_small_2.wav",
+        "sfx/nid_die_small_3.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 6,
+      "durationSec": 0.531,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 3
+    },
+    "nid_die_mid": {
+      "file": "sfx/nid_die_mid_0.wav",
+      "variants": [
+        "sfx/nid_die_mid_0.wav",
+        "sfx/nid_die_mid_1.wav",
+        "sfx/nid_die_mid_2.wav",
+        "sfx/nid_die_mid_3.wav"
+      ],
+      "volume": 0.55,
+      "maxVoices": 4,
+      "durationSec": 0.577,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 4
+    },
+    "nid_die_big": {
+      "file": "sfx/nid_die_big_0.wav",
+      "variants": [
+        "sfx/nid_die_big_0.wav",
+        "sfx/nid_die_big_1.wav",
+        "sfx/nid_die_big_2.wav"
+      ],
+      "volume": 0.65,
+      "maxVoices": 3,
+      "durationSec": 1.491,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 6
+    },
+    "nid_die_huge": {
+      "file": "sfx/nid_die_huge_0.wav",
+      "variants": [
+        "sfx/nid_die_huge_0.wav",
+        "sfx/nid_die_huge_1.wav"
+      ],
+      "volume": 0.85,
+      "maxVoices": 1,
+      "durationSec": 2.705,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 9,
+      "duck": 0.35
+    },
+    "nid_squish": {
+      "file": "sfx/nid_squish_0.wav",
+      "variants": [
+        "sfx/nid_squish_0.wav",
+        "sfx/nid_squish_1.wav",
+        "sfx/nid_squish_2.wav",
+        "sfx/nid_squish_3.wav"
+      ],
+      "volume": 0.42,
+      "maxVoices": 5,
+      "durationSec": 0.089,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 2
+    },
+    "nid_slash": {
+      "file": "sfx/nid_slash_0.wav",
+      "variants": [
+        "sfx/nid_slash_0.wav",
+        "sfx/nid_slash_1.wav",
+        "sfx/nid_slash_2.wav",
+        "sfx/nid_slash_3.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 5,
+      "durationSec": 0.515,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 5
+    },
+    "stealer_rend": {
+      "file": "sfx/stealer_rend_0.wav",
+      "variants": [
+        "sfx/stealer_rend_0.wav",
+        "sfx/stealer_rend_1.wav",
+        "sfx/stealer_rend_2.wav"
+      ],
+      "volume": 0.52,
+      "maxVoices": 4,
+      "durationSec": 0.434,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 5
+    },
+    "stealer_skitter": {
+      "file": "sfx/stealer_skitter_0.wav",
+      "variants": [
+        "sfx/stealer_skitter_0.wav",
+        "sfx/stealer_skitter_1.wav",
+        "sfx/stealer_skitter_2.wav"
+      ],
+      "volume": 0.32,
+      "maxVoices": 4,
+      "durationSec": 0.344,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 2
+    },
+    "nid_spit": {
+      "file": "sfx/nid_spit_0.wav",
+      "variants": [
+        "sfx/nid_spit_0.wav",
+        "sfx/nid_spit_1.wav",
+        "sfx/nid_spit_2.wav",
+        "sfx/nid_spit_3.wav"
+      ],
+      "volume": 0.45,
+      "maxVoices": 5,
+      "durationSec": 0.497,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 4
+    },
+    "nid_chitter": {
+      "file": "sfx/nid_chitter_0.wav",
+      "variants": [
+        "sfx/nid_chitter_0.wav",
+        "sfx/nid_chitter_1.wav",
+        "sfx/nid_chitter_2.wav"
+      ],
+      "volume": 0.4,
+      "maxVoices": 4,
+      "durationSec": 0.292,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 3
+    },
+    "nid_hiss": {
+      "file": "sfx/nid_hiss_0.wav",
+      "variants": [
+        "sfx/nid_hiss_0.wav",
+        "sfx/nid_hiss_1.wav",
+        "sfx/nid_hiss_2.wav",
+        "sfx/nid_hiss_3.wav"
+      ],
+      "volume": 0.35,
+      "maxVoices": 3,
+      "durationSec": 0.442,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 2
+    },
+    "horma_windup": {
+      "file": "sfx/horma_windup_0.wav",
+      "variants": [
+        "sfx/horma_windup_0.wav",
+        "sfx/horma_windup_1.wav",
+        "sfx/horma_windup_2.wav",
+        "sfx/horma_windup_3.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 4,
+      "durationSec": 0.633,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 6
+    },
+    "horma_shriek": {
+      "file": "sfx/horma_shriek_0.wav",
+      "variants": [
+        "sfx/horma_shriek_0.wav",
+        "sfx/horma_shriek_1.wav",
+        "sfx/horma_shriek_2.wav",
+        "sfx/horma_shriek_3.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 4,
+      "durationSec": 0.614,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 6
+    },
+    "nid_shriek": {
+      "file": "sfx/nid_shriek_0.wav",
+      "variants": [
+        "sfx/nid_shriek_0.wav",
+        "sfx/nid_shriek_1.wav"
+      ],
+      "volume": 0.6,
+      "maxVoices": 2,
+      "durationSec": 1.662,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 7,
+      "duck": 0.2
+    },
+    "nid_emerge": {
+      "file": "sfx/nid_emerge_0.wav",
+      "variants": [
+        "sfx/nid_emerge_0.wav",
+        "sfx/nid_emerge_1.wav"
+      ],
+      "volume": 0.7,
+      "maxVoices": 2,
+      "durationSec": 1.733,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 7
+    },
+    "ravener_burrow": {
+      "file": "sfx/ravener_burrow_0.wav",
+      "variants": [
+        "sfx/ravener_burrow_0.wav",
+        "sfx/ravener_burrow_1.wav",
+        "sfx/ravener_burrow_2.wav"
+      ],
+      "volume": 0.45,
+      "maxVoices": 3,
+      "durationSec": 0.674,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 3
+    },
+    "biovore_thoomp": {
+      "file": "sfx/biovore_thoomp_0.wav",
+      "variants": [
+        "sfx/biovore_thoomp_0.wav",
+        "sfx/biovore_thoomp_1.wav",
+        "sfx/biovore_thoomp_2.wav"
+      ],
+      "volume": 0.6,
+      "maxVoices": 3,
+      "durationSec": 1.036,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 6
+    },
+    "nid_spore_burst": {
+      "file": "sfx/nid_spore_burst_0.wav",
+      "variants": [
+        "sfx/nid_spore_burst_0.wav",
+        "sfx/nid_spore_burst_1.wav",
+        "sfx/nid_spore_burst_2.wav"
+      ],
+      "volume": 0.55,
+      "maxVoices": 3,
+      "durationSec": 0.536,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 5
+    },
+    "nid_crush": {
+      "file": "sfx/nid_crush_0.wav",
+      "variants": [
+        "sfx/nid_crush_0.wav",
+        "sfx/nid_crush_1.wav",
+        "sfx/nid_crush_2.wav"
+      ],
+      "volume": 0.7,
+      "maxVoices": 2,
+      "durationSec": 0.589,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 8
     },
     "carnifex_roar": {
-      "file": "sfx/carnifex_roar.wav",
-      "volume": 0.65,
+      "file": "sfx/carnifex_roar_0.wav",
+      "variants": [
+        "sfx/carnifex_roar_0.wav",
+        "sfx/carnifex_roar_1.wav"
+      ],
+      "volume": 0.85,
+      "maxVoices": 2,
+      "durationSec": 2.02,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 9,
+      "duck": 0.4
+    },
+    "carnifex_charge": {
+      "file": "sfx/carnifex_charge_0.wav",
+      "variants": [
+        "sfx/carnifex_charge_0.wav",
+        "sfx/carnifex_charge_1.wav"
+      ],
+      "volume": 0.8,
+      "maxVoices": 2,
+      "durationSec": 1.835,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 8,
+      "duck": 0.25
+    },
+    "carnifex_step": {
+      "file": "sfx/carnifex_step_0.wav",
+      "variants": [
+        "sfx/carnifex_step_0.wav",
+        "sfx/carnifex_step_1.wav",
+        "sfx/carnifex_step_2.wav",
+        "sfx/carnifex_step_3.wav"
+      ],
+      "volume": 0.55,
+      "maxVoices": 3,
+      "durationSec": 0.569,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 4
+    },
+    "dust_land": {
+      "file": "sfx/dust_land_0.wav",
+      "variants": [
+        "sfx/dust_land_0.wav",
+        "sfx/dust_land_1.wav",
+        "sfx/dust_land_2.wav"
+      ],
+      "volume": 0.35,
+      "maxVoices": 4,
+      "durationSec": 0.095,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 2
+    },
+    "synapse_drone": {
+      "file": "sfx/synapse_drone_0.wav",
+      "variants": [
+        "sfx/synapse_drone_0.wav"
+      ],
+      "volume": 0.4,
       "maxVoices": 1,
-      "durationSec": 0.74,
-      "source": "procedural"
+      "durationSec": 4,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 5,
+      "loop": true
+    },
+    "amb_swarm": {
+      "file": "sfx/amb_swarm_0.wav",
+      "variants": [
+        "sfx/amb_swarm_0.wav"
+      ],
+      "volume": 0.45,
+      "maxVoices": 1,
+      "durationSec": 6,
+      "source": "procedural",
+      "bus": "ambience",
+      "priority": 3,
+      "loop": true
+    },
+    "amb_hive": {
+      "file": "sfx/amb_hive_0.wav",
+      "variants": [
+        "sfx/amb_hive_0.wav"
+      ],
+      "volume": 0.2,
+      "maxVoices": 1,
+      "durationSec": 8,
+      "source": "procedural",
+      "bus": "ambience",
+      "priority": 1,
+      "loop": true
     }
   },
   "music": {
