@@ -77,6 +77,8 @@ After any change, run: `npm run assets && npm test && npm run dev`.
      // group: [min, max], boss: true,                // bosses spawn from director.bosses
      contactDamage: 18, contactCooldown: 0.8,
      threat: 6,                   // director cost; higher = rarer, groups smaller
+     points: 12,                  // personal score for the marine who kills it
+     // spawner: { enemy, interval, max, range },   // children: count toward the wave, never drop
      medkitDropChance: 0.08,
      sprite: 'enemy_lictor',
      sfx: { death: 'nid_die_big', attack: 'nid_slash', roar: 'nid_shriek' },
@@ -88,7 +90,7 @@ After any change, run: `npm run assets && npm test && npm run dev`.
 
 2. **When it spawns:** give it a weight in one or more `waveTable` entries in
    `packages/shared/src/data/director.ts`:
-   `{ fromSec: 180, weights: { hormagaunt: 9, termagant: 5, genestealer: 3, lictor: 1 } }`.
+   `{ fromWave: 7, weights: { hormagaunt: 9, termagant: 5, genestealer: 3, lictor: 1 } }`.
 3. **Sprite:** add `enemy_lictor` to `tools/src/sprites/tyranids.ts`. It faces +X, uses the hive
    palette (`palette.ts`), and has `anims: { walk, attack, death }` frame ranges (see
    [ART_PIPELINE.md](ART_PIPELINE.md)). Optionally add an `ENEMY_VISUALS` entry in
@@ -101,16 +103,28 @@ After any change, run: `npm run assets && npm test && npm run dev`.
 
 Tuning lives in `packages/shared/src/data/director.ts`:
 
-- `budget`: threat points per second, `(base + perMinute · minutes^exponent) · teamScale`.
-- `teamScale`: the multiplier for 1-4 marines.
-- `maxAlive`: the alive cap.
-- `hpScalePerMinute`: enemy HP growth.
-- `surge`: periodic big waves.
-- `crates`: weapon crate timing.
-- `bosses`: which enemy leads boss waves, on which surge, and how many per team size.
-- `waveTable`: the spawn weights over time.
+- `teamScale`: the multiplier for 1-8 marines (one entry per team size up to `MAX_PLAYERS`;
+  validation fails if one is missing).
+- `waves.budget`: each wave's total threat, `(base + perWave · (wave − 1))^exponent · teamScale`.
+  The wave is finite: the next one starts only when it is fully cleared.
+- `waves.pace`: threat sent out per second during a wave; `waves.flankPoints`: how many breaches
+  a wave uses at once.
+- `waves.firstDelay` / `waves.breather`: seconds before wave 1 and between waves.
+- `waves.hpScalePerWave`: enemy HP growth. `waves.maxChildren`: cap on spawned children alive.
+- `waves.reveal`: anti-stall (reveal and hunt when `remaining` or `fraction` are left, or after
+  `afterSec`). `waves.forceNextAfter`: optional hard timeout per wave (omit it to disable).
+- `maxAlive`: the alive cap (`base + perWave`, up to `cap`).
+- `spawnPoints`: the breaches `{ id, x, y, kind: 'breach' | 'tunnel' | 'vent' }`; `spawn`: the
+  telegraph times and group sizes.
+- `drops`: medkits and crates per wave (`base + perMarine × marines`). `crates`: crate timing.
+- `bosses`: which enemy leads boss waves, on which wave, and how many per team size.
+- `waveTable`: the spawn weights by wave (`fromWave`).
 
-Measure with `npm run sim -- --bot=kite --seeds=8 --sizes=1,2,4`.
+Measure with `npm run sim -- --bot=kite --seeds=8 --sizes=1,2,4,8`.
+
+Squad-wide survival tunables live in `PLAYER` (`shared/src/constants.ts`): `bleedOutTime`
+(60 s since v0.4, was 20 s), `reviveTime` (3 s) and `reviveRadius`. Weapons can be **braced**
+(`braceDelay`, `braceFireRateMult`, `braceSpreadMult`, see the Heavy Bolter).
 
 ## Add or replace a sound or music track
 
@@ -130,7 +144,9 @@ Measure with `npm run sim -- --bot=kite --seeds=8 --sizes=1,2,4`.
   - Audition: `npm run assets`, then `/assets/generated/preview.html`, or add the key to the
     scripted mix in `tools/src/audioPreview.ts` and run `npm run audio-preview -w @sms/tools`.
 - **Procedural music:** add a `SongSpec` to `tools/src/audio/music.ts`:
-  `{ key, style: 'battle'|'menu'|'tension', bpm, bars, root, scale, progression, seed, volume }`.
+  `{ key, style: 'menu'|'combat'|'combatDrive'|'boss'|'tension', bpm, bars, root, scale, progression, seed, volume }`.
+  In game the client plays `combat` and layers the `combat_drive` stem in with the number of live
+  Tyranids (silent during a breather), and switches to `boss` while a boss is on the field.
   Tracks the client plays are listed in `CORE_MUSIC`.
 - **Hand-made or AI-made audio:** drop `tools/assets-src/overrides/sfx/<key>.wav` (one take) or
   `<key>_0.wav`, `<key>_1.wav`, … (variants), or `.../music/<key>.wav`. They are copied as-is, and
@@ -146,7 +162,8 @@ an image model or an artist.
 ## Add a chapter (player colour scheme)
 
 Append a `ChapterDef` to `packages/shared/src/data/chapters.ts`: `{ id, name, motto, primary,
-trim, detail, lens, icon }`, where `icon` is one of `chevron | drop | blade | tower | fang`. The
+trim, detail, lens, icon }`, where `icon` is one of `chevron | drop | blade | tower | fang | flame | bolt | feather`. There
+must be at least `MAX_PLAYERS` (8) chapters, one per squad slot. The
 sprite generator draws `marine_<id>`, `_top`, `_down` and `badge_<id>` automatically. Chapters are
 sent on the wire by index, so append new ones at the end. Use only simple geometric badges of
 your own. Never copy real chapter iconography.

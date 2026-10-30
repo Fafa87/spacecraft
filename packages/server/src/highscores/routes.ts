@@ -83,9 +83,10 @@ export async function highscoreRoutes(
       const raw = req.query.teamSize ?? '0';
       const ts = raw === '0' ? 0 : parseTeamSize(raw);
       if (ts === null)
-        return reply
-          .code(400)
-          .send({ error: 'invalid_team_size', message: 'teamSize must be 0-4' });
+        return reply.code(400).send({
+          error: 'invalid_team_size',
+          message: `teamSize must be 0-${HIGHSCORE_LIMITS.maxTeamSize}`,
+        });
       return { teamSize: ts, entries: await repo.topPlayers(ts, clampLimit(req.query.limit)) };
     },
   );

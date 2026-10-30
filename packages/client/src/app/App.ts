@@ -279,7 +279,7 @@ export class App {
     const ui = createGameOverScreen(
       result,
       summary,
-      { store: this.store, canRestart: conn.session.isOwner, colors },
+      { store: this.store, canRestart: conn.session.isOwner, colors, content: this.content },
       {
         again: () => {
           // Back to lobby; solo auto-starts from there, squads return to the room screen.

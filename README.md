@@ -8,10 +8,12 @@
 > content data and can be swapped for neutral ones (`?names=generic`, see "Renaming").
 
 Top-down co-op swarm survival for the browser, styled after Warhammer 40,000 tabletop. A squad of
-**1-4 Primaris-style battle-brothers** holds a ruined hive city against an endless **Tyranid**
-swarm in Behemoth colours. The swarm escalates in surges, a **Carnifex** leads every boss wave,
-and wargear unlocks as you survive. **Survival time is the only score.** Each team size has its
-own table, and each game version (major.minor) has its own leaderboard.
+**1-8 Primaris-style battle-brothers** holds a ruined hive city against the **Tyranid** swarm in
+Behemoth colours. The swarm comes in **finite waves** that pour out of marked hive breaches; clear
+a wave to earn a breather, and a **Carnifex** leads every 3rd wave. Wargear unlocks as you survive.
+Squads are ranked by **survival time** (one table per team size, 1-8), and every marine also
+earns **personal points** for kills, ranked on an individual leaderboard. Each game version
+(major.minor) has its own leaderboards.
 
 **Play it:** https://fafa87.github.io/spacecraft/ (latest). Frozen older builds:
 https://fafa87.github.io/spacecraft/v0.1.0/, https://fafa87.github.io/spacecraft/v0.2.0/ and the menu's **Previous versions** link. It is a
@@ -46,32 +48,66 @@ different one. Shoulder badges are simple geometric shapes of our own, not chapt
 | Dark Angels    | green / bone     | blade   |
 | Imperial Fists | yellow / black   | tower   |
 | Space Wolves   | grey-blue / gold | fang    |
+| Salamanders    | green / black    | flame   |
+| White Scars    | bone / red       | bolt    |
+| Raven Guard    | black / white    | feather |
 
-**Wargear** (keys 1-7, the wheel or Q/E; unlocks over survival time, also found in supply crates):
+There are as many chapters as squad slots (`MAX_PLAYERS` = 8; content validation fails if a
+chapter is missing), so every marine of a full squad has its own colours.
 
-| #   | Weapon        | Unlocks | Play                                                                                                              |
-| --- | ------------- | ------- | ----------------------------------------------------------------------------------------------------------------- |
-| 1   | Bolt Rifle    | 0:00    | Reliable mass-reactive bolts that burst on impact                                                                 |
-| 2   | Power Sword   | 0:45    | Wide arc sweeps that cut through crowds; the blade's cell recharges                                               |
-| 3   | Heavy Bolter  | 1:30    | Belt-fed explosive bolts with high suppression; slows you down                                                    |
-| 4   | Flamer        | 2:30    | Short promethium cone that melts swarms                                                                           |
-| 5   | Plasma Gun    | 4:00    | Piercing shots. Shots past the heat line are **supercharged**; a full gauge **overheats**: it vents and burns you |
-| 6   | Meltagun      | 5:30    | Short-range thermal lance for bosses                                                                              |
-| 7   | Frag Grenades | 7:00    | Lobbed blast charges                                                                                              |
+**Wargear** (keys 1-6, the wheel or Q/E; unlocks over survival time, also found in supply crates):
+
+| #   | Weapon        | Unlocks | Play                                                                                                                    |
+| --- | ------------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 1   | Bolt Rifle    | 0:00    | Reliable mass-reactive bolts that burst on impact                                                                       |
+| 2   | Heavy Bolter  | 1:00    | Belt-fed explosive bolts; slows you down. **Brace**: stand still for 0.25 s and it fires 70% faster with a tighter cone |
+| 3   | Flamer        | 2:05    | Short promethium cone that melts swarms                                                                                 |
+| 4   | Plasma Gun    | 3:20    | Piercing shots. Shots past the heat line are **supercharged**; a full gauge **overheats**: it vents and burns you       |
+| 5   | Meltagun      | 4:45    | Short-range thermal lance for bosses                                                                                    |
+| 6   | Frag Grenades | 6:10    | Lobbed blast charges                                                                                                    |
+
+The Power Sword was removed in v0.4.
 
 **The swarm** (Behemoth-style palette: deep blue-purple carapace, red flesh, bone talons and yellow eyes; Genestealers in purple):
 
-| Tyranid         | Role                                                                                              |
-| --------------- | ------------------------------------------------------------------------------------------------- |
-| Hormagaunt      | fast melee swarm; leaps the last metres                                                           |
-| Termagant       | ranged gaunt spitting fleshborer beetles                                                          |
-| Ripper Swarm    | tiny worms in big clumps                                                                          |
-| Genestealer     | four-armed, purple, very fast                                                                     |
-| Tyranid Warrior | **synapse**: nearby gaunts are faster and hit harder (violet halo)                                |
-| Ravener         | **burrows** (untargetable dust trail) and erupts beside a marine                                  |
-| Biovore         | living artillery that lobs drifting spore mines                                                   |
-| Spore Mine      | floating gas-bag; bursts in acid near marines or when shot                                        |
-| Carnifex        | **boss**: rears up, then charges in a straight line. Arrives on surge 3 and every 3rd surge after |
+| Tyranid         | Role                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------ |
+| Hormagaunt      | fast melee swarm; leaps the last metres                                                    |
+| Termagant       | ranged gaunt spitting fleshborer beetles                                                   |
+| Ripper Swarm    | tiny worms in big clumps                                                                   |
+| Genestealer     | four-armed, purple, very fast                                                              |
+| Tyranid Warrior | **synapse**: nearby gaunts are faster and hit harder (violet halo)                         |
+| Ravener         | **burrows** (untargetable dust trail) and erupts beside a marine                           |
+| Biovore         | living artillery that lobs drifting spore mines                                            |
+| Spore Mine      | floating gas-bag; bursts in acid near marines or when shot                                 |
+| Carnifex        | **boss**: rears up, then charges in a straight line. Leads wave 3 and every 3rd wave after |
+
+**Waves, spawn points and scoring (v0.4).**
+
+- **Finite waves.** Each wave has a fixed, data-driven enemy budget
+  (`DIRECTOR.waves.budget`, scaled by team size 1-8 through `teamScale`). The next wave starts
+  only after the whole wave is dead, children included (Biovore spore mines are capped and
+  finite). Then comes an 8 s breather with **WAVE N CLEARED** and a countdown. The HUD shows how
+  many Tyranids are left. Stragglers can't stall a run: when only a few are left (or after 30 s)
+  they are revealed on the minimap and hunt the squad faster, and a wave is forced on after 240 s.
+  Medkit and crate drops are capped per wave (scaled by squad size), and children never drop.
+- **Spawn points.** Tyranids pour out of six fixed hive breaches (four bulkheads at the arena
+  edges, two floor vents), drawn on the floor and on the minimap. A breach pulses for 1.1 s
+  (2.2 s for a boss) before a group emerges, and spawns avoid breaches right next to a marine.
+- **Personal points.** Every kill gives its marine the enemy's `points` (Hormagaunt 2,
+  Termagant 3, Ripper 1, Genestealer 5, Warrior 15, Ravener 10, Biovore 8, Spore Mine 1,
+  Carnifex 50). The HUD shows each marine's points. The game-over screen breaks the squad down
+  (points and share, kills, top kills by type, damage, when they fell, the MVP) and the
+  leaderboards have a **MARINES · POINTS** board: all team sizes or one at a time.
+- **Downed marines** bleed out after **60 s** (was 20 s before v0.4); a revive still takes 3 s
+  next to them.
+- **Units above terrain.** Ruins and debris are drawn under every marine, Tyranid and
+  projectile, so nothing hides behind scenery.
+- **Escape / ⏸** opens a "leave the game?" dialog. Solo play pauses while it is open; in a squad
+  the game keeps running (the dialog says so), and a leaving host closes the room as before.
+- **Music** is Chaos Gate-style gothic: organ, choir, bells and war drums. A combat drive layer
+  swells with the size of the swarm and falls silent between waves, a boss track takes over while
+  a Carnifex is on the field, and a sting plays when a wave is cleared.
 
 All stats live in `packages/shared/src/data/` (`weapons.ts`, `enemies.ts`, `director.ts`,
 `chapters.ts`, `naming.ts`); see [docs/ADDING_CONTENT.md](docs/ADDING_CONTENT.md).
@@ -116,10 +152,12 @@ ways. The PC controls are unchanged.
 - **Mouse:** aim.
 - **Left mouse button:** fire.
 - **R:** reload.
-- **1-9, mouse wheel or Q/E:** switch weapon.
+- **1-6, mouse wheel or Q/E:** switch weapon.
+- **Esc:** "leave the game?" dialog (pauses solo play).
 - **M:** mute. Per-bus volumes (master, weapons, Tyranids, ambience, interface, music) are in
   the menu under **SOUND MIX** and are remembered in this browser.
-- **Revive:** stand next to a downed teammate for 3 seconds.
+- **Revive:** stand next to a downed teammate for 3 seconds (they bleed out after 60 s).
+- **Heavy Bolter brace:** stop moving to plant your feet; it fires faster.
 
 **Phone / tablet (standard twin-stick)**
 
@@ -129,7 +167,7 @@ ways. The PC controls are unchanged.
   and **auto-fires** once it is past a 20% deadzone. Let go to stop firing. While you only move,
   the marine faces the way it is walking.
 - **Weapon slots** (right edge): tap an unlocked slot to switch to it.
-- **Bottom buttons:** ⟳ reload (large), 🔊 mute and ⛶ fullscreen (fullscreen also locks
+- **Bottom buttons:** ⟳ reload (large), 🔊 mute, ⏸ leave dialog and ⛶ fullscreen (fullscreen also locks
   landscape where the browser allows it).
 - **Multi-touch** works: move, aim and tap buttons at the same time. Page scroll, pinch-zoom,
   pull-to-refresh and long-press menus are disabled in game.
@@ -182,6 +220,7 @@ public PeerJS cloud, so it needs nothing extra.
 | `npm run test:rules`                  | Firestore security-rules tests in the emulator (needs Java 11+), including the REST store end to end.                                          |
 | `npm run check:firestore`             | Live smoke test against the configured Firebase project: create, read, query, duplicate and invalid writes.                                    |
 | `npm run sim -- --bot=kite --seeds=6` | Headless balance simulation: bot survival statistics per team size.                                                                            |
+| `npm run net:load`                    | Network load probe: 8 bot clients in a heavy late wave; host upload per client and total, snapshot size, JSON vs protocol v5.                  |
 | `npm run contact-sheet -w @sms/tools` | Renders the labelled unit sheet `docs/wh-sprites.png` from the generated atlas.                                                                |
 | `npm run audio-preview -w @sms/tools` | Renders the 32 s scripted sound showcase to `docs/audio-preview.wav` and `.mp3` (ffmpeg).                                                      |
 | `npm run deploy:pages [-- --push]`    | Versioned GitHub Pages deploy: latest at `/`, frozen `/vX.Y.Z/`, updated `versions.json`; a normal commit on `gh-pages`, never forced.         |
@@ -269,13 +308,15 @@ packages/
     src/sim/         deterministic simulation: world, systems/ (movement, weapons, projectiles,
                      enemies, director, combat, pickups, players), snapshot builder, spatial hash
     src/session/     HostSession (authoritative lobby + game loop), ClientSession, Scheduler
-    src/net/         wire protocol, codec, Link abstraction + in-memory LocalLink pair
+    src/net/         wire protocol, binary delta snapshot codec (wire.ts), Link abstraction +
+                     in-memory LocalLink pair
     src/highscore/   RunResult/HighscoreEntry types, validation & plausibility checks
     src/assets/      asset manifest format + referencedAssetKeys(content)
   server/   @sms/server: Fastify highscore API, highscore repositories, PeerJS server, WS game host
   client/   @sms/client: Vite + Canvas2D (app/, game/, net/, render/, audio/, ui/, highscores/)
 tools/      @sms/tools: procedural sprites → atlas, layered DSP SFX recipes, music, manifest, preview
-scripts/    smoke.ts, browser-smoke.ts, mobile-check.ts, balance-sim.ts, deploy-pages.ts, Firestore helpers
+scripts/    smoke.ts, browser-smoke.ts, mobile-check.ts, balance-sim.ts, net-load.ts, deploy-pages.ts,
+            Firestore helpers
 docs/       ARCHITECTURE.md, ADDING_CONTENT.md, ART_PIPELINE.md, screenshots
 ```
 
@@ -289,7 +330,8 @@ covers sprite sizes, animation frames and how to drop in your own art.
 - **Host-authoritative, transport-agnostic.**
   - One `HostSession` runs the simulation at a fixed **30 Hz**. It owns the lobby, applies the
     players' inputs, broadcasts snapshots and submits the result.
-  - Clients are `ClientSession`s and only send inputs.
+  - Clients are `ClientSession`s and only send inputs. Up to **8 marines** per session
+    (`MAX_PLAYERS`).
   - Both talk through a tiny `Link` interface, so the same code runs over:
     - **LocalLink** (in-memory) for **solo**: the browser is host and client.
     - **PeerJS / WebRTC data channels** for **P2P co-op** (the default). The player who
@@ -300,8 +342,15 @@ covers sprite sizes, animation frames and how to drop in your own art.
 - **Client prediction and reconciliation.** The local marine's movement is predicted with the
   same pure `stepPlayerMovement` the host uses. Unacknowledged inputs are replayed on each
   snapshot, and small errors are smoothed away.
-- **Interpolation.** Other entities are rendered about 2.5 ticks behind, from a `SnapshotBuffer`
-  with a smoothed clock offset.
+- **Interpolation.** Other entities are rendered one snapshot interval + 1.5 ticks behind, from a
+  `SnapshotBuffer` with a smoothed clock offset.
+- **Bandwidth (protocol v5).** Network snapshots go out at **15 Hz** (the sim stays at 30 Hz;
+  solo gets every tick) as **binary, per-link delta frames**: both ends extrapolate every entity
+  and only corrections are sent, strings are sent once, and Tyranids far outside a client's view
+  are refreshed every 4th snapshot. In a heavy wave-12 fight with 8 marines (about 93 Tyranids
+  on the field, up to 152) this cut the host's upload from **12.9 Mbit/s** (v4 JSON at 30 Hz,
+  P2P host + 7 remote marines) to **0.93 Mbit/s**. `npm run net:load` measures it; see
+  docs/ARCHITECTURE.md "Bandwidth".
 - **Team size** is the number of marines at the start of the run, and decides the highscore table.
   Downed marines can be revived; the run ends when no marine is left standing.
 
@@ -320,13 +369,15 @@ covers sprite sizes, animation frames and how to drop in your own art.
      re-submitted automatically the next time the server answers.
    - **Server rejects it** (4xx): reported as `failed`, so the run never pretends to have counted.
    - With the dedicated WS host, the **server itself** submits straight to the repository.
-3. `GET /api/highscores?limit=10` returns all four tables. `GET /api/highscores/:teamSize?limit=N`
+3. `GET /api/highscores?limit=10` returns all eight tables (team sizes 1-8). `GET /api/highscores/:teamSize?limit=N`
    (or `?teamSize=N`) returns one table, ordered by survival time (desc), earlier submission wins
-   ties. `limit` is clamped to 1-100.
+   ties. `limit` is clamped to 1-100. `GET /api/scores?teamSize=N` (0 or none = all team sizes)
+   returns the individual leaderboard by personal points.
 4. Storage goes through the `HighscoreRepository` interface (`memory`, `json` and `sqlite`
    implementations; add Postgres etc. by implementing 5 methods).
 5. **Validation and limits** (shared `validateRunResult`, also run by the client before sending):
-   - team size 1-4, and `players.length === teamSize`;
+   - team size 1-8, and `players.length === teamSize`;
+   - optional `playerScores` / `playerKills` (v0.4+), one per marine, capped by survival time;
    - names sanitized to 1-16 characters, with control characters and `<>` stripped;
    - survival between 1 s and 4 h; `runId` pattern; mode whitelist; no future `endedAt`;
    - plausibility caps on kills per second per marine and on the wave number for the time
@@ -365,7 +416,8 @@ SDK (`packages/client/src/highscores/FirestoreHighscoreStore.ts`, about 3 KB).
   - The rules enforce `board ==` the path segment `==` major.minor of `version`, so a v0.2 client
     can't post into another version's board.
   - All boards use the collection id `highscores`, so the **one existing composite index**
-    (`teamSize` ASC, `survivalMs` DESC, scope Collection) serves every board. No new index is needed.
+    (`teamSize` ASC, `survivalMs` DESC, scope Collection) serves every board; the v0.4 individual
+    rows in `boards/{board}/scores` need one more (`teamSize` ASC, `score` DESC).
   - Local fallback tables are namespaced in the same way (`sms.highscores.board-0.2`). The v0.1.0
     table `sms.highscores.v1` on the same github.io origin is left alone. Name, mute and chapter
     preferences are shared by all versions.
@@ -400,7 +452,15 @@ SDK (`packages/client/src/highscores/FirestoreHighscoreStore.ts`, about 3 KB).
    - fields `teamSize` **Ascending** and `survivalMs` **Descending**
    - query scope **Collection**
 
-   This index is also in `firestore.indexes.json`. Until it is ready, the first query error links
+   v0.4 adds a second one for the individual leaderboard:
+   - collection `scores`
+   - fields `teamSize` **Ascending** and `score` **Descending**
+   - query scope **Collection**
+
+   (The "all team sizes" marines board orders by `score` alone, which Firestore indexes
+   automatically.)
+
+   Both indexes are also in `firestore.indexes.json`. Until it is ready, the first query error links
    straight to the pre-filled form.
 
 5. **Values to hand back / configure:**
@@ -426,11 +486,15 @@ and enable App Check later.
 
 - Public read, create only (no update or delete). Only `boards/{major.minor}/highscores/{runId}`
   and the legacy `highscores/{runId}` are reachable.
-- Exactly the 9 board fields (or the 8 legacy fields, without `board`), with the right types (ints are real ints).
+- Exactly the board fields: 11 from v0.4 (with `playerScores` / `playerKills`), 9 on the frozen
+  0.2 / 0.3 boards, or the 8 legacy fields without `board`, with the right types (ints are real ints).
 - `board` equals the path segment and the major.minor of `version`.
-- `teamSize` 1-4, and `names.length == teamSize`.
+- `teamSize` 1-8, and `names.length == teamSize`.
+- v0.4+ runs carry `playerScores` and `playerKills` (one per marine, plausible for the time
+  survived). Each marine's personal score is also written to `boards/{board}/scores/{runId}-{slot}`,
+  which must match its run.
 - `survivalMs` between 1 s and 4 h. Kills at most 25/s per marine plus 50, and a wave cap that
-  follows the surge schedule.
+  follows the wave schedule (a wave needs at least the breather after the previous one).
 - A mode whitelist, the version pattern, and `timestamp == request.time` (no backdating).
 - Names: 1-16 characters (letters, digits and `.,!?'_-` plus inner spaces) and a profanity
   blocklist (English + Polish). The client filter is a superset: it also folds leetspeak and
@@ -461,7 +525,7 @@ real fix).
 `packages/client/public/assets/generated/` (gitignored, always regenerated):
 
 - `atlas.png`: 95 procedurally drawn sprites (236 frames), drawn at 2× with `@napi-rs/canvas`
-  and shelf-packed into a 2048×4096 atlas. It holds 5 chapter marines (walk, torso and downed
+  and shelf-packed into a 2048×4096 atlas. It holds 8 chapter marines (walk, torso and downed
   pose), 9 Tyranids with walk/attack/death strips, wargear icons, held weapons and crates, bolts
   and plasma, flames, blood and ichor decals, Imperial floor tiles, hive ruins and creep, FX and
   shoulder badges.
@@ -472,8 +536,8 @@ real fix).
   noise, biquads, waveshaping, compression, reverb). One-shots get 2–4 random variants each, and
   the client picks one per play without immediate repeats. They cover every weapon (bolt rifle
   boom/whoosh/impact, heavy bolter with belt rattle, flamer ignition → seamless loop → tail,
-  plasma charge whine/discharge/vent plus a heat-following whine, meltagun "fwoomp", power sword
-  hum/crackle/chop, frag blast with debris), reloads, armour hits and pain grunts, and the
+  plasma charge whine/discharge/vent plus a heat-following whine, meltagun "fwoomp", frag blast
+  with debris), reloads, armour hits and pain grunts, and the
   Tyranids: swarm and hive ambience beds, hisses, leap shrieks and wind-ups, Genestealer
   skitter, Carnifex roar/steps/charge, the Warrior synapse drone, Biovore "thoomp", spore pops
   and the Ravener burrow rumble. `npm run audio-preview -w @sms/tools` renders the scripted
@@ -481,7 +545,8 @@ real fix).
 - **Mixer** (client): buses for weapons, Tyranids, ambience, interface and music, a bus
   compressor, a 32-voice limit with priority stealing, distance attenuation and stereo pan from
   the listener, music ducking on big explosions and roars, and persisted per-bus sliders.
-- `music/*.wav`: 3 procedural gothic tracks (`menu`, `battle`, `gameover`) with an additive pipe
+- `music/*.wav`: 5 procedural gothic tracks (`menu`, `combat`, the `combat_drive` stem, `boss`,
+  `gameover`) with an additive pipe
   organ, a formant "aah" choir, bells and war drums. They are seeded, deterministic and loop
   seamlessly.
 - `manifest.json`: the frame rects, anchors, animation ranges, volumes, voice limits and
@@ -496,7 +561,9 @@ runs in a unit test.
 
 ## Testing
 
-- `npm test`: 149 unit/integration tests (vitest).
+- `npm test`: unit/integration tests (vitest), including the protocol v5 codec
+  (`wire.test.ts`: lossless vs JSON, interest-culled rows converge, JSON fallback) and PeerLink over
+  fake raw/JSON data channels (`peerLink.test.ts`).
   - Shared: rng, movement, swept projectile collision, determinism, director escalation,
     revive and game over, content and highscore validation, and a full HostSession over local
     links with a ManualScheduler. `tyranids.test.ts` covers the Hive Siege content: weapon
@@ -543,13 +610,13 @@ runs in a unit test.
 
 - **Netcode:**
   - Run the browser host in a Web Worker, so a backgrounded host tab is not throttled.
-  - Binary snapshot codec with delta compression, and an unreliable/unordered data channel for
-    snapshots.
+  - An unreliable/unordered data channel for snapshots (v5 deltas assume reliable + ordered
+    links today; they would need acks).
   - TURN server config for strict NATs.
   - Host migration.
 - **Gameplay:**
   - Flyers (Gargoyles), a Hive Tyrant / broodlord boss with spawns, Lictor ambushes.
-  - Perks/wargear upgrades between surges, a jump-pack dash, chapter-specific traits.
+  - Perks/wargear upgrades between waves, a jump-pack dash, chapter-specific traits.
   - Obstacles and maps (the arena is open floor today).
 - **Balance:** tune with `npm run sim` (bots survive about 1-3 min today; humans who kite and
   revive do better).

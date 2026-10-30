@@ -92,5 +92,5 @@ its own) through a compressor, limits the total to 32 voices by `priority`, atte
 by distance from the listener, and ducks the music on big blasts.
 
 `npm run audio-preview -w @sms/tools` renders a 32-second scripted battle mix (bolters, heavy
-bolter, flamer, plasma with overheat, melta, sword, frags, a Hormagaunt pack leaping, a Carnifex
+bolter, flamer, plasma with overheat, melta, frags, a Hormagaunt pack leaping, a Carnifex
 charge, the swarm bed) to `docs/audio-preview.wav` and `docs/audio-preview.mp3` (needs ffmpeg).

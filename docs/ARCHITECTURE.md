@@ -22,7 +22,7 @@
                 weapons.ts      fire, reload, switch, unlocks over time
                 projectiles.ts  swept-segment collision (no tunnelling), pierce, explosions
                 enemies.ts      melee / ranged / kamikaze behaviours, separation via SpatialHash
-                director.ts     threat budget ↑ over time, wave table, surges, weapon crates
+                director.ts     finite waves (budget per wave), spawn points, wave table, drops, crates
                 combat.ts       damage, armor, knockback, explosions, kill credit
                 pickups.ts      medkits and weapon crates
               snapshot.ts      compact per-tick snapshot (arrays for enemies/projectiles)
@@ -91,12 +91,53 @@
 - **Prediction:** the client applies its input immediately with `stepPlayerMovement`. On each
   snapshot it resets to the authoritative position and replays pending inputs. Corrections under
   120 px become a decaying visual offset; anything larger snaps.
-- **Interpolation:** remote entities render at `serverTime - 2.5 ticks` from a SnapshotBuffer
-  whose clock offset adapts quickly to early packets and slowly to late ones.
-- **Events** (`shot`, `hit`, `kill`, `explode`, `down`, `revive`, `unlock`, `surge`, …) ride in
+- **Interpolation:** remote entities render at `serverTime - delay` from a SnapshotBuffer whose
+  clock offset adapts quickly to early packets and slowly to late ones. The delay adapts to the
+  snapshot spacing: `max(base, (tickGap + 1.5) × tick)`, i.e. about 3.5 ticks at 15 Hz.
+- **Events** (`shot`, `hit`, `kill`, `explode`, `down`, `revive`, `unlock`, `surge` (wave start), `breach`, `cleared`, …) ride in
   snapshots and drive SFX and particles on every client, so FX never need extra messages.
 - **Solo** uses the same path over an in-memory LocalLink pair, so there is exactly one
   code path to test.
+
+### Bandwidth (protocol v5)
+
+Network sessions snapshot every `NET.snapshotEvery` = 2 sim ticks (**15 Hz**; solo over LocalLink
+stays at 30 Hz). Events produced on the skipped tick are queued and ride in the next snapshot,
+and the final snapshot is always sent when the run ends.
+
+`shared/src/net/wire.ts` is a stateful codec, one per link (`createWireCodec()`; WsLink on both
+sides and PeerLink when the DataConnection uses `serialization: 'raw'`):
+
+- Non-snapshot messages are JSON strings. A snapshot becomes a binary frame (magic `0x5a`)
+  whenever it fits the format, otherwise it falls back to JSON.
+- Players, enemies and projectiles are id-keyed tables. Encoder and decoder both
+  **extrapolate** every row from its last measured per-snapshot delta; a row is written only
+  where the real value differs from the prediction (bitmask + varints), plus spawns and removals.
+  Jumps larger than `maxStep` (teleports, burrow) are not extrapolated.
+- Strings (ids, names) are interned and sent once per link.
+- `shot`, `hit` and `die` events are binary; shot positions and angles are relative to the
+  shooter's row. Other events stay JSON.
+- **Interest management** (`NET.interest`): enemies and projectiles outside a
+  ±1700 × ±1100 px box around the client's marine (well beyond any screen) are refreshed only
+  every `farEvery` = 4th snapshot, so their extrapolation error stays bounded (< 120 px in tests).
+- The codec learns its player id from `welcome` and resets on `start`. Links are reliable and
+  ordered, so no acks are needed. A pre-v5 peer that negotiates JSON serialization still gets
+  plain objects.
+
+Measured with `npm run net:load` (8 bot clients, wave 12, 93 Tyranids on average and 152 at
+peak, 30 s window):
+
+| Host upload                     | Snapshot avg / peak | Per client  | Dedicated (8 remote) | P2P host (7 remote) |
+| ------------------------------- | ------------------- | ----------- | -------------------- | ------------------- |
+| v4: JSON, 30 Hz                 | 7685 / 10254 B      | 1845 kbit/s | 14.76 Mbit/s         | 12.91 Mbit/s        |
+| JSON, 15 Hz                     | 7967 B              | 956 kbit/s  | 7.65 Mbit/s          | 6.69 Mbit/s         |
+| v5 binary deltas, 30 Hz         | 929 B               | 223 kbit/s  | 1.78 Mbit/s          | 1.56 Mbit/s         |
+| **v5 deltas + interest, 15 Hz** | **1111 / 1869 B**   | 133 kbit/s  | **1.07 Mbit/s**      | **0.93 Mbit/s**     |
+
+A v5 snapshot is about 19 B header, 66 B players, 437 B enemies, 282 B projectiles, 41 B
+pickups and 264 B events. The harness also decodes every frame and checks it against the JSON
+snapshot (0 mismatches over 5804 snapshots). Remaining levers if needed: a client-reported
+viewport for a tighter interest box, and deriving new projectiles from `shot` events.
 
 ### Transports
 
@@ -117,7 +158,7 @@ HostSession ──RunResult──► submitResult()
 server: routes.ts ─► RateLimiter ─► validateRunResult ─► HighscoreRepository (sqlite | json | memory)
 ```
 
-Tables are keyed by `teamSize` (1-4), ordered by `survivalMs DESC, submittedAt ASC`. `runId`
+Tables are keyed by `teamSize` (1-8, `MAX_PLAYERS`), ordered by `survivalMs DESC, submittedAt ASC`. `runId`
 makes submits idempotent. See the README for the anti-cheat roadmap.
 
 The remote store is picked in `client/src/highscores/index.ts`. Firestore is used when
@@ -132,6 +173,14 @@ Leaderboards are **per game version (major.minor)**. Firestore writes go to
 local fallback uses `sms.highscores.board-<major.minor>`. The frozen v0.1.0 build keeps the
 legacy top-level `highscores` collection. Because all boards share the collection id, one
 composite index serves every board.
+
+**Personal points (v0.4).** `EnemyDef.points` is credited to the killer (`Player.score`,
+`kills`, `killsBy`, `damage`, `downedAtMs`); the snapshot carries the points so the HUD can show
+them. `RunResult` gains `playerScores` and `playerKills`. In Firestore the run document carries
+them and the same commit writes one row per marine to `boards/{board}/scores/{runId}-{slot}`. The
+rules check every row against its run with `getAfter`. The game-over screen
+(`ui/screens/gameOver.ts`, `breakdownTable`) and the leaderboard panel (`ui/highscoreTable.ts`,
+boards SQUADS · SURVIVAL and MARINES · POINTS, team size tabs) read them.
 
 ## Hive Siege (40k) systems
 
@@ -157,9 +206,35 @@ composite index serves every board.
   glowing eyes; the Carnifex rears up, sways, paws the deck and roars. The dash stretches the
   sprite with ghost trails, and landing throws dust (and plays `dust_land` / a step).
 
-- **Boss waves.** `director.bosses` spawns the boss on surge `firstSurge` and every `everySurge`
+- **Finite waves.** `sim/systems/director.ts` alternates `breather` and wave phases. Each wave's
+  budget is `(base + perWave × (n−1))^exponent × teamScale[size−1]`; it is spent at `pace` threat
+  per second, split across 2-3 spawn points. The wave ends when the budget is spent and nothing is
+  alive (children such as spore mines count, capped by `maxChildren`). Then the `cleared` event
+  fires and the next wave starts after `breather` s, shown as a countdown. The anti-stall
+  `reveal` marks stragglers and sends them hunting the squad faster (`hunt` event);
+  `forceNextAfter` starts the next wave anyway. Drops per wave are capped by `drops`; children
+  never drop. Snapshots carry `wv {r, t, a, nx}` (remaining, total, active, next-wave countdown)
+  for the HUD.
+- **Spawn points.** `director.spawnPoints` are fixed breaches. A spawn group is announced with a
+  `breach` event and a telegraph (1.1 s, 2.2 s for bosses) before it emerges (`swarm`), and
+  `Snapshot.sp` carries each breach's state for the floor markers and minimap; points closer
+  than `pointMinDistance` to a marine are skipped. Burrowing Raveners still use the ring around a
+  marine.
+- **Boss waves.** `director.bosses` spawns the boss on wave `firstWave` and every `everyWave`
   after it. The count depends on team size and grows by `extraPerAppearance`. The `boss` event drives
   the horn and the banner.
+- **Heavy Bolter brace.** `WeaponDef.braceDelay / braceFireRateMult / braceSpreadMult`: after
+  standing still for `braceDelay` s the weapon fires faster with a tighter cone (`PlayerSnap`
+  flag; HUD tag and `brace_heavy` clunk).
+- **Downed marines.** `PLAYER.bleedOutTime` = 60 s (20 s before v0.4), `reviveTime` = 3 s.
+- **Render layers.** `Renderer` draws floor → creep → decals → ruins/props → breaches →
+  pickups → corpses → Tyranids → marines → projectiles → particles, so marines and Tyranids are always drawn above terrain.
+- **Leaving.** Escape / ⏸ opens a confirmation dialog (`GameClient.toggleLeaveDialog`). Solo
+  pauses the LocalLink host while it is open; in multiplayer the game keeps running. Confirming
+  goes through the normal leave path (a leaving host ends the room).
+- **Music.** `menu`, `combat` with a `combat_drive` stem whose level follows the number of live
+  Tyranids (silent in a breather), `boss` while a boss is on the field (6 s hysteresis) and
+  `gameover`, plus a `wave_cleared` sting (`GameClient.updateMusic`).
 - **Presentation** is client-only and data-keyed: `render/visuals.ts` (`WEAPON_VISUALS`,
   `ENEMY_VISUALS`, `PROJECTILE_VISUALS`), `game/fx.ts` (muzzle flashes, ichor, decals, distance-
   attenuated screen shake, sounds per event) and `render/hud.ts` (the brass-and-parchment HUD).

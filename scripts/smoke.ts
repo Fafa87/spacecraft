@@ -83,7 +83,7 @@ async function main(): Promise<void> {
     }
     const lastB = snaps.b.at(-1)!;
     check(
-      snaps.a.length > 40 && snaps.b.length > 40,
+      snaps.a.length > 20 && snaps.b.length > 20, // 15 Hz network snapshots (NET.snapshotEvery)
       `snapshots streamed (A ${snaps.a.length}, B ${snaps.b.length}, tick ${lastB?.tick})`,
     );
     const pa = lastB.players.find((p) => p.id === a.playerId)!;

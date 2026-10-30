@@ -274,6 +274,33 @@ button.primary:hover:not(:disabled) {
   padding: 7px 4px;
   font-size: 11px;
 }
+.tabs.sizes button {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 6px 2px;
+}
+.tabs button[hidden] {
+  display: none;
+}
+.tag.mvp {
+  background: rgba(255, 192, 74, 0.2);
+  color: var(--accent);
+}
+.summary tr.mvp td {
+  color: var(--accent);
+}
+.summary tr.total td {
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  font-weight: bold;
+}
+.summary td.kinds,
+.summary th.kinds {
+  font-size: 11px;
+  color: var(--muted, #9aa);
+}
+td.score {
+  font-weight: bold;
+}
 .tabs button.active {
   background: rgba(255, 192, 74, 0.2);
   border-color: var(--accent);
