@@ -1,0 +1,10 @@
+{
+  "name": "Spacecraft: Hive Siege",
+  "short_name": "Hive Siege",
+  "start_url": ".",
+  "scope": ".",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0a0806",
+  "theme_color": "#0a0806"
+}
