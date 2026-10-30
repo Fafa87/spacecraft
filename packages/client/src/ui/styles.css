@@ -579,24 +579,66 @@ body.touch-mode canvas#game.playing ~ .touch-layer {
 .tb.pressed {
   background: rgba(255, 192, 74, 0.45);
 }
-.rotate-hint {
+/* touch phone held in portrait: full-screen "rotate your device" (input paused meanwhile) */
+.rotate-overlay {
   display: none;
-  position: absolute;
-  top: max(8px, env(safe-area-inset-top));
-  left: 50%;
-  transform: translate(-50%, 92px);
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(8, 12, 18, 0.75);
-  border: 1px solid var(--line);
-  font-size: 12px;
-  color: var(--accent);
-  white-space: nowrap;
-  pointer-events: none;
 }
-@media (orientation: portrait) {
-  .rotate-hint {
-    display: block;
+body.rotate-blocked .rotate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+  background: radial-gradient(circle at 50% 40%, #1a1410 0%, #07090c 75%);
+  color: var(--text);
+  text-align: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.rotate-box h2 {
+  margin: 18px 0 4px;
+  font-size: 28px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.rotate-box .en {
+  margin: 0 0 14px;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+.rotate-box .small {
+  max-width: 280px;
+  margin: 0 auto;
+  font-size: 13px;
+  opacity: 0.7;
+}
+.rotate-icon {
+  color: var(--accent);
+}
+.rotate-icon .phone {
+  transform-origin: 32px 26px;
+  animation: rotate-phone 2.2s ease-in-out infinite;
+}
+@keyframes rotate-phone {
+  0%,
+  20% {
+    transform: rotate(0deg);
+  }
+  55%,
+  85% {
+    transform: rotate(-90deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rotate-icon .phone {
+    animation: none;
   }
 }
 

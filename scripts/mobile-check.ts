@@ -11,7 +11,9 @@
  *  3. Opening the decoded link goes straight to the join flow (callsign only, prefilled)
  *  4. Solo run driven by synthetic multi-touch (CDP): left stick moves, right stick aims and
  *     auto-fires, reload button, weapon slot tap        -> docs/mobile-gameplay.png
- *  5. Portrait: rotate hint shown, game still playable
+ *  5. Portrait phone: full-screen "Obróć telefon / Rotate your device" overlay blocks the menu
+ *     and pauses a running game (no input, solo sim frozen); rotating to landscape resumes
+ *     play                          -> docs/review/rotate-overlay.png, landscape-gameplay.png
  *  6. Desktop (mouse + keyboard, no touch): WASD moves, mouse aims/fires, touch UI hidden
  *
  * Env: CHROME_PATH (default /usr/bin/google-chrome), NO_SHOTS=1 to skip screenshots.
@@ -178,6 +180,14 @@ async function mobile(browser: Browser, deviceName: keyof typeof KnownDevices, e
   await page.type('#name', 'Filip');
   await page.tap('#host');
   await page.waitForSelector('.room canvas#qr', { timeout: 20000 });
+  const fs = await page.evaluate(() => ({
+    fs: !!document.fullscreenElement,
+    o: screen.orientation?.type ?? '?',
+  }));
+  check(
+    fs.fs && fs.o.startsWith('landscape'),
+    `${tag}: first button tap (Host) went fullscreen + landscape (${fs.o})`,
+  );
   const code = await page.$eval('.room #code', (e) => e.textContent ?? '');
   const qr = await decodeQr(page);
   const linkInput = await page.$eval('#link', (e) => (e as HTMLInputElement).value);
@@ -354,28 +364,109 @@ async function mobile(browser: Browser, deviceName: keyof typeof KnownDevices, e
 
 async function portrait(browser: Browser, errors: string[]) {
   const dev = KnownDevices['iPhone 14'];
+  const land = KnownDevices['iPhone 14 landscape'].viewport;
+  const portraitVp = dev.viewport;
   const ctx = await browser.createBrowserContext();
   const page = await ctx.newPage();
   watchErrors(page, 'portrait', errors);
   await page.emulate(dev);
   await page.goto(CLIENT, { waitUntil: 'networkidle0' });
   await page.waitForSelector('.menu #solo', { timeout: 15000 });
+  await page.touchscreen.tap(portraitVp.width / 2, 12); // first touch -> touch mode
+  await sleep(150);
+  const overlay = () =>
+    page.evaluate(() => {
+      const o = document.querySelector('.rotate-overlay') as HTMLElement;
+      const r = o.getBoundingClientRect();
+      const top = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
+      return {
+        shown: getComputedStyle(o).display !== 'none',
+        covers: r.width >= innerWidth && r.height >= innerHeight && !!top && o.contains(top),
+        text: o.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+        icon: !!o.querySelector('svg'),
+      };
+    });
+  const m = await overlay();
+  check(
+    m.shown &&
+      m.covers &&
+      m.icon &&
+      m.text.includes('Obróć telefon') &&
+      m.text.includes('Rotate your device'),
+    `iPhone 14 portrait: full-screen rotate overlay with icon on the menu ("${m.text.slice(0, 40)}…")`,
+  );
+  await page.touchscreen.tap(portraitVp.width / 2, portraitVp.height / 2);
+  await sleep(300);
+  const scr = await page.evaluate(() => (window as any).__sms?.screen);
+  check(scr === 'menu', `iPhone 14 portrait: taps under the overlay are blocked (screen=${scr})`);
+
+  // rotate -> landscape: overlay gone, start a solo run
+  await page.setViewport({ ...land });
+  await sleep(300);
+  check(!(await overlay()).shown, 'iPhone 14 rotated to landscape: overlay hidden');
   await page.tap('#solo');
   await page.waitForFunction(() => (window as any).__sms?.screen === 'game', { timeout: 15000 });
   await sleep(500);
   await keepAlive(page);
-  const hint = await page.$eval('.rotate-hint', (e) => getComputedStyle(e).display);
+
+  // back to portrait mid-game: overlay up, input + solo sim paused
+  await page.setViewport({ ...portraitVp });
+  await sleep(400);
+  const g = await overlay();
+  const tick0 = await page.evaluate(() => (window as any).__sms.conn.host.world.tick as number);
   const cdp = await page.createCDPSession();
   const t = new Touch(cdp);
   const p0 = await player(page);
-  await t.start(0, { x: 100, y: dev.viewport.height - 140 });
-  await t.drag(0, { x: 100, y: dev.viewport.height - 195 });
+  await t.start(0, { x: 100, y: portraitVp.height - 140 });
+  await t.drag(0, { x: 100, y: portraitVp.height - 195 });
   await sleep(900);
   const p1 = await player(page);
+  const tick1 = await page.evaluate(() => (window as any).__sms.conn.host.world.tick as number);
   await t.endAll();
   check(
-    hint === 'block' && p0.y - p1.y > 40,
-    `iPhone 14 portrait: rotate hint shown, still playable (y ${p0.y.toFixed(0)} → ${p1.y.toFixed(0)})`,
+    g.shown && g.covers && Math.abs(p1.y - p0.y) < 1 && p1.mx === 0 && tick1 === tick0,
+    `iPhone 14 portrait mid-game: overlay up, input ignored and solo paused (y ${p0.y.toFixed(0)} → ${p1.y.toFixed(0)}, tick ${tick0} → ${tick1})`,
+  );
+  if (SHOTS) {
+    mkdirSync(path.join(docs, 'review'), { recursive: true });
+    await page.screenshot({ path: path.join(docs, 'review', 'rotate-overlay.png') });
+  }
+
+  // landscape again: playable, controls laid out for the wide screen
+  await page.setViewport({ ...land });
+  await sleep(400);
+  await keepAlive(page);
+  const H = land.height;
+  const q0 = await player(page);
+  await t.start(0, { x: 130, y: H - 110 });
+  await t.drag(0, { x: 130, y: H - 165 });
+  await sleep(900);
+  const R = { x: Math.round(land.width * 0.7), y: Math.round(H * 0.6) };
+  await t.start(1, R);
+  await t.drag(1, { x: R.x + 55, y: R.y });
+  await sleep(500);
+  if (SHOTS) await page.screenshot({ path: path.join(docs, 'review', 'landscape-gameplay.png') });
+  const q1 = await player(page);
+  const tick2 = await page.evaluate(() => (window as any).__sms.conn.host.world.tick as number);
+  const layout = await page.evaluate(() => {
+    const [layer, buttons] = ['.touch-layer', '.touch-buttons'].map((sel) => {
+      const e = document.querySelector(sel) as HTMLElement | null;
+      if (!e || getComputedStyle(e).display === 'none') return false;
+      const r = e.getBoundingClientRect();
+      return (
+        r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1 && r.left >= -1 && r.top >= -1
+      );
+    });
+    return { layer, buttons, overlay: document.body.classList.contains('rotate-blocked') };
+  });
+  await t.endAll();
+  check(
+    !layout.overlay && q0.y - q1.y > 40 && q1.fire && tick2 > tick1,
+    `iPhone 14 landscape again: game resumes, stick moves (y ${q0.y.toFixed(0)} → ${q1.y.toFixed(0)}) and aim fires`,
+  );
+  check(
+    !!layout.layer && !!layout.buttons,
+    'iPhone 14 landscape: touch layer + buttons inside the viewport',
   );
   await ctx.close();
 }
@@ -392,6 +483,11 @@ async function desktop(browser: Browser, errors: string[]) {
     kbmHelp: getComputedStyle(document.querySelector('.help .kbm-only')!).display !== 'none',
   }));
   check(!ui.touch && ui.kbmHelp, 'desktop: no touch mode, keyboard/mouse help shown');
+  await page.setViewport({ width: 420, height: 860 }); // tall, narrow PC window
+  await sleep(200);
+  const tallOverlay = await page.$eval('.rotate-overlay', (e) => getComputedStyle(e).display);
+  check(tallOverlay === 'none', 'desktop: no rotate overlay even in a tall, narrow window');
+  await page.setViewport({ width: 1280, height: 760 });
   await page.click('#solo');
   await page.waitForFunction(() => (window as any).__sms?.screen === 'game', { timeout: 15000 });
   await sleep(500);
@@ -455,6 +551,8 @@ async function main() {
   const real = errors.filter(
     (e) =>
       !/peer|webrtc|negotiat|Could not connect/i.test(e) &&
+      // Chrome intervention notice while the fullscreen transition settles; harmless
+      !e.includes('Ignored attempt to cancel a touchstart') &&
       !(p2pBlocked && e.includes('-joiner console')),
   );
   for (const e of errors) note(e);

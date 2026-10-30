@@ -171,8 +171,16 @@ ways. The PC controls are unchanged.
   landscape where the browser allows it).
 - **Multi-touch** works: move, aim and tap buttons at the same time. Page scroll, pinch-zoom,
   pull-to-refresh and long-press menus are disabled in game.
-- **Orientation:** landscape is recommended. In portrait a small "rotate" hint appears, but the
-  game stays playable. The HUD scales down on small screens and respects notches and safe areas.
+- **Orientation:** phones play in **landscape**. The first button tap (Solo, Host, Join…) asks for
+  fullscreen and `screen.orientation.lock('landscape')`, which works on Android Chrome. The web
+  manifest also declares `"orientation": "landscape"` for home-screen installs. When a phone is
+  still held in portrait (iOS Safari cannot lock), a full-screen **"Obróć telefon / Rotate your
+  device"** overlay covers the page. Input is ignored and a solo run pauses until the phone is
+  turned. Tapping the overlay retries the lock. Tablets and PC are not affected. The HUD scales
+  down on small screens and respects notches and safe areas.
+
+![Rotate overlay](docs/review/rotate-overlay.png)
+![Landscape gameplay](docs/review/landscape-gameplay.png)
 
 ### Joining from a phone (QR code)
 
@@ -600,7 +608,9 @@ runs in a unit test.
   `http://localhost:5173/`). It checks the responsive menu and the lobby QR (decoded with jsQR,
   it must equal the join link). It opens the decoded `?join=` link in a second "phone" and checks
   the quick-join screen. In a solo run it drives the twin sticks (move, aim + auto-fire,
-  independent release), reload and a weapon-slot tap, and checks the portrait hint. It also
+  independent release), reload and a weapon-slot tap. It checks that the first tap goes fullscreen
+  and landscape, and that in portrait the rotate overlay blocks the menu and pauses a running game
+  until the phone is rotated back (`docs/review/rotate-overlay.png`, `landscape-gameplay.png`). It also
   checks that desktop mouse/keyboard still behave as before. It saves `docs/mobile-lobby-qr.png`
   and `docs/mobile-gameplay.png`.
 

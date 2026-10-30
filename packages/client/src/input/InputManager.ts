@@ -5,6 +5,7 @@ import {
   type ContinuousIntent,
   type InputKind,
 } from './InputSource.js';
+import { isRotateBlocked, onRotateBlockedChange } from './orientation.js';
 import { KeyboardMouseInput } from './KeyboardMouseInput.js';
 import { TouchInput, type TouchInputOptions } from './TouchInput.js';
 
@@ -17,6 +18,7 @@ export class InputManager {
   readonly kbm: KeyboardMouseInput;
   readonly touch: TouchInput;
   private offKind: () => void;
+  private offRotate: () => void;
 
   constructor(canvas: HTMLCanvasElement, touchOpts: TouchInputOptions = {}) {
     this.kbm = new KeyboardMouseInput(canvas);
@@ -24,6 +26,11 @@ export class InputManager {
     this.kbm.onActivity = () => setInputKind('kbm');
     this.touch.onActivity = () => setInputKind('touch');
     this.offKind = onInputKindChange((k) => k === 'kbm' && this.touch.reset());
+    // Portrait phone (rotate overlay up): drop held sticks and queued presses.
+    this.offRotate = onRotateBlockedChange(() => {
+      this.touch.reset();
+      this.takeActions();
+    });
   }
 
   get active(): InputKind {
@@ -35,6 +42,7 @@ export class InputManager {
   }
 
   read(): ContinuousIntent {
+    if (isRotateBlocked()) return { move: { x: 0, y: 0 }, aim: null, fire: false };
     return combineIntents(this.active, this.kbm.read(), this.touch.read());
   }
 
@@ -44,6 +52,7 @@ export class InputManager {
 
   dispose(): void {
     this.offKind();
+    this.offRotate();
     this.kbm.dispose();
     this.touch.dispose();
   }

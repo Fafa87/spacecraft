@@ -4,6 +4,7 @@ import {
   type ContinuousIntent,
   type InputSource,
 } from './InputSource.js';
+import { requestLandscape } from './orientation.js';
 import { VirtualStick, type StickVector } from './joystick.js';
 
 /** Tuning for the twin-stick layout (CSS px). */
@@ -81,8 +82,7 @@ export class TouchInput implements InputSource {
         <button class="tb" data-act="mute" aria-label="Mute">🔊</button>
         <button class="tb main" data-act="reload" aria-label="Reload">⟳<span>RELOAD</span></button>
         ${canFullscreen ? '<button class="tb" data-act="fullscreen" aria-label="Fullscreen">⛶</button>' : ''}
-      </div>
-      <div class="rotate-hint">↻ Rotate to landscape for the best experience</div>`;
+      </div>`;
     host.append(this.layer);
 
     const on = <K extends keyof HTMLElementEventMap>(
@@ -203,9 +203,7 @@ async function toggleFullscreen(): Promise<void> {
   try {
     if (document.fullscreenElement) await document.exitFullscreen();
     else {
-      await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
-      const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
-      await o.lock?.('landscape').catch(() => undefined);
+      await requestLandscape();
     }
   } catch {
     /* not allowed (e.g. iOS Safari) — ignore */

@@ -20,6 +20,7 @@ import { isImmediate, playEvent, type FxContext, type NoticeKind } from './fx.js
 import { SnapshotBuffer } from './interpolation.js';
 import { Predictor } from './prediction.js';
 import { createLeaveDialog } from '../ui/leaveDialog.js';
+import { isRotateBlocked, onRotateBlockedChange } from '../input/orientation.js';
 
 export type GameClientEvents = {
   over: { result: RunResult; summary: PlayerSummary[] };
@@ -91,6 +92,8 @@ export class GameClient extends Emitter<GameClientEvents> {
         this.emit('over', o);
       }),
     );
+    // Portrait phone: the rotate overlay is up. Solo pauses like the leave dialog does.
+    this.unsubs.push(onRotateBlockedChange(() => this.syncPause()));
     const onResize = () => this.renderer.resize();
     window.addEventListener('resize', onResize);
     this.unsubs.push(() => window.removeEventListener('resize', onResize));
@@ -101,6 +104,7 @@ export class GameClient extends Emitter<GameClientEvents> {
     this.audio.playMusic('combat');
     this.canvas.classList.add('playing');
     this.lastFrame = performance.now();
+    this.syncPause();
     const loop = (now: number) => {
       if (this.disposed) return;
       this.frame(now);
@@ -140,7 +144,7 @@ export class GameClient extends Emitter<GameClientEvents> {
     });
     document.body.append(this.dialog);
     this.canvas.classList.add('menu-open');
-    if (solo) this.conn.host?.setPaused(true);
+    this.syncPause();
     (this.dialog.querySelector('#leave-no') as HTMLElement | null)?.focus();
   }
 
@@ -149,8 +153,17 @@ export class GameClient extends Emitter<GameClientEvents> {
     this.dialog.remove();
     this.dialog = null;
     this.canvas.classList.remove('menu-open');
-    if (this.conn.mode === 'local') this.conn.host?.setPaused(false);
+    this.syncPause();
     this.input.takeActions(); // drop slot / reload presses made while the dialog was open
+  }
+
+  /** Solo only: the sim pauses while the leave dialog or the rotate overlay is up. */
+  private get soloPaused(): boolean {
+    return this.conn.mode === 'local' && !this.over && (!!this.dialog || isRotateBlocked());
+  }
+
+  private syncPause(): void {
+    if (this.conn.mode === 'local') this.conn.host?.setPaused(this.soloPaused);
   }
 
   private toggleMute(): void {
@@ -199,9 +212,9 @@ export class GameClient extends Emitter<GameClientEvents> {
     while (this.inputAcc >= TICK_DT) {
       this.inputAcc -= TICK_DT;
       if (this.over || !me) continue;
-      // solo + dialog open: the sim is paused, send nothing (keeps prediction in step)
-      if (this.dialog && this.conn.mode === 'local') continue;
-      const alive = me.st === 'alive' && !this.dialog;
+      // solo + dialog / rotate overlay: the sim is paused, send nothing (keeps prediction in step)
+      if (this.soloPaused) continue;
+      const alive = me.st === 'alive' && !this.dialog && !isRotateBlocked();
       const intent = this.input.read();
       const { x: mx, y: my } = alive ? intent.move : { x: 0, y: 0 };
       const cur = this.content.weapons.get(me.w);
