@@ -1,3 +1,4 @@
+import type { Server } from 'node:http';
 import { PeerServer } from 'peer';
 
 /**
@@ -6,13 +7,18 @@ import { PeerServer } from 'peer';
  * 0.peerjs.com cloud during development.
  */
 export function startPeerServer(port: number, path: string, log: (msg: string) => void): { close: () => void } {
-  const server = PeerServer({ port, path, allow_discovery: false });
+  let http: Server | null = null;
+  let closed = false;
+  PeerServer({ port, path, allow_discovery: false }, (server) => {
+    http = server as Server;
+    if (closed) http.close();
+  });
   log(`PeerJS signaling server on :${port}${path}`);
   return {
     close: () => {
-      // peer's PeerServer returns an express app with a bound http server under `_server` in some versions.
-      const s = (server as unknown as { _server?: { close: () => void } })._server;
-      s?.close();
+      closed = true;
+      http?.closeAllConnections?.();
+      http?.close();
     },
   };
 }

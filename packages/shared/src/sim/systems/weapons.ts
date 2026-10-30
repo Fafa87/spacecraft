@@ -95,6 +95,8 @@ export function fireWeapon(world: World, p: Player, def: WeaponDef): void {
       id: allocId(world),
       owner: 'player',
       ownerId: p.id,
+      sx: p.x,
+      sy: p.y,
       kind: spec.kind,
       x: mx,
       y: my,

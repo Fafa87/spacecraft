@@ -204,7 +204,7 @@ export class Hud {
     ctx.fillText(
       me.st === 'downed'
         ? me.rv > 0
-          ? `Being revived… ${Math.round((me.rv / PLAYER.reviveTime) * 100)}%`
+          ? `Being revived… ${Math.round(me.rv * 100)}%`
           : `Bleeding out in ${Math.ceil(me.bo)}s — a teammate must stand next to you`
         : 'Spectating your squad',
       w / 2,

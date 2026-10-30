@@ -2,17 +2,17 @@ import type { DirectorConfig } from './types.js';
 
 /** Spawn director tuning. All times in seconds of survival. */
 export const DIRECTOR: DirectorConfig = {
-  budget: { base: 1.4, perMinute: 1.5, exponent: 1.25 },
+  budget: { base: 1.0, perMinute: 1.5, exponent: 1.25 },
   teamScale: [1, 1.65, 2.25, 2.8],
   maxAlive: { base: 35, perMinute: 14, cap: 260 },
   hpScalePerMinute: 0.07,
   surge: {
-    firstAtSec: 40,
-    interval: 50,
+    firstAtSec: 60,
+    interval: 55,
     duration: 7,
-    budgetMultiplier: 3.5,
-    bonusThreat: 14,
-    bonusThreatPerWave: 6,
+    budgetMultiplier: 2.4,
+    bonusThreat: 8,
+    bonusThreatPerWave: 5,
   },
   spawn: { minDistance: 620, maxDistance: 900, groupMin: 2, groupMax: 6, groupSpread: 70 },
   crates: { firstAtSec: 25, intervalMin: 22, intervalMax: 38, minDistance: 220, maxDistance: 520 },

@@ -17,7 +17,7 @@ export const WEAPONS: WeaponDef[] = [
     pellets: 1,
     spread: 0.06,
     moveSpeedMul: 1,
-    projectile: { kind: 'bullet', speed: 1100, lifetime: 0.9, radius: 4, damage: 14, pierce: 0, knockback: 40 },
+    projectile: { kind: 'bullet', speed: 1100, lifetime: 0.9, radius: 4, damage: 16, pierce: 0, knockback: 40 },
     unlockAtSec: 0,
     crateWeight: 0,
     sfx: { fire: 'shoot_rifle', reload: 'reload' },

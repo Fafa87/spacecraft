@@ -97,6 +97,12 @@ export interface Projectile {
   drag: number;
   knockback: number;
   explosion?: ExplosionSpec;
+  /**
+   * Start of the swept-collision segment for the next tick. Set on spawn to the
+   * shooter's position so point-blank targets inside the muzzle offset are hit.
+   */
+  sx?: number;
+  sy?: number;
   /** Enemy ids already hit (so piercing shots hit each target once). */
   hit: number[];
   dead: boolean;

@@ -27,7 +27,8 @@
     "smoke": "tsx scripts/smoke.ts",
     "smoke:browser": "tsx scripts/browser-smoke.ts",
     "predev": "npm run assets --silent",
-    "prebuild": "npm run assets --silent"
+    "prebuild": "npm run assets --silent",
+    "sim": "tsx scripts/balance-sim.ts"
   },
   "engines": {
     "node": ">=20"

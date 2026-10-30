@@ -10,6 +10,9 @@ const QUERY_PAD = 40;
 export function updateProjectiles(world: World, enemyHash: SpatialHash<Enemy>, dt: number): void {
   for (const pr of world.projectiles) {
     if (pr.dead) continue;
+    const x0 = pr.sx ?? pr.x;
+    const y0 = pr.sy ?? pr.y;
+    pr.sx = pr.sy = undefined;
     if (pr.drag > 0) {
       const f = Math.max(0, 1 - pr.drag * dt);
       pr.vx *= f;
@@ -22,19 +25,42 @@ export function updateProjectiles(world: World, enemyHash: SpatialHash<Enemy>, d
       detonate(world, pr);
       continue;
     }
-    if (pr.owner === 'player') hitEnemies(world, pr, enemyHash);
-    else hitPlayers(world, pr);
+    if (pr.owner === 'player') hitEnemies(world, pr, x0, y0, enemyHash);
+    else hitPlayers(world, pr, x0, y0);
   }
   world.projectiles = world.projectiles.filter((p) => !p.dead);
 }
 
-function hitEnemies(world: World, pr: Projectile, hash: SpatialHash<Enemy>): void {
-  hash.query(pr.x, pr.y, pr.radius + QUERY_PAD, (enemy) => {
-    if (pr.dead || enemy.dead || pr.hit.includes(enemy.id)) return;
+/**
+ * Swept test: squared distance from (px,py) to the segment (x0,y0)-(x1,y1).
+ * Fast projectiles move ~35 px per tick, more than a small enemy's diameter,
+ * so a point test would tunnel straight through targets.
+ */
+export function segmentDist2(x0: number, y0: number, x1: number, y1: number, px: number, py: number): number {
+  const dx = x1 - x0;
+  const dy = y1 - y0;
+  const len2 = dx * dx + dy * dy;
+  const t = len2 > 0 ? Math.max(0, Math.min(1, ((px - x0) * dx + (py - y0) * dy) / len2)) : 0;
+  return dist2(x0 + dx * t, y0 + dy * t, px, py);
+}
+
+function hitEnemies(world: World, pr: Projectile, x0: number, y0: number, hash: SpatialHash<Enemy>): void {
+  const halfLen = Math.hypot(pr.x - x0, pr.y - y0) / 2;
+  const hits: { enemy: Enemy; t: number }[] = [];
+  hash.query((pr.x + x0) / 2, (pr.y + y0) / 2, halfLen + pr.radius + QUERY_PAD, (enemy) => {
+    if (enemy.dead || pr.hit.includes(enemy.id)) return;
     const r = world.content.enemy(enemy.type).radius + pr.radius;
-    if (dist2(pr.x, pr.y, enemy.x, enemy.y) > r * r) return;
+    if (segmentDist2(x0, y0, pr.x, pr.y, enemy.x, enemy.y) > r * r) return;
+    hits.push({ enemy, t: dist2(x0, y0, enemy.x, enemy.y) });
+  });
+  // Resolve nearest-first so a non-piercing shot hits the first enemy in its path.
+  hits.sort((a, b) => a.t - b.t);
+  for (const { enemy } of hits) {
+    if (pr.dead) return;
     pr.hit.push(enemy.id);
     if (pr.explosion) {
+      pr.x = enemy.x;
+      pr.y = enemy.y;
       detonate(world, pr);
       return;
     }
@@ -45,16 +71,16 @@ function hitEnemies(world: World, pr: Projectile, hash: SpatialHash<Enemy>): voi
       ky: pr.vy,
       knockback: pr.knockback,
     });
-    if (pr.kind !== 'flame') world.events.push({ e: 'hit', x: Math.round(pr.x), y: Math.round(pr.y), k: pr.kind });
+    if (pr.kind !== 'flame') world.events.push({ e: 'hit', x: Math.round(enemy.x), y: Math.round(enemy.y), k: pr.kind });
     if (pr.pierceLeft-- <= 0) pr.dead = true;
-  });
+  }
 }
 
-function hitPlayers(world: World, pr: Projectile): void {
+function hitPlayers(world: World, pr: Projectile, x0: number, y0: number): void {
   for (const p of world.players) {
     if (p.state !== 'alive') continue;
     const r = PLAYER.radius + pr.radius;
-    if (dist2(pr.x, pr.y, p.x, p.y) <= r * r) {
+    if (segmentDist2(x0, y0, pr.x, pr.y, p.x, p.y) <= r * r) {
       damagePlayer(world, p, pr.damage);
       world.events.push({ e: 'hit', x: Math.round(pr.x), y: Math.round(pr.y), k: pr.kind });
       pr.dead = true;

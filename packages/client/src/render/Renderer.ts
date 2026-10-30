@@ -311,7 +311,7 @@ export class Renderer {
           ctx.strokeStyle = '#6fff8a';
           ctx.lineWidth = 6;
           ctx.beginPath();
-          ctx.arc(x, y, 38, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, p.rv / PLAYER.reviveTime));
+          ctx.arc(x, y, 38, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, p.rv));
           ctx.stroke();
         }
         ctx.font = 'bold 12px system-ui, sans-serif';
