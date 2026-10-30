@@ -206,9 +206,16 @@ boards SQUADS · SURVIVAL and MARINES · POINTS, team size tabs) read them.
   glowing eyes; the Carnifex rears up, sways, paws the deck and roars. The dash stretches the
   sprite with ghost trails, and landing throws dust (and plays `dust_land` / a step).
 
+- **Damage profiles (v0.5).** Weapons carry Warhammer-style Strength / AP, Tyranids Toughness /
+  Save (`data/profile.ts`). `combat.damageEnemy` scales damage by `woundMul(S, T)` and rolls the
+  armour save on `world.rng` (so it is deterministic and host-authoritative); a saved hit does
+  nothing and emits `bnc` (ricochet sound + sparks on the client, no marker on the enemy).
+- **Firing slow-down (v0.5).** `Player.fireSlow` is 1 while the trigger is held and decays over
+  `PLAYER.fireMoveRecover`; speed is `marineMoveSpeed(weapon, fireSlow)`
+  (`sim/systems/movement.ts`). It depends only on input, so client prediction uses the same function.
 - **Finite waves.** `sim/systems/director.ts` alternates `breather` and wave phases. Each wave's
-  budget is `(base + perWave × (n−1))^exponent × teamScale[size−1]`; it is spent at `pace` threat
-  per second, split across 2-3 spawn points. The wave ends when the budget is spent and nothing is
+  budget is `(base + perWave × (n−1))^exponent × teamScaling.budget[size−1]`; it is spent at
+  `pace × teamScaling.pace[size−1]` threat per second, split across 2-3 spawn points. The wave ends when the budget is spent and nothing is
   alive (children such as spore mines count, capped by `maxChildren`). Then the `cleared` event
   fires and the next wave starts after `breather` s, shown as a countdown. The anti-stall
   `reveal` marks stragglers and sends them hunting the squad faster (`hunt` event);

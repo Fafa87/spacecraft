@@ -85,7 +85,8 @@ The Power Sword was removed in v0.4.
 **Waves, spawn points and scoring (v0.4).**
 
 - **Finite waves.** Each wave has a fixed, data-driven enemy budget
-  (`DIRECTOR.waves.budget`, scaled by team size 1-8 through `teamScale`). The next wave starts
+  (`DIRECTOR.waves.budget`, scaled by team size 1-8 through `DIRECTOR.teamScaling`: more and faster spawns, tougher and
+  more elite Tyranids for bigger squads). The next wave starts
   only after the whole wave is dead, children included (Biovore spore mines are capped and
   finite). Then comes an 8 s breather with **WAVE N CLEARED** and a countdown. The HUD shows how
   many Tyranids are left. Stragglers can't stall a run: when only a few are left (or after 30 s)

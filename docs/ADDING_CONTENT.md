@@ -22,17 +22,20 @@ After any change, run: `npm run assets && npm test && npm run dev`.
      reloadTime: 2.2,
      pellets: 1,
      spread: 0.04,                // radians, total cone
-     moveSpeedMul: 0.85,
+     moveSpeedMul: 0.85,          // speed while carried
+     fireMoveMul: 0.75,           // extra speed factor while the trigger is held (0..1]
+     roles: ['ANTI-ELITE'],       // shown in the HUD + pickup notice (see the profile table)
      projectile: {
        kind: 'shell',             // → sprite key `proj_shell`
        speed: 1300, lifetime: 0.8, radius: 6,
-       damage: 70, pierce: 3, armorPierce: true, knockback: 120,
-       // explosion: { radius: 60, damage: 40, edgeFactor: 0.3 },
+       damage: 70, strength: 7, ap: 1, pierce: 3, knockback: 120,
+       // explosion: { radius: 60, damage: 40, edgeFactor: 0.3, strength: 5, ap: 0 },
      },
      unlockAtSec: 480,            // 0 = starting weapon, null = crate-only
      crateWeight: 4,              // chance weight in weapon crates
      // heat: { perShot: 0.16, max: 1, coolPerSec: 0.35, superchargeAt: 0.6,
-     //         superchargeDamageMul: 1.6, ventTime: 1.6, selfDamage: 22 },  // plasma-style
+     //         superchargeDamageMul: 1.6, superchargeStrength: 1, superchargeAp: 1,
+     //         ventTime: 1.6, selfDamage: 22 },  // plasma-style
      sfx: { fire: 'shoot_autocannon', reload: 'reload_bolter' },
      sprites: { icon: 'icon_autocannon', pickup: 'crate_autocannon', held: 'held_autocannon' },
    },
@@ -57,7 +60,9 @@ After any change, run: `npm run assets && npm test && npm run dev`.
    `PROJECTILE_VISUALS` keyed by projectile kind (colour, glow, trail) and `WEAPON_VISUALS` keyed by
    weapon id (muzzle flash size, recoil, casings, screen shake). Unknown ids use the defaults.
 5. `npm run assets && npm test`. ContentRegistry validation catches duplicate slots and ids and
-   bad numbers.
+   bad numbers (a missing Strength, empty `roles`, `fireMoveMul` outside (0, 1], …).
+6. `npx tsx scripts/profile-table.ts` prints time-to-kill and %-damage-through for every weapon
+   against every Tyranid, so you can check the new gun has a niche.
 
 ## Add an enemy
 
@@ -68,7 +73,7 @@ After any change, run: `npm run assets && npm test && npm run dev`.
      id: 'lictor',
      name: 'Lictor',
      role: 'Camouflaged hunter; strikes from the shadows.',  // shown on the contact sheet
-     hp: 120, armor: 2, speed: 210, accel: 6, radius: 22, mass: 2,
+     hp: 120, toughness: 4, save: 5, speed: 210, accel: 6, radius: 22, mass: 2,
      behavior: 'melee',           // 'melee' | 'ranged' (needs `ranged`) | 'kamikaze' (needs `explode`)
      // Optional traits (any behaviour):
      // charge:  { triggerDistance, minDistance, windup, duration, speedMul, cooldown, damage },
@@ -99,13 +104,77 @@ After any change, run: `npm run assets && npm test && npm run dev`.
    `sim/systems/enemies.ts`, and add a validation rule in `ContentRegistry.validate()`.
 5. `npm run assets && npm test`, then `npm run sim` to check the difficulty curve.
 
+## Weapon and Tyranid profiles (v0.5)
+
+Damage follows Warhammer 40k: weapons have **Strength (S)** and **Armour Penetration (AP)**, Tyranids
+have **Toughness (T)** and an armour **Save (Sv, 2+ best … 7 = none)**. For every hit
+(`sim/systems/combat.ts`, formula in `data/profile.ts`):
+
+1. **Wound:** damage × `woundMul(S, T)`: ×1.25 if S ≥ 2T, ×1 if S > T, ×0.75 if S = T, ×0.5 if
+   S < T, ×0.25 if 2S ≤ T.
+2. **Save:** roll on the sim RNG; the save succeeds with chance `(7 − max(2, Sv + AP)) / 6` (never
+   if that is 7+). A saved hit does **0 damage**, 40 % knockback, and plays the carapace ricochet
+   with a few sparks (event `bnc`; there are deliberately no rings or markers on enemies).
+3. Hits without a Strength (Tyranid spore-mine / Biovore blasts) ignore T and Sv.
+
+| Weapon        | Direct hit (S / AP / dmg)             | Blast (S / AP / dmg) | Roles                    | `fireMoveMul` | `moveSpeedMul` |
+| ------------- | ------------------------------------- | -------------------- | ------------------------ | ------------- | -------------- |
+| Bolt Rifle    | 4 / −1 / 15                           | 4 / −1 / 9           | GENERALIST               | 0.80          | 1.00           |
+| Heavy Bolter  | 5 / −1 / 17                           | 5 / 0 / 10           | ANTI-HORDE · SUSTAINED   | 0.65          | 0.90           |
+| Flamer        | 4 / 0 / 4.5 (pierces)                 | –                    | ANTI-HORDE · SHORT RANGE | 0.85          | –              |
+| Plasma Gun    | 7 / −2 / 50 (supercharge +1 S, +1 AP) | –                    | ANTI-ELITE · OVERCHARGE  | 0.80          | –              |
+| Meltagun      | 9 / −4 / 300                          | –                    | ANTI-TANK · SHORT RANGE  | 0.75          | –              |
+| Frag Grenades | –                                     | 4 / 0 / 110          | ANTI-HORDE · BLAST       | 0.90          | –              |
+
+| Tyranid                | T   | Sv  | HP (wave 1, solo) |
+| ---------------------- | --- | --- | ----------------- |
+| Ripper                 | 2   | 6+  | 12                |
+| Hormagaunt / Termagant | 3   | 5+  | 28 / 30           |
+| Spore Mine             | 2   | –   | 20                |
+| Genestealer            | 4   | 4+  | 60                |
+| Biovore                | 5   | 4+  | 90                |
+| Ravener                | 5   | 4+  | 150               |
+| Tyranid Warrior        | 5   | 4+  | 220               |
+| Carnifex               | 9   | 2+  | 1000              |
+
+Resulting matrix (single target, seconds to kill / share of damage that goes through; from
+`npx tsx scripts/profile-table.ts`):
+
+|             | Bolt Rifle   | Heavy Bolter | Flamer       | Plasma        | Melta         | Frag         |
+| ----------- | ------------ | ------------ | ------------ | ------------- | ------------- | ------------ |
+| Gaunts      | 0.3 s / 83 % | 0.2 s / 83 % | 0.4 s / 67 % | 0.2 s / 125 % | 0.1 s / 125 % | 0.6 s / 67 % |
+| Genestealer | 1.1 s / 50 % | 0.5 s / 67 % | 1.5 s / 38 % | 0.5 s / 83 %  | 0.2 s / 125 % | 2.2 s / 38 % |
+| Warrior     | 6.0 s / 33 % | 2.3 s / 50 % | 8.5 s / 25 % | 1.9 s / 83 %  | 0.9 s / 100 % | 12 s / 25 %  |
+| Carnifex    | 108 s / 8 %  | 35 s / 17 %  | 231 s / 4 %  | 29 s / 25 %   | 6.6 s / 63 %  | 327 s / 4 %  |
+
+The flamer, heavy bolter and frags win against **crowds** (pierce / blast hit many gaunts at once);
+the plasma gun owns elites; only the melta (or a very long plasma burst) kills a Carnifex quickly.
+`roles` is free text from `WeaponRole` in `data/types.ts`; the HUD shows `ROLE_SHORT` /
+`ROLE_COLOR` from `data/profile.ts`.
+
 ## Tune difficulty
 
 Tuning lives in `packages/shared/src/data/director.ts`:
 
-- `teamScale`: the multiplier for 1-8 marines (one entry per team size up to `MAX_PLAYERS`;
-  validation fails if one is missing).
-- `waves.budget`: each wave's total threat, `(base + perWave · (wave − 1))^exponent · teamScale`.
+- `teamScaling`: per-squad-size tables (8 entries each, index = marines − 1; validation fails if
+  one is missing):
+  - `budget`: wave threat multiplier (more Tyranids); `pace`: spawn-rate multiplier;
+  - `maxAlive`: alive-cap multiplier; `children`: spawned-children cap multiplier;
+  - `hp`: Tyranid HP multiplier (on top of `hpScalePerWave`);
+  - `elite`: spawn-weight multiplier for enemies with `threat ≥ eliteThreat` (more Warriors,
+    Raveners, Carnifexes for big squads).
+
+  Current values (tuned so 1-8 marines survive within ±25 % of solo in `npm run sim`):
+
+  | Marines  | 1    | 2    | 3    | 4   | 5    | 6    | 7    | 8     |
+  | -------- | ---- | ---- | ---- | --- | ---- | ---- | ---- | ----- |
+  | budget   | 0.85 | 2.0  | 3.3  | 4.5 | 6.0  | 7.0  | 7.5  | 7.9   |
+  | pace     | 0.85 | 2.3  | 4.22 | 6.3 | 9.0  | 11.2 | 12.9 | 14.54 |
+  | maxAlive | 1    | 1.9  | 2.9  | 3.9 | 4.9  | 5.7  | 6.3  | 6.8   |
+  | hp       | 1    | 1.15 | 1.3  | 1.4 | 1.55 | 1.7  | 1.75 | 1.75  |
+  | elite    | 1    | 1.5  | 1.9  | 2.3 | 2.7  | 3.1  | 3.4  | 3.8   |
+
+- `waves.budget`: each wave's total threat, `(base + perWave · (wave − 1))^exponent · teamScaling.budget`.
   The wave is finite: the next one starts only when it is fully cleared.
 - `waves.pace`: threat sent out per second during a wave; `waves.flankPoints`: how many breaches
   a wave uses at once.
@@ -120,7 +189,8 @@ Tuning lives in `packages/shared/src/data/director.ts`:
 - `bosses`: which enemy leads boss waves, on which wave, and how many per team size.
 - `waveTable`: the spawn weights by wave (`fromWave`).
 
-Measure with `npm run sim -- --bot=kite --seeds=8 --sizes=1,2,4,8`.
+Measure with `npm run sim -- --seeds=48 --max=900` (all sizes, ~1 min). The bot picks the owned
+weapon with the best `sustainedDps` against its target, so it exercises the profiles too.
 
 Squad-wide survival tunables live in `PLAYER` (`shared/src/constants.ts`): `bleedOutTime`
 (60 s since v0.4, was 20 s), `reviveTime` (3 s) and `reviveRadius`. Weapons can be **braced**
