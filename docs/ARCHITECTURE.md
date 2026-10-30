@@ -44,10 +44,18 @@
   app/App.ts           screens and flow (menu → lobby → game → game over), connection setup
   net/                 PeerLink (PeerJS DataConnection), WsLink, connection.ts (host/join/solo factories)
   game/                GameClient (render loop, input → ClientSession), prediction, interpolation, fx
+  input/               InputSource abstraction → ContinuousIntent {move, aim, fire} + ActionIntent
+                       {slot, cycle, reload}; KeyboardMouseInput (the PC controls), TouchInput (twin
+                       floating VirtualSticks + buttons), InputManager (merges both, picks aim from the
+                       active device), device.ts (touch/kbm auto-detect → body.touch-mode),
+                       joystick.ts (pure stick/deadzone math). Sim and protocol are unchanged:
+                       intents become the same PlayerInput {mx, my, aim, fire, …}.
   render/              Renderer (Canvas2D, atlas sprites), camera, HUD, particles, visuals mapping
   audio/               AudioEngine (WebAudio, voice limits, music crossfades)
   highscores/          HighscoreStore interface: Http + Local (localStorage) + Fallback composition
-  ui/                  DOM screens, leaderboard tables, styles
+  ui/                  DOM screens (menu, lobby with join QR, quick-join for ?join=CODE), leaderboard
+                       tables, qr.ts (client-side QR via `qrcode`), styles (responsive + safe areas)
+  net/joinUrl.ts       build/parse the shareable join link (respects BASE_URL, keeps ?ws / ?api)
 
 @sms/tools
   sprites/             SpriteDef { key, w, h, frames, prompt, draw(ctx, frame, rng) }

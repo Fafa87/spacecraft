@@ -8,6 +8,7 @@ import {
 } from '@sms/shared';
 import type { NoticeKind } from '../game/fx.js';
 import { formatTime } from '../ui/format.js';
+import type { StickView } from '../input/TouchInput.js';
 import type { Assets } from './assets.js';
 
 export interface Notice {
@@ -24,11 +25,40 @@ export interface HudState {
   notices: Notice[];
   ping: number;
   fps: number;
-  mouse: { x: number; y: number };
+  /** Crosshair in CSS px (mouse cursor, or projected aim on touch); null = hidden. */
+  crosshair: { x: number; y: number } | null;
+  /** Touch sticks when the touch layout is active; null = PC layout. */
+  touch: StickView[] | null;
+  /** Safe-area insets in CSS px (notches). */
+  inset?: Insets;
   roomCode: string;
   mode: string;
   muted: boolean;
   debug: string | null;
+}
+
+export interface Insets {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+const NO_INSETS: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
+
+/** HUD scale: 1 on desktop; on touch, shrink to fit small phone screens. */
+export function hudScale(w: number, h: number, touch: boolean): number {
+  if (!touch) return 1;
+  return Math.max(0.6, Math.min(1, w / 900, h / 520));
+}
+
+interface SlotRect {
+  slot: number;
+  owned: boolean;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
 const NOTICE_COLORS: Record<NoticeKind, string> = {
@@ -45,21 +75,56 @@ export class Hud {
     private readonly content: ContentRegistry,
   ) {}
 
-  draw(ctx: CanvasRenderingContext2D, dpr: number, w: number, h: number, s: HudState): void {
+  /** Weapon slot rects in CSS px from the last frame (touch hit-testing). */
+  private slotRects: SlotRect[] = [];
+
+  /** Returns the owned weapon slot under a CSS-px point, or 0. */
+  slotAt(x: number, y: number): number {
+    const pad = 6;
+    const hit = this.slotRects.find(
+      (r) => x >= r.x - pad && x <= r.x + r.w + pad && y >= r.y - pad && y <= r.y + r.h + pad,
+    );
+    return hit?.owned ? hit.slot : 0;
+  }
+
+  draw(ctx: CanvasRenderingContext2D, dpr: number, cw: number, ch: number, s: HudState): void {
+    const touch = !!s.touch;
+    const ui = hudScale(cw, ch, touch);
+    const ins = s.inset ?? NO_INSETS;
+    // Everything below works in "HUD units" = CSS px / ui, inside the safe area.
+    const w = (cw - ins.left - ins.right) / ui;
+    const h = (ch - ins.top - ins.bottom) / ui;
     ctx.save();
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.setTransform(dpr * ui, 0, 0, dpr * ui, dpr * ins.left, dpr * ins.top);
     ctx.textBaseline = 'alphabetic';
+    this.slotRects = [];
     this.timer(ctx, w, s);
-    this.team(ctx, s);
     this.minimap(ctx, w, s);
+    if (touch) {
+      if (s.me) this.health(ctx, 96, s.me);
+      this.team(ctx, s, s.me ? 76 : 10);
+    } else {
+      this.team(ctx, s, 10);
+      if (s.me) this.health(ctx, h, s.me);
+    }
     if (s.me) {
-      this.health(ctx, h, s.me);
-      this.weapons(ctx, w, h, s.me);
+      if (touch) this.weaponColumn(ctx, w, s.me);
+      else this.weapons(ctx, w, h, s.me);
       this.stateBanner(ctx, w, h, s.me);
     }
     this.notices(ctx, w, s.notices);
     this.footer(ctx, w, h, s);
-    if (s.me?.st === 'alive') this.crosshair(ctx, s);
+    // convert slot rects to CSS px
+    for (const r of this.slotRects) {
+      r.x = r.x * ui + ins.left;
+      r.y = r.y * ui + ins.top;
+      r.w *= ui;
+      r.h *= ui;
+    }
+    // sticks + crosshair are positioned in raw CSS px
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (s.touch) this.sticks(ctx, cw, ch, s.touch, s.me?.st === 'alive');
+    if (s.me?.st === 'alive' && s.crosshair) this.crosshair(ctx, s.crosshair);
     ctx.restore();
   }
 
@@ -89,13 +154,13 @@ export class Hud {
     );
   }
 
-  private team(ctx: CanvasRenderingContext2D, s: HudState): void {
+  private team(ctx: CanvasRenderingContext2D, s: HudState, top: number): void {
     const players = s.snap.players;
     if (players.length < 2) return;
-    this.panel(ctx, 10, 10, 200, 14 + players.length * 26);
+    this.panel(ctx, 10, top, 200, 14 + players.length * 26);
     ctx.textAlign = 'left';
     players.forEach((p, i) => {
-      const y = 22 + i * 26;
+      const y = top + 12 + i * 26;
       ctx.fillStyle = PLAYER_COLORS[p.c % 4];
       ctx.fillRect(20, y, 6, 18);
       ctx.font = '600 12px system-ui, sans-serif';
@@ -218,7 +283,102 @@ export class Hud {
         }
       }
       ctx.globalAlpha = 1;
+      this.slotRects.push({ slot: def.slot, owned, x, y, w: cell, h: 64 });
       x += cell + 6;
+    }
+  }
+
+  /** Touch layout: big tappable weapon slots stacked under the minimap on the right. */
+  private weaponColumn(ctx: CanvasRenderingContext2D, w: number, me: PlayerSnap): void {
+    const order = this.content.weaponOrder;
+    const cw = 92;
+    const chh = 56;
+    const x = w - cw - 12;
+    let y = 164;
+    for (const def of order) {
+      const owned = me.ws.includes(def.id);
+      const active = me.w === def.id;
+      ctx.globalAlpha = owned ? 1 : 0.3;
+      this.panel(ctx, x, y, cw, chh);
+      if (active) {
+        ctx.strokeStyle = '#ffc04a';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x + 1, y + 1, cw - 2, chh - 2);
+      }
+      ctx.textAlign = 'left';
+      ctx.font = '700 11px system-ui, sans-serif';
+      ctx.fillStyle = active ? '#ffc04a' : '#9fc4ff';
+      ctx.fillText(String(def.slot), x + 5, y + 13);
+      if (!this.assets.draw(ctx, def.sprites.icon, 0, x + cw / 2, y + 24)) {
+        ctx.fillStyle = '#ccc';
+        ctx.fillRect(x + cw / 2 - 22, y + 20, 44, 8);
+      }
+      ctx.textAlign = 'center';
+      if (active) {
+        const by = y + chh - 10;
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(x + 4, by, cw - 8, 5);
+        const reloading = me.rl > 0;
+        const frac = reloading ? 1 - me.rl / def.reloadTime : me.ammo / def.magazine;
+        ctx.fillStyle = reloading ? '#ffc04a' : frac < 0.25 ? '#ff5050' : '#e8e8e8';
+        ctx.fillRect(x + 4, by, (cw - 8) * frac, 5);
+        ctx.font = '700 11px ui-monospace, monospace';
+        ctx.fillText(reloading ? 'RELOAD' : `${me.ammo}/${def.magazine}`, x + cw / 2, by - 3);
+      } else {
+        ctx.font = '600 10px system-ui, sans-serif';
+        ctx.fillStyle = '#ddd';
+        ctx.fillText(
+          owned
+            ? def.name.toUpperCase()
+            : def.unlockAtSec
+              ? `🔒 ${formatTime(def.unlockAtSec * 1000)}`
+              : 'CRATE',
+          x + cw / 2,
+          y + chh - 6,
+        );
+      }
+      ctx.globalAlpha = 1;
+      this.slotRects.push({ slot: def.slot, owned, x, y, w: cw, h: chh });
+      y += chh + 6;
+    }
+  }
+
+  /** Floating stick bases/knobs (engaged) or faint hints where to put thumbs (idle). */
+  private sticks(
+    ctx: CanvasRenderingContext2D,
+    w: number,
+    h: number,
+    sticks: StickView[],
+    alive: boolean,
+  ): void {
+    if (!alive) return;
+    for (const st of sticks) {
+      const color = st.kind === 'move' ? '120,190,255' : '255,190,90';
+      if (!st.engaged) {
+        const hx = st.kind === 'move' ? 110 : w - 230;
+        const hy = h - 100;
+        ctx.strokeStyle = `rgba(${color},0.22)`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(hx, hy, st.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.textAlign = 'center';
+        ctx.font = '600 11px system-ui, sans-serif';
+        ctx.fillStyle = `rgba(${color},0.45)`;
+        ctx.fillText(st.kind === 'move' ? 'MOVE' : 'AIM · FIRE', hx, hy + 4);
+        continue;
+      }
+      ctx.fillStyle = `rgba(${color},0.12)`;
+      ctx.strokeStyle = `rgba(${color},0.5)`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(st.origin.x, st.origin.y, st.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = `rgba(${color},${st.active ? 0.75 : 0.4})`;
+      ctx.beginPath();
+      ctx.arc(st.knob.x, st.knob.y, st.radius * 0.45, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 
@@ -261,7 +421,7 @@ export class Hud {
     ctx.fillStyle = 'rgba(200,220,255,0.6)';
     const room = s.mode === 'local' ? 'SOLO' : `ROOM ${s.roomCode}`;
     ctx.fillText(
-      `${room} · ${s.mode.toUpperCase()} · ping ${Math.round(s.ping)}ms · ${Math.round(s.fps)} fps${s.muted ? ' · MUTED (M)' : ''}`,
+      `${room} · ${s.mode.toUpperCase()} · ping ${Math.round(s.ping)}ms · ${Math.round(s.fps)} fps${s.muted ? (s.touch ? ' · MUTED' : ' · MUTED (M)') : ''}`,
       w - 12,
       h - 10,
     );
@@ -271,8 +431,8 @@ export class Hud {
     }
   }
 
-  private crosshair(ctx: CanvasRenderingContext2D, s: HudState): void {
-    const { x, y } = s.mouse;
+  private crosshair(ctx: CanvasRenderingContext2D, pos: { x: number; y: number }): void {
+    const { x, y } = pos;
     ctx.strokeStyle = '#ffe9a8';
     ctx.lineWidth = 2;
     ctx.beginPath();

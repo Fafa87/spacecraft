@@ -27,6 +27,7 @@
     "format:check": "prettier --check .",
     "smoke": "tsx scripts/smoke.ts",
     "smoke:browser": "tsx scripts/browser-smoke.ts",
+    "check:mobile": "tsx scripts/mobile-check.ts",
     "predev": "npm run assets --silent",
     "prebuild": "npm run assets --silent",
     "sim": "tsx scripts/balance-sim.ts"
@@ -37,10 +38,13 @@
   "devDependencies": {
     "@eslint/js": "^9.12.0",
     "@types/node": "^20.14.0",
+    "@types/pngjs": "^6.0.5",
     "concurrently": "^9.0.1",
     "eslint": "^9.12.0",
     "eslint-config-prettier": "^9.1.0",
     "globals": "^15.11.0",
+    "jsqr": "^1.4.0",
+    "pngjs": "^7.0.0",
     "prettier": "^3.3.3",
     "puppeteer-core": "^23.5.0",
     "tsx": "^4.19.0",

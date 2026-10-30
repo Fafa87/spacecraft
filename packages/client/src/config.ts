@@ -2,9 +2,11 @@
  * Runtime configuration: build-time env (VITE_*) + URL params + /api/config
  * discovery from the highscore server.
  *   ?api=http://host:8787   override highscore server
- *   ?join=CODE              prefill join code
+ *   ?join=CODE              open the join flow for a room (QR / share link)
  *   ?ws=1                   use the experimental dedicated WebSocket host instead of P2P
  */
+import { parseJoinCode } from './net/joinUrl.js';
+
 const params = new URLSearchParams(location.search);
 
 /** Dev default: the highscore server started by `npm run dev` on the page host, port 8787. */
@@ -29,12 +31,16 @@ function resolveApiUrl(): string | null {
 }
 
 const apiUrl = resolveApiUrl();
+const apiParam = params.get('api')?.trim() || null;
 
 export const config = {
   apiUrl,
   /** False on a static deploy: local-only highscores, no dedicated WS host. */
   hasServer: apiUrl !== null,
-  joinCode: params.get('join') ?? '',
+  /** Room code from a join link / QR (`?join=CODE`); cleared once used. */
+  joinCode: parseJoinCode(location.search),
+  /** `?api=` as given, forwarded in share links so joiners use the same server. */
+  apiFromUrl: apiParam,
   /** ?ws=1 picks the dedicated WebSocket host; ignored when no server is configured. */
   useDedicatedHost: apiUrl !== null && params.get('ws') === '1',
   debug: params.get('debug') === '1',

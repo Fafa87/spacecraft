@@ -36,17 +36,56 @@ Then open **http://localhost:5173**, enter a name and choose **Solo**, **Host co
 
 ### Controls
 
+The client detects the input device by itself. A touch puts it in touch mode, and mouse
+movement or a key press puts it back in keyboard/mouse mode, so a touchscreen laptop works both
+ways. The PC controls are unchanged.
+
+**PC (keyboard + mouse)**
+
 - **WASD / arrow keys:** move.
 - **Mouse:** aim.
 - **Left mouse button:** fire.
 - **R:** reload.
 - **1-9, mouse wheel or Q/E:** switch weapon.
+- **M:** mute.
 - **Revive:** stand next to a downed teammate for 3 seconds.
+
+**Phone / tablet (standard twin-stick)**
+
+- **Left half of the screen:** a floating **move stick**. It appears where your thumb lands and
+  follows it if you drag past the edge. The deadzone is 12% and the speed is analog.
+- **Right half of the screen:** a floating **aim stick**. It aims in the direction you push
+  and **auto-fires** once it is past a 20% deadzone. Let go to stop firing. While you only move,
+  the marine faces the way it is walking.
+- **Weapon slots** (right edge): tap an unlocked slot to switch to it.
+- **Bottom buttons:** ⟳ reload (large), 🔊 mute and ⛶ fullscreen (fullscreen also locks
+  landscape where the browser allows it).
+- **Multi-touch** works: move, aim and tap buttons at the same time. Page scroll, pinch-zoom,
+  pull-to-refresh and long-press menus are disabled in game.
+- **Orientation:** landscape is recommended. In portrait a small "rotate" hint appears, but the
+  game stays playable. The HUD scales down on small screens and respects notches and safe areas.
+
+### Joining from a phone (QR code)
+
+The co-op lobby (**Host co-op**) shows a **QR code**, the room code, the join link and a
+**Copy link** button. Scanning the QR opens `<site>/?join=CODE`, which goes straight to a short
+join screen. That screen only asks for a callsign, which is prefilled from your last visit. If
+the join fails, the error is shown on that screen so you can retry.
+The link respects the deploy base path (e.g. `/spacecraft/`) and keeps `?ws=1` / `?api=`.
+
+**Testing on a phone over LAN in dev:** the QR uses the address the _host_ browser was opened
+with, so do not open the host on `localhost`.
+
+`npm run dev` already serves the client on all interfaces (`vite --host 0.0.0.0`; for a plain
+Vite setup this is `vite --host`). Open `http://<your-LAN-IP>:5173` on the PC (e.g. `http://192.168.1.20:5173`) and host a room,
+then scan the QR with a phone on the same Wi-Fi. For P2P co-op in dev, the PeerJS signaling
+server (:9000) must also be reachable from the phone. The deployed GitHub Pages build uses the
+public PeerJS cloud, so it needs nothing extra.
 
 ### Client URL parameters
 
 - `?api=http://host:8787` overrides the highscore server.
-- `?join=CODE` pre-fills the join code.
+- `?join=CODE` opens the quick-join screen for that room (this is what the lobby QR encodes).
 - `?ws=1` uses the dedicated WebSocket host instead of P2P.
 - `?debug=1` (or F3 in game) shows the net/debug overlay.
 - `?autosolo=1&name=X` starts a solo run straight away (used by the smoke test).
@@ -209,13 +248,15 @@ runs in a unit test.
 
 ## Testing
 
-- `npm test`: 62 unit/integration tests.
+- `npm test`: 84 unit/integration tests.
   - Shared: rng, movement, swept projectile collision, determinism, director escalation,
     revive and game over, content and highscore validation, and a full HostSession over local
     links with a ManualScheduler.
   - Server: API via `app.inject` (201/200/400/413/429, ordering, separate tables, CORS) and
     json/sqlite persistence across restarts.
-  - Client: Predictor, SnapshotBuffer and Local/Fallback highscore stores.
+  - Client: Predictor, SnapshotBuffer, Local/Fallback highscore stores, the joystick/deadzone
+    math, touch intents and input merging, and join-URL building and parsing with a QR encode →
+    decode round trip.
   - Tools: asset coverage, packer overlap, WAV round-trip and song length.
 - `npm run smoke`: headless, starts its own in-memory server on a random port.
 - `npm run smoke:browser`: needs `npm run dev` (for the Vite client) and Chrome at
@@ -223,6 +264,17 @@ runs in a unit test.
   (ports 8797/9007), so it never touches the real leaderboard. It saves `docs/menu.png`,
   `docs/screenshot.png`, `docs/gameover.png` and `docs/screenshot-coop-*.png`. Set
   `STRICT_P2P=1` to make a blocked WebRTC data channel fatal.
+- `npm run check:mobile [clientUrl]`: headless mobile emulation (iPhone 14 and Pixel 5
+  landscape, touch, via CDP multi-touch) against a running client (default
+  `http://localhost:5173/`). It checks the responsive menu and the lobby QR (decoded with jsQR,
+  it must equal the join link). It opens the decoded `?join=` link in a second "phone" and checks
+  the quick-join screen. In a solo run it drives the twin sticks (move, aim + auto-fire,
+  independent release), reload and a weapon-slot tap, and checks the portrait hint. It also
+  checks that desktop mouse/keyboard still behave as before. It saves `docs/mobile-lobby-qr.png`
+  and `docs/mobile-gameplay.png`.
+
+![Lobby QR on a phone](docs/mobile-lobby-qr.png)
+![Touch controls](docs/mobile-gameplay.png)
 
 ## Roadmap
 
@@ -235,7 +287,7 @@ runs in a unit test.
 - **Gameplay:**
   - More enemy types: burrowers, flyers, a broodmother boss with spawns.
   - Perks/upgrades between surges, grenades, turrets, a melee/dash.
-  - Obstacles and maps (the arena is open floor today), plus mobile/touch controls.
+  - Obstacles and maps (the arena is open floor today).
 - **Balance:** tune with `npm run sim` (bots survive about 1-3 min today; humans who kite and
   revive do better).
 - **Assets:** an AI-art workflow through the override folder, animation states, a music

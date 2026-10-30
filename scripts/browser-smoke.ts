@@ -87,8 +87,8 @@ async function coop(
   if (mode === 'p2p') {
     // Signaling sanity: a wrong code is reported as not found.
     await b.page.goto(`${CLIENT}/?join=ZZZZZ&${q}`, { waitUntil: 'networkidle0' });
-    await b.page.waitForSelector('.menu #join', { timeout: 10000 });
-    await b.page.click('#join');
+    await b.page.waitForSelector('.join-screen #go', { timeout: 10000 });
+    await b.page.click('#go');
     await b.page.waitForFunction(
       () => document.querySelector('#err')?.textContent?.includes('not found'),
       { timeout: 15000 },
@@ -96,9 +96,10 @@ async function coop(
     check(true, `${label}: unknown room code reported as not found`);
   }
   await b.page.goto(`${CLIENT}/?join=${code}&${q}`, { waitUntil: 'networkidle0' });
-  await b.page.waitForSelector('.menu #name', { timeout: 10000 });
+  // ?join= opens the dedicated join flow (callsign only)
+  await b.page.waitForSelector('.join-screen #name', { timeout: 10000 });
   await setName(b.page, 'Bravo');
-  await b.page.click('#join');
+  await b.page.click('#go');
   const joined = await b.page
     .waitForSelector('.room .players', { timeout: 15000 })
     .then(() => true)

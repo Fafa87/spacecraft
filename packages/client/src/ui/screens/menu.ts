@@ -39,7 +39,8 @@ export function createMenuScreen(actions: MenuActions, opts: MenuOptions): HTMLE
         </div>
         <div class="error" id="err"></div>
         <div class="help">
-          <b>WASD</b> move · <b>Mouse</b> aim · <b>LMB / Space</b> fire · <b>1-5</b> / <b>Q E</b> / wheel switch weapon · <b>R</b> reload · <b>M</b> mute<br>
+          <span class="kbm-only"><b>WASD</b> move · <b>Mouse</b> aim · <b>LMB / Space</b> fire · <b>1-5</b> / <b>Q E</b> / wheel switch weapon · <b>R</b> reload · <b>M</b> mute<br></span>
+          <span class="touch-only"><b>Left thumb</b> move · <b>Right thumb</b> aim &amp; auto-fire · <b>tap a weapon</b> to switch · <b>⟳</b> reload · <b>⛶</b> fullscreen<br></span>
           Stand next to a downed squadmate to revive them. New weapons unlock over time; crates drop on the map.
         </div>
         <div class="muted small">v${GAME_VERSION} · <span id="status">checking highscore server…</span>${opts.dedicated ? ' · dedicated host mode' : ' · P2P (browser-hosted)'}</div>

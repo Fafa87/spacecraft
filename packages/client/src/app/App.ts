@@ -17,10 +17,12 @@ import {
 } from '../net/connection.js';
 import { Assets } from '../render/assets.js';
 import { createGameOverScreen, type SubmitInfo } from '../ui/screens/gameOver.js';
+import { stripJoinParams } from '../net/joinUrl.js';
+import { createJoinScreen } from '../ui/screens/join.js';
 import { createMenuScreen } from '../ui/screens/menu.js';
 import { createRoomScreen } from '../ui/screens/room.js';
 
-type Screen = 'boot' | 'menu' | 'room' | 'game' | 'over';
+type Screen = 'boot' | 'menu' | 'join' | 'room' | 'game' | 'over';
 
 /**
  * Top-level state machine: menu -> (room) -> game -> game over -> room/menu.
@@ -50,6 +52,7 @@ export class App {
     void this.store.flushPending();
     (window as unknown as { __sms: App }).__sms = this; // debugging / smoke tests
     if (config.autoSolo) this.solo(config.autoName || 'Smoke');
+    else if (config.joinCode) this.showJoin(config.joinCode);
     else this.showMenu();
   }
 
@@ -69,8 +72,47 @@ export class App {
     );
   }
 
+  /** Room code of an in-progress join-link flow (errors return to the join screen). */
+  private linkJoin: string | null = null;
+
+  /** Join flow from a QR / share link: only asks for a callsign. */
+  showJoin(code: string, error?: string): void {
+    this.disconnect();
+    this.screen = 'join';
+    this.linkJoin = code;
+    this.audio.playMusic('menu');
+    this.setUi(
+      createJoinScreen(
+        code,
+        {
+          join: (name) =>
+            void this.connect(() =>
+              config.useDedicatedHost ? connectDedicated(name, code) : joinPeerGame(code, name),
+            ),
+          menu: () => this.leaveJoinFlow(),
+        },
+        error,
+      ),
+    );
+  }
+
+  private leaveJoinFlow(): void {
+    this.linkJoin = null;
+    config.joinCode = '';
+    history.replaceState(null, '', stripJoinParams(location.href));
+    this.showMenu();
+  }
+
+  /** Error path: back to the join screen during a link join, else the menu. */
+  private fail(message: string): void {
+    if (this.linkJoin && this.screen !== 'game' && this.screen !== 'over')
+      this.showJoin(this.linkJoin, message);
+    else this.showMenu(message);
+  }
+
   showMenu(error?: string): void {
     this.disconnect();
+    this.linkJoin = null;
     this.screen = 'menu';
     this.audio.playMusic('menu');
     this.setUi(
@@ -118,9 +160,14 @@ export class App {
       const conn = await factory();
       this.attach(conn);
       this.showRoom();
+      if (this.linkJoin) {
+        // joined via link: drop ?join so leaving / reloading doesn't loop back into the room
+        config.joinCode = '';
+        history.replaceState(null, '', stripJoinParams(location.href));
+      }
     } catch (err) {
       console.error(err);
-      this.showMenu(err instanceof Error ? err.message : String(err));
+      this.fail(err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -145,12 +192,12 @@ export class App {
       }),
       s.on('error', (e) => {
         if (e.code === 'full' || e.code === 'in_progress' || e.code === 'protocol')
-          this.showMenu(e.message);
+          this.fail(e.message);
         else console.warn('[session]', e);
       }),
       s.on('closed', () => {
         if (!this.leaving)
-          this.showMenu(conn.host ? 'Session closed.' : 'Lost connection to the squad host.');
+          this.fail(conn.host ? 'Session closed.' : 'Lost connection to the squad host.');
       }),
     );
   }
@@ -186,6 +233,7 @@ export class App {
     if (!conn) return;
     this.game?.dispose();
     this.screen = 'game';
+    this.linkJoin = null;
     this.lastSubmit = { status: 'pending' };
     this.gameOverUi = null;
     this.setUi(null);

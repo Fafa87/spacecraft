@@ -12,10 +12,10 @@ import type { AudioEngine } from '../audio/AudioEngine.js';
 import { config } from '../config.js';
 import type { GameConnection } from '../net/connection.js';
 import type { Assets } from '../render/assets.js';
-import { Hud, type Notice } from '../render/hud.js';
+import { InputManager, resolveSlot } from '../input/index.js';
+import { Hud, type Insets, type Notice } from '../render/hud.js';
 import { Renderer } from '../render/Renderer.js';
 import { isImmediate, playEvent, type FxContext, type NoticeKind } from './fx.js';
-import { InputState } from './input.js';
 import { SnapshotBuffer } from './interpolation.js';
 import { Predictor } from './prediction.js';
 
@@ -30,7 +30,9 @@ export type GameClientEvents = {
 export class GameClient extends Emitter<GameClientEvents> {
   readonly renderer: Renderer;
   private readonly hud: Hud;
-  private readonly input: InputState;
+  private readonly input: InputManager;
+  /** World point the camera leans towards (mouse cursor / aim direction); null = none. */
+  private lookPoint: { x: number; y: number } | null = null;
   private readonly buffer = new SnapshotBuffer();
   private readonly predictor = new Predictor();
   private notices: Notice[] = [];
@@ -57,10 +59,13 @@ export class GameClient extends Emitter<GameClientEvents> {
     super();
     this.renderer = new Renderer(canvas, assets, content);
     this.hud = new Hud(assets, content);
-    this.input = new InputState(canvas);
+    this.input = new InputManager(canvas, {
+      hitSlot: (x, y) => this.hud.slotAt(x, y),
+      onButton: (act) => act === 'mute' && this.toggleMute(),
+    });
+    this.input.touch.setMuted(this.audio.muted);
     this.input.onKey = (code) => {
-      if (code === 'KeyM')
-        this.notify(this.audio.toggleMute() ? 'Sound muted' : 'Sound on', 'info');
+      if (code === 'KeyM') this.toggleMute();
       if (code === 'F3') config.debug = !config.debug;
     };
     const s = conn.session;
@@ -97,6 +102,12 @@ export class GameClient extends Emitter<GameClientEvents> {
     for (const u of this.unsubs) u();
     this.canvas.classList.remove('playing');
     this.clear();
+  }
+
+  private toggleMute(): void {
+    const muted = this.audio.toggleMute();
+    this.input.touch.setMuted(muted);
+    this.notify(muted ? 'Sound muted' : 'Sound on', 'info');
   }
 
   get myId(): number {
@@ -140,17 +151,19 @@ export class GameClient extends Emitter<GameClientEvents> {
       this.inputAcc -= TICK_DT;
       if (this.over || !me) continue;
       const alive = me.st === 'alive';
-      const { mx, my } = alive ? this.input.move() : { mx: 0, my: 0 };
+      const intent = this.input.read();
+      const { x: mx, y: my } = alive ? intent.move : { x: 0, y: 0 };
       const cur = this.content.weapons.get(me.w);
       const owned = this.content.weaponOrder.filter((w) => me.ws.includes(w.id)).map((w) => w.slot);
-      const slot = this.input.consumeSlot(owned, cur?.slot ?? 1);
+      const actions = this.input.takeActions();
+      const slot = resolveSlot(actions, owned, cur?.slot ?? 1);
       const sent = this.conn.session.sendInput({
         mx,
         my,
         aim: this.aim,
-        fire: alive && this.input.fire(),
+        fire: alive && intent.fire,
         slot,
-        reload: this.input.consumeReload(),
+        reload: actions.reload,
       });
       this.predictor.applyLocal(sent, playerMoveSpeed(cur?.moveSpeedMul ?? 1), alive);
     }
@@ -163,9 +176,17 @@ export class GameClient extends Emitter<GameClientEvents> {
     const r = this.renderer;
 
     // aim from predicted position (falls back to camera centre)
-    const mouseWorld = r.camera.toWorld(this.input.mouseX, this.input.mouseY);
     const p0 = this.predictor.ready ? this.predictor.pos : { x: r.camera.x, y: r.camera.y };
-    this.aim = Math.atan2(mouseWorld.y - p0.y, mouseWorld.x - p0.x);
+    const aim = this.input.read().aim;
+    if (aim?.kind === 'screen') {
+      // mouse: aim at the cursor, camera leans towards it (unchanged PC behaviour)
+      const mouseWorld = r.camera.toWorld(aim.x, aim.y);
+      this.aim = Math.atan2(mouseWorld.y - p0.y, mouseWorld.x - p0.x);
+      this.lookPoint = mouseWorld;
+    } else if (aim?.kind === 'angle') {
+      this.aim = aim.angle;
+      this.lookPoint = { x: p0.x + Math.cos(aim.angle) * 260, y: p0.y + Math.sin(aim.angle) * 260 };
+    } else this.lookPoint = null;
 
     this.sendInputs(dt);
 
@@ -200,8 +221,9 @@ export class GameClient extends Emitter<GameClientEvents> {
     if (!target) target = latest.players.find((p) => p.st !== 'dead') ?? meLatest;
     if (target) {
       const look = myPos ? 0.18 : 0;
-      const tx = target.x + (mouseWorld.x - target.x) * look;
-      const ty = target.y + (mouseWorld.y - target.y) * look;
+      const lp = this.lookPoint ?? target;
+      const tx = target.x + (lp.x - target.x) * look;
+      const ty = target.y + (lp.y - target.y) * look;
       r.camera.follow(tx, ty, dt, !this.cameraInit);
       this.cameraInit = true;
     }
@@ -230,7 +252,9 @@ export class GameClient extends Emitter<GameClientEvents> {
       notices: this.notices,
       ping: this.conn.session.rtt,
       fps: this.fps,
-      mouse: { x: this.input.mouseX, y: this.input.mouseY },
+      crosshair: this.crosshair(),
+      touch: this.input.active === 'touch' ? this.input.touch.sticks() : null,
+      inset: safeAreaInsets(),
       roomCode: this.conn.roomCode,
       mode: this.conn.mode,
       muted: this.audio.muted,
@@ -238,6 +262,19 @@ export class GameClient extends Emitter<GameClientEvents> {
         ? `tick ${latest.tick} · buf ${(sample.t * 100) | 0}% · pending ${this.predictor.pendingCount} · corr ${this.predictor.lastCorrection.toFixed(1)}px · ents ${latest.enemies.length}/${latest.projectiles.length}`
         : null,
     });
+  }
+
+  /** Crosshair position in CSS px: the mouse on PC, a reticle along the aim stick on touch. */
+  private crosshair(): { x: number; y: number } | null {
+    if (this.input.active === 'kbm') return { x: this.input.kbm.mouseX, y: this.input.kbm.mouseY };
+    if (!this.input.touch.aimStick.vector.active || !this.predictor.ready) return null;
+    const cam = this.renderer.camera;
+    const p = this.predictor.pos;
+    const d = 150;
+    return {
+      x: (p.x - cam.x) * cam.zoom + cam.width / 2 + Math.cos(this.aim) * d,
+      y: (p.y - cam.y) * cam.zoom + cam.height / 2 + Math.sin(this.aim) * d,
+    };
   }
 
   private drawWaiting(): void {
@@ -250,4 +287,27 @@ export class GameClient extends Emitter<GameClientEvents> {
     ctx.textAlign = 'center';
     ctx.fillText('Deploying…', canvas.width / 2, canvas.height / 2);
   }
+}
+
+/** Safe-area insets (notch / home indicator) in CSS px, measured via a probe element. */
+let insetCache: { key: string; v: Insets } | null = null;
+function safeAreaInsets(): Insets {
+  const key = `${window.innerWidth}x${window.innerHeight}`;
+  if (insetCache?.key === key) return insetCache.v;
+  let probe = document.getElementById('safe-probe');
+  if (!probe) {
+    probe = document.createElement('div');
+    probe.id = 'safe-probe';
+    document.body.append(probe);
+  }
+  const cs = getComputedStyle(probe);
+  const px = (v: string) => parseFloat(v) || 0;
+  const v = {
+    top: px(cs.paddingTop),
+    right: px(cs.paddingRight),
+    bottom: px(cs.paddingBottom),
+    left: px(cs.paddingLeft),
+  };
+  insetCache = { key, v };
+  return v;
 }

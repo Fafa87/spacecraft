@@ -366,3 +366,227 @@ tr.hl td {
 .summary {
   margin: 10px 0;
 }
+
+/* ---------------------------------------------------------------- share / join */
+.room {
+  width: min(600px, 100%);
+}
+.share {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+.share .qr {
+  flex: none;
+  width: 168px;
+  height: 168px;
+  border-radius: 8px;
+  background: #fff;
+  image-rendering: pixelated;
+}
+.share-info {
+  flex: 1;
+  min-width: 0;
+}
+.share-info .code-box {
+  margin: 0 0 6px;
+}
+.share-info .code {
+  font-size: 44px;
+}
+@media (max-width: 520px) {
+  .share {
+    flex-direction: column;
+  }
+}
+.join-screen {
+  width: min(420px, 100%);
+}
+.join-screen button.wide {
+  width: 100%;
+  padding: 16px;
+  font-size: 17px;
+  margin-top: 4px;
+}
+button.link {
+  background: none;
+  border: none;
+  color: var(--muted);
+  text-decoration: underline;
+  width: 100%;
+}
+.touch-only {
+  display: none;
+}
+body.touch-mode .touch-only {
+  display: revert;
+}
+body.touch-mode .kbm-only {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- mobile / touch */
+html,
+body {
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+canvas#game {
+  z-index: 0;
+  touch-action: none;
+}
+#ui {
+  z-index: 2;
+  padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+}
+/* margin:auto (instead of only flex centering) keeps tall screens scrollable, not clipped */
+.screen {
+  margin: auto;
+}
+#safe-probe {
+  position: fixed;
+  visibility: hidden;
+  pointer-events: none;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+.touch-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+body.touch-mode canvas#game.playing ~ .touch-layer {
+  display: block;
+}
+.touch-buttons {
+  position: absolute;
+  left: 50%;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+.tb {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 20px;
+  background: rgba(8, 12, 18, 0.55);
+  border: 1px solid rgba(120, 170, 220, 0.35);
+  color: #dfe9f5;
+  touch-action: none;
+}
+.tb.main {
+  width: 64px;
+  height: 64px;
+  font-size: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.tb.main span {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  margin-top: 3px;
+}
+.tb.pressed {
+  background: rgba(255, 192, 74, 0.45);
+}
+.rotate-hint {
+  display: none;
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translate(-50%, 92px);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(8, 12, 18, 0.75);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--accent);
+  white-space: nowrap;
+  pointer-events: none;
+}
+@media (orientation: portrait) {
+  .rotate-hint {
+    display: block;
+  }
+}
+
+/* tap-friendly controls on touch screens */
+@media (pointer: coarse) {
+  button {
+    min-height: 44px;
+  }
+  .tabs button {
+    min-height: 38px;
+  }
+  input {
+    min-height: 44px;
+    font-size: 16px; /* no iOS focus zoom */
+  }
+}
+body.touch-mode button,
+body.touch-mode input {
+  min-height: 44px;
+}
+body.touch-mode .tb {
+  min-height: 0;
+}
+
+/* short landscape phones: compact menus */
+@media (max-height: 500px) {
+  #ui {
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+  .title {
+    margin-bottom: 10px;
+  }
+  h1 {
+    font-size: 28px;
+  }
+  .tagline {
+    display: none;
+  }
+  .card {
+    padding: 14px 16px;
+  }
+  .code {
+    font-size: 36px;
+  }
+  .share .qr {
+    width: 132px;
+    height: 132px;
+  }
+  .players {
+    margin: 8px 0;
+  }
+  .players li {
+    padding: 6px 10px;
+    margin-bottom: 4px;
+  }
+  .big {
+    font-size: 40px;
+  }
+}
+@media (max-height: 500px) and (min-width: 600px) {
+  .cols,
+  .gameover {
+    grid-template-columns: minmax(300px, 380px) 1fr;
+  }
+}
