@@ -3,7 +3,8 @@ import type { WeaponDef } from './types.js';
 /**
  * Weapon table (40k-style armoury). Order does not matter; `slot` decides key binding & HUD
  * order. Names are display-only and can be renamed via data/naming.ts.
- * Balance notes: DPS ~ (damage + blast) * pellets / fireInterval.
+ * Balance notes: DPS ~ (damage + blast) * pellets / fireInterval. Intervals are exact (cooldown
+ * carries over between 30 Hz ticks); v0.4 set them to the rates v0.3 effectively fired at.
  */
 export const WEAPONS: WeaponDef[] = [
   {
@@ -11,7 +12,7 @@ export const WEAPONS: WeaponDef[] = [
     name: 'Bolt Rifle',
     slot: 1,
     description: 'Mass-reactive bolts that burst inside the target. Your trusted starting weapon.',
-    fireInterval: 0.15,
+    fireInterval: 1 / 6,
     automatic: true,
     magazine: 30,
     reloadTime: 1.5,
@@ -34,45 +35,22 @@ export const WEAPONS: WeaponDef[] = [
     sprites: { icon: 'icon_bolt_rifle', pickup: 'crate_bolt_rifle', held: 'held_bolt_rifle' },
   },
   {
-    id: 'power_sword',
-    name: 'Power Sword',
-    slot: 2,
-    description:
-      'Crackling blade: wide armour-splitting sweeps. Charge cell recharges after 16 cuts.',
-    fireInterval: 0.36,
-    automatic: true,
-    magazine: 16,
-    reloadTime: 0.9,
-    pellets: 5,
-    spread: 1.7,
-    moveSpeedMul: 1.1,
-    projectile: {
-      kind: 'slash',
-      speed: 560,
-      lifetime: 0.13,
-      radius: 16,
-      damage: 38,
-      pierce: 99,
-      armorPierce: true,
-      knockback: 150,
-    },
-    unlockAtSec: 45,
-    crateWeight: 6,
-    sfx: { fire: 'swing_power_sword', reload: 'power_field', impact: 'sword_impact' },
-    sprites: { icon: 'icon_power_sword', pickup: 'crate_power_sword', held: 'held_power_sword' },
-  },
-  {
     id: 'heavy_bolter',
     name: 'Heavy Bolter',
-    slot: 3,
-    description: 'Belt-fed, hammering explosive bolts. Slows you down.',
-    fireInterval: 0.085,
+    slot: 2,
+    description:
+      'Belt-fed, hammering explosive bolts. Slows you down; plant your feet and it fires much faster.',
+    fireInterval: 0.1,
     automatic: true,
-    magazine: 75,
+    magazine: 90,
     reloadTime: 2.6,
     pellets: 1,
     spread: 0.12,
     moveSpeedMul: 0.82,
+    // Braced: standing still for braceDelay s -> +70% fire rate, tighter cone.
+    braceDelay: 0.25,
+    braceFireRateMult: 1.7,
+    braceSpreadMult: 0.45,
     projectile: {
       kind: 'heavy_bolt',
       speed: 1050,
@@ -83,17 +61,22 @@ export const WEAPONS: WeaponDef[] = [
       knockback: 70,
       explosion: { radius: 30, damage: 10, edgeFactor: 0.5 },
     },
-    unlockAtSec: 90,
+    unlockAtSec: 60,
     crateWeight: 10,
-    sfx: { fire: 'shoot_heavy_bolter', reload: 'reload_heavy', impact: 'heavy_bolt_impact' },
+    sfx: {
+      fire: 'shoot_heavy_bolter',
+      reload: 'reload_heavy',
+      impact: 'heavy_bolt_impact',
+      brace: 'brace_heavy',
+    },
     sprites: { icon: 'icon_heavy_bolter', pickup: 'crate_heavy_bolter', held: 'held_heavy_bolter' },
   },
   {
     id: 'flamer',
     name: 'Flamer',
-    slot: 4,
+    slot: 3,
     description: 'A roaring cone of burning promethium. Ignores cover, melts swarms.',
-    fireInterval: 0.045,
+    fireInterval: 1 / 15,
     automatic: true,
     magazine: 110,
     reloadTime: 2.2,
@@ -112,7 +95,7 @@ export const WEAPONS: WeaponDef[] = [
       drag: 1.1,
       knockback: 4,
     },
-    unlockAtSec: 150,
+    unlockAtSec: 125,
     crateWeight: 8,
     sfx: {
       fire: 'flamer_ignite',
@@ -125,10 +108,10 @@ export const WEAPONS: WeaponDef[] = [
   {
     id: 'plasma_gun',
     name: 'Plasma Gun',
-    slot: 5,
+    slot: 4,
     description:
       'Piercing star-hot bolts. Hot shots are supercharged; let it overheat and it burns you.',
-    fireInterval: 0.26,
+    fireInterval: 0.27,
     automatic: true,
     magazine: 20,
     reloadTime: 1.8,
@@ -154,7 +137,7 @@ export const WEAPONS: WeaponDef[] = [
       ventTime: 1.8,
       selfDamage: 22,
     },
-    unlockAtSec: 240,
+    unlockAtSec: 200,
     crateWeight: 6,
     sfx: {
       fire: 'shoot_plasma',
@@ -168,9 +151,9 @@ export const WEAPONS: WeaponDef[] = [
   {
     id: 'meltagun',
     name: 'Meltagun',
-    slot: 6,
+    slot: 5,
     description: 'Short-range thermal beam. Turns a Carnifex into slag.',
-    fireInterval: 0.85,
+    fireInterval: 0.87,
     automatic: true,
     magazine: 6,
     reloadTime: 2.2,
@@ -187,7 +170,7 @@ export const WEAPONS: WeaponDef[] = [
       armorPierce: true,
       knockback: 220,
     },
-    unlockAtSec: 330,
+    unlockAtSec: 285,
     crateWeight: 5,
     sfx: { fire: 'shoot_melta', reload: 'reload_melta', impact: 'melta_impact' },
     sprites: { icon: 'icon_meltagun', pickup: 'crate_meltagun', held: 'held_meltagun' },
@@ -195,7 +178,7 @@ export const WEAPONS: WeaponDef[] = [
   {
     id: 'frag_grenade',
     name: 'Frag Grenades',
-    slot: 7,
+    slot: 6,
     description: 'Lobbed fragmentation charges: big blast, bursts on contact.',
     fireInterval: 0.7,
     automatic: false,
@@ -215,7 +198,7 @@ export const WEAPONS: WeaponDef[] = [
       knockback: 0,
       explosion: { radius: 120, damage: 110, edgeFactor: 0.35 },
     },
-    unlockAtSec: 420,
+    unlockAtSec: 370,
     crateWeight: 5,
     sfx: { fire: 'throw_grenade', reload: 'reload_grenade' },
     sprites: { icon: 'icon_frag_grenade', pickup: 'crate_frag_grenade', held: 'held_frag_grenade' },

@@ -44,7 +44,6 @@ describe('40k content data', () => {
     const order = content.weaponOrder.map((w) => w.id);
     expect(order).toEqual([
       'bolt_rifle',
-      'power_sword',
       'heavy_bolter',
       'flamer',
       'plasma_gun',
@@ -213,7 +212,8 @@ describe('Tyranid behaviours', () => {
     const b = content.director.bosses;
     w.director.wave = b.firstSurge - 1;
     w.director.nextSurgeAt = w.time;
-    const evs = run(w, 1);
+    // The boss telegraphs at a breach first, then emerges.
+    const evs = run(w, Math.ceil((content.director.spawn.bossTelegraph + 0.2) / TICK_DT));
     expect(evs.some((e) => e.e === 'boss' && e.t === 'carnifex' && e.n === b.count[0])).toBe(true);
     expect(w.enemies.filter((e) => e.type === 'carnifex').length).toBe(b.count[0]);
     expect(w.director.bossWaves).toBe(1);

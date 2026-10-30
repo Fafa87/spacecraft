@@ -14,7 +14,27 @@ export const DIRECTOR: DirectorConfig = {
     bonusThreat: 7,
     bonusThreatPerWave: 5,
   },
-  spawn: { minDistance: 620, maxDistance: 900, groupMin: 2, groupMax: 6, groupSpread: 70 },
+  // Six hive breaches: four in the bulkheads at the arena edges, two floor vents inside.
+  spawnPoints: [
+    { id: 'north', x: 1600, y: 130, kind: 'breach' },
+    { id: 'east', x: 3070, y: 980, kind: 'tunnel' },
+    { id: 'south', x: 1720, y: 2070, kind: 'breach' },
+    { id: 'west', x: 130, y: 1220, kind: 'tunnel' },
+    { id: 'vent_nw', x: 860, y: 600, kind: 'vent' },
+    { id: 'vent_se', x: 2380, y: 1600, kind: 'vent' },
+  ],
+  spawn: {
+    telegraph: 1.1,
+    bossTelegraph: 2.2,
+    pointMinDistance: 430,
+    surgePoints: [2, 3],
+    // minDistance / maxDistance: burrowing Raveners (and crates) still use a ring around a marine.
+    minDistance: 620,
+    maxDistance: 900,
+    groupMin: 2,
+    groupMax: 6,
+    groupSpread: 60,
+  },
   crates: { firstAtSec: 25, intervalMin: 22, intervalMax: 38, minDistance: 220, maxDistance: 520 },
   // Surges at 60, 115, 170, 225 ... -> a Carnifex arrives on the 3rd surge (170 s) and every 3rd after.
   bosses: {

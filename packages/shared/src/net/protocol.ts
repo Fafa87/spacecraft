@@ -20,6 +20,10 @@ export interface PlayerSummary {
   id: number;
   name: string;
   kills: number;
+  /** Personal score (sum of kill points). */
+  score: number;
+  /** Kills per enemy type id. */
+  killsByType: Record<string, number>;
   damage: number;
   diedAtMs: number | null;
 }

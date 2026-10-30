@@ -2,7 +2,7 @@ import { GAME_VERSION } from '../constants.js';
 import { DIRECTOR } from '../data/director.js';
 import { HIGHSCORE_LIMITS, sanitizeName } from './limits.js';
 import { leaderboardName } from './names.js';
-import type { RunMode, RunResult } from './types.js';
+import type { PlayerScoreEntry, RunMode, RunResult } from './types.js';
 
 export const RUN_MODES: readonly RunMode[] = ['local', 'p2p', 'dedicated'];
 const MODES = RUN_MODES;
@@ -11,6 +11,14 @@ const MODES = RUN_MODES;
 export const maxPlausibleKills = (survivalMs: number, teamSize: number) =>
   (survivalMs / 1000) * HIGHSCORE_LIMITS.maxKillsPerSecondPerPlayer * teamSize +
   HIGHSCORE_LIMITS.killsSlack;
+
+/** Max personal score for a survival time (mirrored with integer math in firestore.rules). */
+export const maxPlausibleScore = (survivalMs: number) =>
+  (survivalMs / 1000) * HIGHSCORE_LIMITS.maxPointsPerSecondPerPlayer + HIGHSCORE_LIMITS.pointsSlack;
+
+/** Max kills one marine can make in a survival time. */
+export const maxPlausiblePlayerKills = (survivalMs: number) =>
+  maxPlausibleKills(survivalMs, 1);
 
 /** Highest wave reachable in a survival time (the director's surge schedule + slack). */
 export const maxPlausibleWave = (survivalMs: number) =>
@@ -68,6 +76,26 @@ export function validateRunResult(input: unknown): ValidationResult<RunResult> {
       errors.push('wave implausible for survival time');
   }
 
+  const intList = (key: 'playerScores' | 'playerKills', max: number): number[] | undefined => {
+    const v = o[key];
+    if (v === undefined) return undefined;
+    if (!Array.isArray(v) || !v.every((n) => isInt(n) && n >= 0 && n <= max)) {
+      errors.push(`${key} must be a list of integers 0-${max}`);
+      return undefined;
+    }
+    if (isInt(teamSize) && v.length !== teamSize) errors.push(`${key}.length must equal teamSize`);
+    return v as number[];
+  };
+  const playerScores = intList('playerScores', L.maxScore);
+  const playerKills = intList('playerKills', L.maxKills);
+  if (errors.length === 0) {
+    const ms = survivalMs as number;
+    if (playerScores?.some((n) => n > maxPlausibleScore(ms)))
+      errors.push('playerScores implausible for survival time');
+    if (playerKills?.some((n) => n > (kills as number) || n > maxPlausiblePlayerKills(ms)))
+      errors.push('playerKills implausible');
+  }
+
   let endedAt = new Date().toISOString();
   if (o.endedAt !== undefined) {
     const d = typeof o.endedAt === 'string' ? new Date(o.endedAt) : new Date(NaN);
@@ -92,6 +120,8 @@ export function validateRunResult(input: unknown): ValidationResult<RunResult> {
       survivalMs: survivalMs as number,
       kills: kills as number,
       wave: wave as number,
+      ...(playerScores ? { playerScores } : {}),
+      ...(playerKills ? { playerKills } : {}),
       endedAt,
       version: version as string,
       mode,
@@ -108,6 +138,27 @@ export function validateLeaderboardRun(input: unknown): ValidationResult<RunResu
     value: { ...v.value, players: v.value.players.map((n, i) => leaderboardName(n, i + 1)) },
   };
 }
+
+/** A run's per-marine score rows (empty for runs from before v0.4). */
+export function playerScoreEntries(run: RunResult, at: string): PlayerScoreEntry[] {
+  if (!run.playerScores) return [];
+  return run.players.map((name, slot) => ({
+    id: `${run.runId}-${slot}`,
+    runId: run.runId,
+    slot,
+    name,
+    score: run.playerScores![slot] ?? 0,
+    kills: run.playerKills?.[slot] ?? 0,
+    teamSize: run.teamSize,
+    survivalMs: run.survivalMs,
+    version: run.version,
+    at,
+  }));
+}
+
+/** Individual leaderboard order: points, then longer survival, then earlier. */
+export const comparePlayerScores = (a: PlayerScoreEntry, b: PlayerScoreEntry) =>
+  b.score - a.score || b.survivalMs - a.survivalMs || a.at.localeCompare(b.at);
 
 export function clampLimit(raw: unknown): number {
   const n = typeof raw === 'string' ? parseInt(raw, 10) : typeof raw === 'number' ? raw : NaN;

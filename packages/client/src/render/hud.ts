@@ -1,5 +1,6 @@
 import {
   ARENA,
+  BREACH_STATE,
   PLAYER,
   type ContentRegistry,
   type EnemyDef,
@@ -52,6 +53,10 @@ export interface HudState {
   mode: string;
   muted: boolean;
   debug: string | null;
+  /** Camera centre (world px) + zoom (world px -> CSS px), for offscreen breach arrows. */
+  camera?: { x: number; y: number; zoom: number };
+  /** Render clock, seconds (animations). */
+  now?: number;
 }
 
 export interface Insets {
@@ -116,6 +121,7 @@ export class Hud {
     ctx.textBaseline = 'alphabetic';
     this.slotRects = [];
     this.timer(ctx, w, s);
+    if (s.me) this.score(ctx, w, s.me);
     this.minimap(ctx, w, s);
     if (touch) {
       if (s.me) this.health(ctx, 96, s.me);
@@ -128,6 +134,7 @@ export class Hud {
       if (touch) this.weaponColumn(ctx, w, s.me);
       else this.weapons(ctx, w, h, s.me);
       this.stateBanner(ctx, w, h, s.me);
+      if (s.me.br && s.me.st === 'alive') this.braced(ctx, w, touch ? h - 24 : h - 122, s.now ?? 0);
     }
     const boss = this.bossBar(ctx, w, s);
     this.notices(ctx, w, s.notices, boss ? 136 : 110);
@@ -141,6 +148,7 @@ export class Hud {
     }
     // sticks + crosshair are positioned in raw CSS px
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.breachArrows(ctx, cw, ch, s);
     if (s.touch) this.sticks(ctx, cw, ch, s.touch, s.me?.st === 'alive');
     if (s.me?.st === 'alive' && s.crosshair) this.crosshair(ctx, s.crosshair);
     ctx.restore();
@@ -258,7 +266,8 @@ export class Hud {
       const label = p.st === 'alive' ? '' : p.st === 'downed' ? `DOWN ${Math.ceil(p.bo)}s` : 'KIA';
       ctx.fillStyle = p.st === 'downed' ? '#ff6a50' : HUD.dim;
       ctx.textAlign = 'right';
-      ctx.fillText(label || `${p.k}`, 200, y + 10);
+      if (!label) ctx.font = F(600, 10, true);
+      ctx.fillText(label || `${p.sc ?? 0} pts`, 200, y + 10);
       ctx.textAlign = 'left';
       this.bar(
         ctx,
@@ -272,6 +281,84 @@ export class Hud {
     });
   }
 
+  /** Own score: big, right of the clock (teammates' scores are small, in the team panel). */
+  private score(ctx: CanvasRenderingContext2D, w: number, me: PlayerSnap): void {
+    const x = w / 2 + 131;
+    this.panel(ctx, x, 8, 110, 64);
+    ctx.textAlign = 'center';
+    ctx.font = F(700, 10);
+    ctx.fillStyle = HUD.gold;
+    ctx.fillText('YOUR SCORE', x + 55, 24);
+    ctx.font = F(800, 26, true);
+    ctx.fillStyle = '#fff2c8';
+    ctx.fillText(String(me.sc ?? 0), x + 55, 54);
+    ctx.font = F(600, 9);
+    ctx.fillStyle = HUD.dim;
+    ctx.fillText(`${me.k} KILLS`, x + 55, 66);
+  }
+
+  /** Heavy Bolter brace indicator. */
+  private braced(ctx: CanvasRenderingContext2D, w: number, y: number, t: number): void {
+    const text = '◆ BRACED · RATE OF FIRE UP ◆';
+    ctx.textAlign = 'center';
+    ctx.font = F(800, 14);
+    const tw = ctx.measureText(text).width + 24;
+    this.panel(ctx, w / 2 - tw / 2, y - 17, tw, 24);
+    ctx.fillStyle = `rgba(255,${200 + Math.round(40 * Math.sin(t * 8))},110,1)`;
+    ctx.fillText(text, w / 2, y);
+  }
+
+  /** Edge arrows towards telegraphing / active spawn points that are off screen. */
+  private breachArrows(
+    ctx: CanvasRenderingContext2D,
+    cw: number,
+    ch: number,
+    s: HudState,
+  ): void {
+    const cam = s.camera;
+    const sp = s.snap.sp;
+    if (!cam || !sp) return;
+    const pts = this.content.director.spawnPoints;
+    const m = 34;
+    const t = s.now ?? 0;
+    for (let i = 0; i < pts.length; i++) {
+      const st = sp[i] ?? 0;
+      if (st === BREACH_STATE.idle) continue;
+      const p = pts[i]!;
+      const sx = (p.x - cam.x) * cam.zoom + cw / 2;
+      const sy = (p.y - cam.y) * cam.zoom + ch / 2;
+      if (sx >= 0 && sx <= cw && sy >= 0 && sy <= ch) continue;
+      const dx = sx - cw / 2;
+      const dy = sy - ch / 2;
+      const k = Math.min((cw / 2 - m) / Math.abs(dx || 1e-6), (ch / 2 - m) / Math.abs(dy || 1e-6));
+      const ax = cw / 2 + dx * k;
+      const ay = ch / 2 + dy * k;
+      const ang = Math.atan2(dy, dx);
+      const pulse = 0.6 + 0.4 * Math.sin(t * (st === BREACH_STATE.active ? 14 : 8) + i);
+      ctx.save();
+      ctx.translate(ax, ay);
+      ctx.rotate(ang);
+      ctx.fillStyle = `rgba(255,${st === BREACH_STATE.active ? 60 : 110},90,${pulse})`;
+      ctx.strokeStyle = 'rgba(20,0,10,0.9)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(18, 0);
+      ctx.lineTo(-10, -13);
+      ctx.lineTo(-4, 0);
+      ctx.lineTo(-10, 13);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+      ctx.textAlign = 'center';
+      ctx.font = F(800, 10);
+      ctx.fillStyle = `rgba(255,190,170,${pulse})`;
+      const lx = ax - Math.cos(ang) * 26;
+      const ly = ay - Math.sin(ang) * 26 + 4;
+      ctx.fillText(p.kind.toUpperCase(), lx, ly);
+    }
+  }
+
   private minimap(ctx: CanvasRenderingContext2D, w: number, s: HudState): void {
     const mw = 190;
     const mh = (mw * ARENA.height) / ARENA.width;
@@ -281,6 +368,14 @@ export class Hud {
     this.panel(ctx, x0 - 4, y0 - 4, mw + 8, mh + 8);
     ctx.fillStyle = 'rgba(40,30,20,0.6)';
     ctx.fillRect(x0, y0, mw, mh);
+    s.snap.sp?.forEach((st, i) => {
+      const p = this.content.director.spawnPoints[i];
+      if (!p) return;
+      ctx.fillStyle = st ? '#ff4060' : 'rgba(170,80,170,0.8)';
+      ctx.beginPath();
+      ctx.arc(x0 + p.x * k, y0 + p.y * k, st ? 4.5 : 3, 0, Math.PI * 2);
+      ctx.fill();
+    });
     ctx.fillStyle = '#c05ad0';
     for (const e of s.snap.enemies) ctx.fillRect(x0 + e[2] * k - 1, y0 + e[3] * k - 1, 2, 2);
     for (const p of s.snap.pickups) {

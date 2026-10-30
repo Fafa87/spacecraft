@@ -1,4 +1,4 @@
-import type { HighscoreEntry, RunResult, SubmitResponse } from '@sms/shared';
+import type { HighscoreEntry, PlayerScoreEntry, RunResult, SubmitResponse } from '@sms/shared';
 
 /**
  * Storage abstraction for highscores. Implementations: memory (tests),
@@ -12,6 +12,8 @@ export interface HighscoreRepository {
   add(result: RunResult): Promise<SubmitResponse>;
   top(teamSize: number, limit: number): Promise<HighscoreEntry[]>;
   count(teamSize?: number): Promise<number>;
+  /** Individual leaderboard (personal points, v0.4+ runs); teamSize 0 = all team sizes. */
+  topPlayers(teamSize: number, limit: number): Promise<PlayerScoreEntry[]>;
   close(): Promise<void>;
 }
 

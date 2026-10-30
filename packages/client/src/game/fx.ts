@@ -107,29 +107,6 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
           grow: 3,
           shape: 'smoke',
         });
-      } else if (ev.w === 'power_sword') {
-        P.spawn({
-          x: mx,
-          y: my,
-          shape: 'sprite',
-          sprite: 'fx_slash',
-          maxLife: 0.16,
-          size: 1.2,
-          angle: ev.a,
-          additive: true,
-          drag: 0,
-          color: vis.muzzleColor,
-        });
-        P.burst(mx, my, 4, {
-          speed: 220,
-          dir: ev.a,
-          spread: 1.2,
-          color: '#bff4ff',
-          maxLife: 0.15,
-          size: 1.5,
-          shape: 'spark',
-          additive: true,
-        });
       } else if (vis.muzzle > 0) {
         const big = ev.s ? 1.6 : 1;
         P.spawn({

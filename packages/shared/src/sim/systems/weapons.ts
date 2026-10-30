@@ -46,7 +46,13 @@ export function updatePlayerWeapon(world: World, p: Player, dt: number): void {
   }
 
   const def = world.content.weapon(p.current);
-  p.fireCooldown = Math.max(0, p.fireCooldown - dt);
+  const braced = isBraced(p, def);
+  if (braced && p.stillTime - dt < def.braceDelay!)
+    world.events.push({ e: 'brace', p: p.id, w: def.id });
+  // Keep the overshoot while the trigger stays down so fire rates aren't rounded up to whole
+  // ticks; reset to 0 when idle (no stored burst).
+  const held = p.triggerWasDown && p.input.fire && def.automatic;
+  p.fireCooldown = Math.max(held ? -dt : 0, p.fireCooldown - dt);
   coolWeapons(world, p, dt);
 
   if (p.reloadTimer > 0) {
@@ -72,9 +78,9 @@ export function updatePlayerWeapon(world: World, p: Player, dt: number): void {
       startReload(world, p, def);
       return;
     }
-    fireWeapon(world, p, def);
+    fireWeapon(world, p, def, braced);
     p.ammo[def.id]--;
-    p.fireCooldown += def.fireInterval;
+    p.fireCooldown += braced ? def.fireInterval / (def.braceFireRateMult ?? 1) : def.fireInterval;
     if (def.heat && addHeat(world, p, def)) return;
     if (!def.automatic) break;
   }
@@ -115,12 +121,17 @@ function addHeat(world: World, p: Player, def: WeaponDef): boolean {
   return true;
 }
 
+/** True when the marine has stood still long enough to brace this weapon (and is alive). */
+export function isBraced(p: Player, def: WeaponDef): boolean {
+  return def.braceDelay !== undefined && p.state === 'alive' && p.stillTime >= def.braceDelay;
+}
+
 /** True when the next shot of this weapon would be supercharged. */
 export function isSupercharged(p: Player, def: WeaponDef): boolean {
   return !!def.heat && (p.heat[def.id] ?? 0) >= def.heat.superchargeAt * def.heat.max;
 }
 
-export function fireWeapon(world: World, p: Player, def: WeaponDef): void {
+export function fireWeapon(world: World, p: Player, def: WeaponDef, braced = false): void {
   const spec = def.projectile;
   const sc = isSupercharged(p, def);
   const dmgMul = sc ? def.heat!.superchargeDamageMul : 1;
@@ -138,7 +149,8 @@ export function fireWeapon(world: World, p: Player, def: WeaponDef): void {
     ...(sc ? { s: 1 as const } : {}),
   });
   for (let i = 0; i < def.pellets; i++) {
-    const a = p.aim + (world.rng.next() - 0.5) * def.spread;
+    const spread = braced ? def.spread * (def.braceSpreadMult ?? 1) : def.spread;
+    const a = p.aim + (world.rng.next() - 0.5) * spread;
     const speed = spec.speed * (1 + (world.rng.next() - 0.5) * 2 * (spec.speedJitter ?? 0));
     world.projectiles.push({
       id: allocId(world),

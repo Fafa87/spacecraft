@@ -1,7 +1,12 @@
 import type { HighscoreEntry, RunResult } from '@sms/shared';
-import type { HighscoreStore, SubmitOutcome, TopResult } from './HighscoreStore.js';
+import type {
+  HighscoreStore,
+  SubmitOutcome,
+  TopPlayersResult,
+  TopResult,
+} from './HighscoreStore.js';
 import { HttpError } from './HttpHighscoreStore.js';
-import type { LocalHighscoreStore } from './LocalHighscoreStore.js';
+import { mergePlayerScores, type LocalHighscoreStore } from './LocalHighscoreStore.js';
 
 /** A rejection that retrying can't fix (bad run, denied by rules). 408/429 are transient. */
 const isPermanentRejection = (err: unknown): err is HttpError =>
@@ -65,6 +70,22 @@ export class FallbackHighscoreStore implements HighscoreStore {
     } catch {
       this.online = false;
       return this.local.top(teamSize, limit);
+    }
+  }
+
+  async topPlayers(teamSize: number, limit = 10): Promise<TopPlayersResult> {
+    if (!this.remote) return this.local.topPlayers(teamSize, limit);
+    try {
+      const res = await this.remote.topPlayers(teamSize, limit);
+      this.online = true;
+      // Still-pending local runs show alongside the server rows.
+      const pending = this.local
+        .pending()
+        .filter((e) => teamSize === 0 || e.teamSize === teamSize);
+      return { entries: mergePlayerScores(pending, res.entries, limit), source: 'server' };
+    } catch {
+      this.online = false;
+      return this.local.topPlayers(teamSize, limit);
     }
   }
 

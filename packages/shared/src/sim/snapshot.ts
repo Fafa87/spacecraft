@@ -1,4 +1,5 @@
 import { round } from '../math/vec.js';
+import { isBraced } from './systems/weapons.js';
 import type { Enemy, Player, PlayerState, World } from './types.js';
 import type { GameEvent, PickupKind } from './types.js';
 
@@ -27,7 +28,14 @@ export interface PlayerSnap {
   ht?: number;
   /** Venting after an overheat (rl counts down the vent). */
   vt?: 1;
+  /** Personal score (sum of kill points). */
+  sc: number;
+  /** Braced (bracing weapon equipped, standing still long enough). */
+  br?: 1;
 }
+
+/** Spawn point state in Snapshot.sp: idle, telegraphing (about to emerge), active (emerging). */
+export const BREACH_STATE = { idle: 0, telegraph: 1, active: 2 } as const;
 
 /** Bit flags in EnemySnap[6]. */
 export const ENEMY_FLAG = {
@@ -62,7 +70,20 @@ export interface Snapshot {
   enemies: EnemySnap[];
   projectiles: ProjectileSnap[];
   pickups: PickupSnap[];
+  /** BREACH_STATE per director spawn point (content.director.spawnPoints order). */
+  sp: number[];
   events: GameEvent[];
+}
+
+export function breachStates(world: World): number[] {
+  const st = world.director;
+  return world.content.director.spawnPoints.map((_, i) =>
+    st.queue.some((q) => q.point === i)
+      ? BREACH_STATE.telegraph
+      : (st.activeUntil[i] ?? -1) > world.time
+        ? BREACH_STATE.active
+        : BREACH_STATE.idle,
+  );
 }
 
 function heatFields(world: World, p: Player): { ht?: number; vt?: 1 } {
@@ -109,6 +130,8 @@ export function buildSnapshot(world: World, bleedOutTime: number): Snapshot {
       rv: round(p.reviveProgress, 2),
       seq: p.lastInputSeq,
       k: p.kills,
+      sc: p.score,
+      ...(isBraced(p, c.weapon(p.current)) ? { br: 1 as const } : {}),
       ...heatFields(world, p),
     })),
     enemies: world.enemies.map((e) => [
@@ -135,6 +158,7 @@ export function buildSnapshot(world: World, bleedOutTime: number): Snapshot {
       y: round(p.y),
       life: round(p.life, 1),
     })),
+    sp: breachStates(world),
     events: world.events,
   };
 }

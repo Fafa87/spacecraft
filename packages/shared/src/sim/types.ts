@@ -60,6 +60,12 @@ export interface Player {
   lastInputSeq: number;
   connected: boolean;
   kills: number;
+  /** Personal score: sum of `points` of every enemy this marine killed. */
+  score: number;
+  /** Kills per enemy type id. */
+  killsByType: Record<string, number>;
+  /** Seconds without moving (bracing weapons fire faster after braceDelay). */
+  stillTime: number;
   damageDealt: number;
   /** Survival second this marine died (or null). */
   diedAt: number | null;
@@ -164,10 +170,32 @@ export type GameEvent =
   | { e: 'pickup'; p: number; k: PickupKind; w?: string }
   | { e: 'crate'; x: number; y: number }
   | { e: 'surge'; n: number }
+  /** A hive breach starts pulsing: a group emerges from spawn point `i` soon (`b` = boss). */
+  | { e: 'breach'; i: number; t: string; b?: 1 }
+  /** The group bursts out of spawn point `i`. */
+  | { e: 'swarm'; i: number; n: number }
+  /** Marine braced a bracing weapon (heavy bolter). */
+  | { e: 'brace'; p: number; w: string }
   | { e: 'reload'; p: number; w: string }
   | { e: 'switch'; p: number; w: string };
 
+/** A group waiting to emerge from a breach (spawn point) once its telegraph ends. */
+export interface QueuedGroup {
+  point: number;
+  type: string;
+  n: number;
+  /** Survival second it emerges. */
+  at: number;
+  hpMul: number;
+}
+
 export interface DirectorState {
+  /** Groups telegraphing at breaches. */
+  queue: QueuedGroup[];
+  /** Per spawn point: survival second until which it counts as active (emerging). */
+  activeUntil: number[];
+  /** Breaches the current surge flanks from. */
+  surgePoints: number[];
   budget: number;
   wave: number;
   surgeUntil: number;

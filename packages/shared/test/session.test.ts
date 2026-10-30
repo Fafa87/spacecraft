@@ -58,4 +58,35 @@ describe('HostSession over local links', () => {
     expect(results[0].mode).toBe('p2p');
     host.close();
   });
+
+  it('freezes the solo sim while paused (leave-game dialog) and resumes without catch-up', async () => {
+    const scheduler = new ManualScheduler();
+    const host = new HostSession({
+      roomCode: 'SOLO',
+      mode: 'local',
+      maxPlayers: 1,
+      scheduler,
+      seed: () => 7,
+      submitResult: async () => ({ status: 'local' }),
+    });
+    const [h, c] = createLocalLinkPair('s');
+    host.addLink(h);
+    const a = new ClientSession(c, 'Solo');
+    a.join();
+    await flush();
+    a.requestStart();
+    await flush();
+    scheduler.advance(500);
+    const t0 = host.world!.time;
+    expect(t0).toBeGreaterThan(0);
+    host.setPaused(true);
+    scheduler.advance(5000);
+    expect(host.world!.time).toBe(t0);
+    host.setPaused(false);
+    scheduler.advance(100);
+    // no 5 s catch-up burst after unpausing
+    expect(host.world!.time - t0).toBeLessThan(0.3);
+    expect(host.world!.time).toBeGreaterThan(t0);
+    host.close();
+  });
 });

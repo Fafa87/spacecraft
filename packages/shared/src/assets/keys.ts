@@ -30,7 +30,6 @@ export const CORE_SPRITES = [
   'fx_muzzle',
   'fx_particle',
   'fx_ring',
-  'fx_slash',
   'fx_burrow',
   'fx_synapse',
   'fx_spark',

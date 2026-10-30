@@ -6,7 +6,6 @@ import type { Ctx, SpriteDef } from './types.js';
 /** Accent colour per weapon (crate light strip, icon glow). */
 export const WEAPON_TINT: Record<string, string> = {
   bolt_rifle: '#e0b44a',
-  power_sword: '#7fc8ff',
   heavy_bolter: '#ff9a3a',
   flamer: '#ff6a1a',
   plasma_gun: '#59c8ff',
@@ -51,24 +50,6 @@ const ICONS: Record<string, (ctx: Ctx, c: string, d: string) => void> = {
       1.2,
     ); // magazine
     roundRect(ctx, 16, 4, 14, 4, 1, c, d, 1); // scope
-  },
-  power_sword: (ctx, c, d) => {
-    roundRect(ctx, 2, 12, 12, 5, 2, c, d, 1.2); // grip
-    roundRect(ctx, 13, 5, 4, 19, 1.5, c, d, 1.2); // guard
-    poly(
-      ctx,
-      [
-        [17, 11],
-        [56, 11],
-        [63, 14.5],
-        [56, 18],
-        [17, 18],
-      ],
-      c,
-      d,
-      1.4,
-    ); // blade
-    line(ctx, 19, 14.5, 56, 14.5, '#7fc8ff', 1.4);
   },
   heavy_bolter: (ctx, c, d) => {
     roundRect(ctx, 4, 7, 34, 15, 3, c, d, 1.5);
@@ -218,40 +199,6 @@ const HELD: Record<string, (ctx: Ctx) => void> = {
       1,
     );
     glow(ctx, RX + 32, 4, 3.5, '#ff6a2a', 0.8);
-  },
-  power_sword: (ctx) => {
-    // Held in the right hand, blade swept forward-left across the body.
-    ctx.save();
-    ctx.translate(RX, RY);
-    ctx.rotate(-0.28);
-    roundRect(ctx, -5, -1.6, 8, 3.2, 1.2, '#3a2a1a', GUN_D, 0.8); // grip
-    roundRect(ctx, 2, -5, 2.6, 10, 1, BRASS, '#5a4416', 0.8); // guard
-    glow(ctx, 18, 0, 10, '#7fc8ff', 0.35);
-    poly(
-      ctx,
-      [
-        [4.6, -2],
-        [31, -2],
-        [36, 0],
-        [31, 2],
-        [4.6, 2],
-      ],
-      '#cfe6f5',
-      '#3a5a74',
-      0.8,
-    );
-    line(ctx, 6, 0, 31, 0, '#7fc8ff', 0.9);
-    // Power-field crackle.
-    ctx.strokeStyle = 'rgba(200,235,255,0.85)';
-    ctx.lineWidth = 0.6;
-    ctx.beginPath();
-    ctx.moveTo(8, -3);
-    ctx.lineTo(13, -1);
-    ctx.lineTo(17, -3.5);
-    ctx.lineTo(23, -1.5);
-    ctx.lineTo(28, -3);
-    ctx.stroke();
-    ctx.restore();
   },
   frag_grenade: (ctx) => {
     // Bolt pistol in the right hand, grenade ready in the left.

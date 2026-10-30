@@ -43,7 +43,11 @@ export function killEnemy(world: World, enemy: Enemy, killer?: Player): void {
   enemy.dead = true;
   const def = world.content.enemy(enemy.type);
   world.stats.kills++;
-  if (killer) killer.kills++;
+  if (killer) {
+    killer.kills++;
+    killer.score += def.points;
+    killer.killsByType[enemy.type] = (killer.killsByType[enemy.type] ?? 0) + 1;
+  }
   world.events.push({ e: 'die', t: enemy.type, x: Math.round(enemy.x), y: Math.round(enemy.y) });
   if (def.explode?.onDeath)
     explode(world, enemy.x, enemy.y, def.explode, { hurtsPlayers: true, hurtsEnemies: true });

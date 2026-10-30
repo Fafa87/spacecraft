@@ -359,44 +359,6 @@ const fx: SpriteDef[] = [
     },
   },
   {
-    key: 'fx_slash',
-    group: 'fx',
-    w: 96,
-    h: 96,
-    scale: 1.5,
-    frames: 3,
-    prompt:
-      'Power-sword swing arc: crescent of crackling blue-white energy, 3 frames fading, facing right',
-    draw: (ctx, frame) => {
-      const t = frame / 2;
-      ctx.save();
-      ctx.translate(48, 48);
-      ctx.globalAlpha = 1 - t * 0.6;
-      const r = 30 + t * 6;
-      ctx.beginPath();
-      ctx.arc(0, 0, r, -0.95, 0.95);
-      ctx.arc(0, 0, r - 9 + t * 4, 0.95, -0.95, true);
-      ctx.closePath();
-      const g = ctx.createRadialGradient(0, 0, r - 10, 0, 0, r + 2);
-      g.addColorStop(0, 'rgba(127,200,255,0)');
-      g.addColorStop(0.7, 'rgba(160,220,255,0.85)');
-      g.addColorStop(1, 'rgba(255,255,255,0.95)');
-      ctx.fillStyle = g;
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(230,245,255,0.9)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      for (let i = 0; i <= 8; i++) {
-        const a = -0.9 + (i / 8) * 1.8;
-        const rr = r - 3 + (i % 2 ? 3 : -2);
-        if (i) ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
-        else ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
-      }
-      ctx.stroke();
-      ctx.restore();
-    },
-  },
-  {
     key: 'fx_burrow',
     group: 'fx',
     w: 64,

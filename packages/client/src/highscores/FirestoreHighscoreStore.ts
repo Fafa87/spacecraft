@@ -3,13 +3,21 @@ import {
   commitBody,
   endpoint,
   parseCount,
+  hasScores,
   parseTop,
+  parseTopPlayers,
   rankQuery,
+  topPlayersQuery,
   topQuery,
   type FirestoreConfig,
   type FirestoreMethod,
 } from './firestore.js';
-import type { HighscoreStore, SubmitOutcome, TopResult } from './HighscoreStore.js';
+import type {
+  HighscoreStore,
+  SubmitOutcome,
+  TopPlayersResult,
+  TopResult,
+} from './HighscoreStore.js';
 import { HttpError } from './HttpHighscoreStore.js';
 
 type Fetch = typeof fetch;
@@ -76,5 +84,11 @@ export class FirestoreHighscoreStore implements HighscoreStore {
   async top(teamSize: number, limit = 10): Promise<TopResult> {
     const json = await this.post('runQuery', topQuery(this.cfg, teamSize, limit));
     return { entries: parseTop(json), source: 'server' };
+  }
+
+  async topPlayers(teamSize: number, limit = 10): Promise<TopPlayersResult> {
+    if (!hasScores(this.cfg.board)) return { entries: [], source: 'server' };
+    const json = await this.post('runQuery', topPlayersQuery(this.cfg, teamSize, limit));
+    return { entries: parseTopPlayers(json), source: 'server' };
   }
 }

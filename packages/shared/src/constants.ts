@@ -1,8 +1,8 @@
 /** Global tunables. Gameplay content (weapons, enemies, waves) lives in `data/`. */
 
-export const GAME_VERSION = '0.3.0';
+export const GAME_VERSION = '0.4.0-dev';
 /** Bump whenever the wire protocol or data tables change incompatibly. */
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 
 export const TICK_RATE = 30;
 export const TICK_DT = 1 / TICK_RATE;
@@ -19,7 +19,8 @@ export const PLAYER = {
   speed: 230,
   maxHp: 100,
   /** Seconds a downed marine can wait for a revive before dying. */
-  bleedOutTime: 20,
+  // v0.4: tripled (was 20 s) so squads have time to fight their way to a downed brother.
+  bleedOutTime: 60,
   /** Seconds a teammate must stand next to a downed marine to revive them. */
   reviveTime: 3,
   reviveRadius: 70,

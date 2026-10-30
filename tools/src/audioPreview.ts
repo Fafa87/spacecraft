@@ -121,13 +121,7 @@ hit('shoot_melta', 12.9, 0);
 hit('melta_impact', 13.0, -0.3);
 hit('nid_die_mid', 13.2, -0.3);
 hit('reload_melta', 13.9, 0);
-// power sword
-for (let i = 0; i < 3; i++) {
-  hit('swing_power_sword', 15 + i * 0.38, 0.1);
-  hit('sword_impact', 15.12 + i * 0.38, 0.2);
-}
 hit('nid_die_small', 15.9, 0.3);
-hit('power_field', 16.4, 0.1);
 // ripper / termagant / biovore / spore mine + frag grenade
 hit('nid_chitter', 17.4, -0.5);
 hit('nid_spit', 17.8, 0.6);

@@ -35,8 +35,51 @@ export const FIRESTORE_LEGACY_FIELDS = [
   'version',
   'timestamp',
 ] as const;
-/** Fields of a per-board run: the legacy set + `board` (must equal the path segment). */
-export const FIRESTORE_FIELDS = [...FIRESTORE_LEGACY_FIELDS, 'board'] as const;
+/** Fields of a v0.2/v0.3 per-board run: the legacy set + `board` (must equal the path segment). */
+export const FIRESTORE_BOARD_FIELDS = [...FIRESTORE_LEGACY_FIELDS, 'board'] as const;
+/** Boards written by frozen builds from before personal scores (v0.2.x, v0.3.x). */
+export const FIRESTORE_SCORELESS_BOARDS = ['0.2', '0.3'] as const;
+/** Fields of a v0.4+ run: + per-marine points and kills, aligned with `names`. */
+export const FIRESTORE_FIELDS = [...FIRESTORE_BOARD_FIELDS, 'playerScores', 'playerKills'] as const;
+/**
+ * Individual leaderboard (v0.4+): one doc per marine per run in `boards/{board}/scores/{runId}-{slot}`,
+ * written in the same commit as the run and checked against it with getAfter().
+ */
+export const FIRESTORE_SCORES = 'scores';
+export const FIRESTORE_SCORE_FIELDS = [
+  'runId',
+  'slot',
+  'name',
+  'score',
+  'kills',
+  'teamSize',
+  'survivalMs',
+  'version',
+  'board',
+  'timestamp',
+] as const;
+/** Firestore composite indexes the leaderboard queries need (also in firestore.indexes.json). */
+export const FIRESTORE_INDEXES = {
+  indexes: [
+    {
+      collectionGroup: FIRESTORE_COLLECTION,
+      queryScope: 'COLLECTION',
+      fields: [
+        { fieldPath: 'teamSize', order: 'ASCENDING' },
+        { fieldPath: 'survivalMs', order: 'DESCENDING' },
+      ],
+    },
+    {
+      collectionGroup: FIRESTORE_SCORES,
+      queryScope: 'COLLECTION',
+      fields: [
+        { fieldPath: 'teamSize', order: 'ASCENDING' },
+        { fieldPath: 'score', order: 'DESCENDING' },
+      ],
+    },
+  ],
+  fieldOverrides: [],
+};
 
 /** A regex source → a rules string literal ("..." with \ and " escaped). */
 const lit = (s: string) => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
@@ -45,7 +88,15 @@ const unanchored = (r: RegExp) => r.source.replace(/^\^/, '').replace(/\$$/, '')
 export function buildFirestoreRules(): string {
   const list = (fs: readonly string[]) => fs.map((f) => `'${f}'`).join(', ');
   const fields = list(FIRESTORE_FIELDS);
+  const boardFields = list(FIRESTORE_BOARD_FIELDS);
   const legacy = list(FIRESTORE_LEGACY_FIELDS);
+  const scoreFields = list(FIRESTORE_SCORE_FIELDS);
+  const scoreless = list(FIRESTORE_SCORELESS_BOARDS);
+  const perMarine = Array.from(
+    { length: L.maxTeamSize },
+    (_, i) => `        && (d.teamSize <= ${i} || validMarine(d, ${i}))`,
+  ).join('\n');
+  const pts = L.maxPointsPerSecondPerPlayer;
   const nameChecks = Array.from(
     { length: L.maxTeamSize },
     (_, i) => `        && (d.names.size() <= ${i} || validName(d.names[${i}]))`,
@@ -83,6 +134,43 @@ ${nameChecks}
         && d.timestamp == request.time;
     }
 
+    // v0.4+: per-marine points / kills (personal score = sum of kill points).
+    function validMarine(d, i) {
+      return d.playerScores[i] is int && d.playerScores[i] >= 0
+        && d.playerScores[i] * 1000 <= d.survivalMs * ${pts} + ${L.pointsSlack * 1000}
+        && d.playerKills[i] is int && d.playerKills[i] >= 0 && d.playerKills[i] <= d.kills
+        && d.playerKills[i] * 1000 <= d.survivalMs * ${k} + ${L.killsSlack * 1000};
+    }
+
+    function validScores(d) {
+      return d.playerScores is list && d.playerScores.size() == d.teamSize
+        && d.playerKills is list && d.playerKills.size() == d.teamSize
+${perMarine};
+    }
+
+    function boardVersion(board, d) {
+      return d.board == board
+        && d.version is string
+        && d.version.split('[.]').size() >= 3
+        && d.version.split('[.]')[0] + '.' + d.version.split('[.]')[1] == board;
+    }
+
+    // An individual score row must mirror its run, written in the same commit.
+    function validScoreRow(board, scoreId, d) {
+      let run = getAfter(/databases/$(database)/documents/${FIRESTORE_BOARDS}/$(board)/${FIRESTORE_COLLECTION}/$(d.runId)).data;
+      return d.slot is int && d.slot >= 0 && d.slot < ${L.maxTeamSize}
+        && d.runId is string && scoreId == d.runId + '-' + string(d.slot)
+        && d.timestamp == request.time
+        && run.timestamp == request.time
+        && d.slot < run.teamSize
+        && d.teamSize == run.teamSize
+        && d.name == run.names[d.slot]
+        && d.score == run.playerScores[d.slot]
+        && d.kills == run.playerKills[d.slot]
+        && d.survivalMs == run.survivalMs
+        && d.version == run.version;
+    }
+
     // Legacy v0.1.x board (frozen /v0.1.0/ build): unchanged field set, no board field.
     match /${FIRESTORE_COLLECTION}/{runId} {
       allow read: if true;
@@ -92,17 +180,32 @@ ${nameChecks}
       allow update, delete: if false;
     }
 
-    // Per-version boards (v0.2+): board = major.minor of the version, e.g. boards/0.2/highscores.
+    // Per-version boards (v0.2+): board = major.minor of the version, e.g. boards/0.4/highscores.
+    // v0.2/v0.3 (frozen builds) keep their field set; v0.4+ runs carry per-marine scores.
     match /${FIRESTORE_BOARDS}/{board}/${FIRESTORE_COLLECTION}/{runId} {
       allow read: if board.matches("[0-9]{1,3}[.][0-9]{1,3}");
       allow create: if board.matches("[0-9]{1,3}[.][0-9]{1,3}")
-        && request.resource.data.keys().hasOnly([${fields}])
-        && request.resource.data.keys().hasAll([${fields}])
-        && request.resource.data.board == board
-        && request.resource.data.version is string
-        && request.resource.data.version.split('[.]').size() >= 3
-        && request.resource.data.version.split('[.]')[0] + '.' + request.resource.data.version.split('[.]')[1] == board
-        && validRun(runId, request.resource.data);
+        && boardVersion(board, request.resource.data)
+        && validRun(runId, request.resource.data)
+        && ((board in [${scoreless}]
+            && request.resource.data.keys().hasOnly([${boardFields}])
+            && request.resource.data.keys().hasAll([${boardFields}]))
+          || (!(board in [${scoreless}])
+            && request.resource.data.keys().hasOnly([${fields}])
+            && request.resource.data.keys().hasAll([${fields}])
+            && validScores(request.resource.data)));
+      allow update, delete: if false;
+    }
+
+    // Individual leaderboard (v0.4+): boards/{board}/scores/{runId}-{slot}.
+    match /${FIRESTORE_BOARDS}/{board}/${FIRESTORE_SCORES}/{scoreId} {
+      allow read: if board.matches("[0-9]{1,3}[.][0-9]{1,3}");
+      allow create: if board.matches("[0-9]{1,3}[.][0-9]{1,3}")
+        && !(board in [${scoreless}])
+        && request.resource.data.keys().hasOnly([${scoreFields}])
+        && request.resource.data.keys().hasAll([${scoreFields}])
+        && boardVersion(board, request.resource.data)
+        && validScoreRow(board, scoreId, request.resource.data);
       allow update, delete: if false;
     }
 

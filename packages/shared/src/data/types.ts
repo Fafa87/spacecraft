@@ -67,6 +67,13 @@ export interface WeaponDef {
   spread: number;
   /** Movement speed multiplier while this weapon is equipped. */
   moveSpeedMul: number;
+  /**
+   * Bracing (heavy weapons): after standing still for `braceDelay` seconds the weapon fires
+   * `braceFireRateMult`× faster with `braceSpreadMult`× the spread. Omit braceDelay = no bracing.
+   */
+  braceDelay?: number;
+  braceFireRateMult?: number;
+  braceSpreadMult?: number;
   projectile: ProjectileSpec;
   heat?: HeatSpec;
   /** Survival second at which every marine unlocks it; 0 = starting weapon; null = crate-only. */
@@ -86,6 +93,8 @@ export interface WeaponDef {
     impact?: string;
     /** Loop whose level follows the local player's heat (plasma whine). */
     heatLoop?: string;
+    /** Played when the marine braces (bracing weapons). */
+    brace?: string;
   };
   /** Sprite keys (see tools/src/sprites). */
   /** icon = HUD, pickup = crate, held = weapon + gauntlets overlay drawn on the marine. */
@@ -164,6 +173,8 @@ export interface EnemyDef {
   boss?: boolean;
   /** Spawn director cost. */
   threat: number;
+  /** Score awarded to the marine who lands the killing blow. */
+  points: number;
   /** Chance to drop a medkit on death. */
   medkitDropChance: number;
   sprite: string;
@@ -187,6 +198,14 @@ export interface EnemyDef {
     aura?: string;
   };
   decal: 'blood' | 'acid';
+}
+
+export interface SpawnPointDef {
+  id: string;
+  x: number;
+  y: number;
+  /** Visual style: wall breach, floor tunnel mouth or vent. */
+  kind: 'breach' | 'tunnel' | 'vent';
 }
 
 export interface WaveTableEntry {
@@ -213,7 +232,19 @@ export interface DirectorConfig {
     bonusThreat: number;
     bonusThreatPerWave: number;
   };
+  /**
+   * Fixed hive breaches the swarm emerges from (arena coordinates). The director picks among
+   * them (never one too close to a marine); surges flank from several at once.
+   */
+  spawnPoints: SpawnPointDef[];
   spawn: {
+    /** Seconds a breach pulses before the group emerges (boss: bossTelegraph). */
+    telegraph: number;
+    bossTelegraph: number;
+    /** A breach this close to a living marine is not used. */
+    pointMinDistance: number;
+    /** Breaches used at once by a surge wave (flanking), [min, max]. */
+    surgePoints: [number, number];
     minDistance: number;
     maxDistance: number;
     groupMin: number;

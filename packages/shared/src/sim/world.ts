@@ -28,6 +28,9 @@ export function createWorld(
     projectiles: [],
     pickups: [],
     director: {
+      queue: [],
+      activeUntil: d.spawnPoints.map(() => -1),
+      surgePoints: [],
       budget: 0,
       wave: 0,
       surgeUntil: -1,
@@ -93,6 +96,9 @@ export function createPlayer(
     lastInputSeq: 0,
     connected: true,
     kills: 0,
+    score: 0,
+    killsByType: {},
+    stillTime: 0,
     damageDealt: 0,
     diedAt: null,
   };

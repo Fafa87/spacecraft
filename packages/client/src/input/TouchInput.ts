@@ -50,7 +50,7 @@ export interface TouchInputOptions {
   /** Hit-test a tap against HUD widgets (weapon slots); returns a slot number or 0. */
   hitSlot?: (x: number, y: number) => number;
   /** System buttons. */
-  onButton?: (action: 'mute') => void;
+  onButton?: (action: 'mute' | 'menu') => void;
 }
 
 /**
@@ -77,6 +77,7 @@ export class TouchInput implements InputSource {
     this.layer.className = 'touch-layer';
     this.layer.innerHTML = `
       <div class="touch-buttons">
+        <button class="tb" data-act="menu" aria-label="Menu / leave game">⏸</button>
         <button class="tb" data-act="mute" aria-label="Mute">🔊</button>
         <button class="tb main" data-act="reload" aria-label="Reload">⟳<span>RELOAD</span></button>
         ${canFullscreen ? '<button class="tb" data-act="fullscreen" aria-label="Fullscreen">⛶</button>' : ''}
@@ -118,6 +119,7 @@ export class TouchInput implements InputSource {
   private button(act: string, b: HTMLButtonElement): void {
     if (act === 'reload') this.latched.reload = true;
     else if (act === 'mute') this.opts.onButton?.('mute');
+    else if (act === 'menu') this.opts.onButton?.('menu');
     else if (act === 'fullscreen') void toggleFullscreen();
     b.classList.add('pressed');
     setTimeout(() => b.classList.remove('pressed'), 120);

@@ -26,7 +26,6 @@ export const NAME_PRESETS: Record<string, NamePreset> = {
     subtitle: 'A last stand against the swarm',
     weapons: {
       bolt_rifle: 'Burst Rifle',
-      power_sword: 'Arc Blade',
       heavy_bolter: 'Heavy Repeater',
       flamer: 'Incinerator',
       plasma_gun: 'Ion Rifle',

@@ -4,8 +4,28 @@
       "collectionGroup": "highscores",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "teamSize", "order": "ASCENDING" },
-        { "fieldPath": "survivalMs", "order": "DESCENDING" }
+        {
+          "fieldPath": "teamSize",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "survivalMs",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "scores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "teamSize",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "score",
+          "order": "DESCENDING"
+        }
       ]
     }
   ],

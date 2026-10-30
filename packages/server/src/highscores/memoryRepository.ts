@@ -1,4 +1,11 @@
-import type { HighscoreEntry, RunResult, SubmitResponse } from '@sms/shared';
+import {
+  comparePlayerScores,
+  playerScoreEntries,
+  type HighscoreEntry,
+  type PlayerScoreEntry,
+  type RunResult,
+  type SubmitResponse,
+} from '@sms/shared';
 import { compareEntries, toEntry, type HighscoreRepository } from './repository.js';
 
 /** In-memory store; also the base for the JSON file store. */
@@ -40,6 +47,14 @@ export class MemoryHighscoreRepository implements HighscoreRepository {
     return teamSize
       ? this.entries.filter((e) => e.teamSize === teamSize).length
       : this.entries.length;
+  }
+
+  async topPlayers(teamSize: number, limit: number): Promise<PlayerScoreEntry[]> {
+    return this.entries
+      .filter((e) => teamSize === 0 || e.teamSize === teamSize)
+      .flatMap((e) => playerScoreEntries(e, e.submittedAt))
+      .sort(comparePlayerScores)
+      .slice(0, limit);
   }
 
   protected async persist(): Promise<void> {}

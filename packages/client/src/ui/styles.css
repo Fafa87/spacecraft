@@ -734,3 +734,41 @@ input:focus {
   font-size: 11px;
   color: var(--muted);
 }
+
+/* leave-game confirmation (Escape / ⏸) */
+.leave-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 6, 10, 0.62);
+  backdrop-filter: blur(2px);
+  cursor: auto;
+  padding: 16px;
+}
+.leave-dialog .card {
+  width: min(440px, 100%);
+  text-align: center;
+}
+.leave-dialog .row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.leave-dialog .row button {
+  min-width: 150px;
+  min-height: 44px;
+}
+.leave-dialog .hint {
+  margin: 12px 0 0;
+}
+body.touch-mode .leave-dialog .hint {
+  display: none;
+}
+canvas#game.playing.menu-open {
+  cursor: auto;
+}

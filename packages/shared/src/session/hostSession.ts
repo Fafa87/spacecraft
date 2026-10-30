@@ -22,6 +22,7 @@ import {
 import { applyInput, stepWorld } from '../sim/simulation.js';
 import { buildSnapshot } from '../sim/snapshot.js';
 import { stepPlayerMovement, playerMoveSpeed } from '../sim/systems/movement.js';
+import { trackStillness } from '../sim/systems/players.js';
 import type { PlayerInput, World } from '../sim/types.js';
 import { createWorld } from '../sim/world.js';
 import { makeRunId } from '../util/ids.js';
@@ -264,8 +265,21 @@ export class HostSession {
     return true;
   }
 
+  /** Solo pause (leave-game dialog): the loop keeps running but simulates nothing. */
+  paused = false;
+
+  setPaused(paused: boolean): void {
+    this.paused = paused;
+    this.lastTime = this.scheduler.now();
+    this.acc = 0;
+  }
+
   private frame(): void {
     const now = this.scheduler.now();
+    if (this.paused) {
+      this.lastTime = now;
+      return;
+    }
     this.acc += (now - this.lastTime) / 1000;
     this.lastTime = now;
     let ticks = 0;
@@ -289,6 +303,7 @@ export class HostSession {
         const extra = m.inputs.shift()!;
         const p = world.players.find((x) => x.id === m.playerId);
         if (p && p.state === 'alive') {
+          trackStillness(p, extra.mx, extra.my, TICK_DT);
           stepPlayerMovement(
             p,
             extra.mx,
@@ -323,6 +338,8 @@ export class HostSession {
       survivalMs: Math.round(world.time * 1000),
       wave: world.director.wave,
       kills: world.stats.kills,
+      playerScores: world.players.map((p) => p.score),
+      playerKills: world.players.map((p) => p.kills),
       endedAt: new Date().toISOString(),
       version: GAME_VERSION,
       mode: this.opts.mode,
@@ -331,6 +348,8 @@ export class HostSession {
       id: p.id,
       name: p.name,
       kills: p.kills,
+      score: p.score,
+      killsByType: { ...p.killsByType },
       damage: Math.round(p.damageDealt),
       diedAtMs: p.diedAt === null ? null : Math.round(p.diedAt * 1000),
     }));

@@ -10,6 +10,7 @@ import {
   type Snapshot,
 } from '@sms/shared';
 import { lerp, lerpAngle } from '../game/interpolation.js';
+import { drawBreach } from './breaches.js';
 import { chapterUiColor } from './colors.js';
 import type { Assets } from './assets.js';
 import { Camera } from './camera.js';
@@ -243,13 +244,16 @@ export class Renderer {
     this.drawCreep(f.b.time);
     ctx.drawImage(this.decals, 0, 0, ARENA.width, ARENA.height);
     this.drawArenaEdge();
+    // Terrain layer: pillars, rubble and edge boulders always sit UNDER every unit.
+    this.drawProps();
+    // Breach holes / vents (spawn points) are part of the terrain too.
+    this.drawBreaches(f);
     this.drawPickups(f);
     this.drawCorpses();
     this.drawEnemies(f);
     this.drawPlayers(f);
     this.drawProjectiles(f);
     this.drawParticles();
-    this.drawProps();
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.drawVignette();
@@ -329,6 +333,17 @@ export class Renderer {
     for (const p of this.props) {
       if (p.x < v.x0 || p.x > v.x1 || p.y < v.y0 || p.y > v.y1) continue;
       this.assets.draw(ctx, p.key, 0, p.x, p.y, p.ang, p.scale);
+    }
+  }
+
+  /** Spawn points: holes, tunnels and vents with creep and tendrils (terrain layer). */
+  private drawBreaches(f: RenderFrame): void {
+    const v = this.camera.view(260);
+    const pts = this.content.director.spawnPoints;
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i]!;
+      if (p.x < v.x0 || p.x > v.x1 || p.y < v.y0 || p.y > v.y1) continue;
+      drawBreach(this.ctx, p, i, f.b.sp?.[i] ?? 0, this.time);
     }
   }
 

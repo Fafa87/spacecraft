@@ -3,6 +3,7 @@ import {
   clampLimit,
   HIGHSCORE_LIMITS,
   validateLeaderboardRun,
+  type TopPlayersResponse,
   type TopResponse,
 } from '@sms/shared';
 import { RateLimiter } from './rateLimiter.js';
@@ -27,6 +28,7 @@ const parseTeamSize = (raw: unknown): number | null => {
  *   GET  /api/highscores?limit=10               -> { tables: { "1": [...], ..., "4": [...] } }
  *   GET  /api/highscores?teamSize=2&limit=10    -> { teamSize, entries }
  *   GET  /api/highscores/:teamSize?limit=10     -> { teamSize, entries }
+ *   GET  /api/scores?teamSize=0&limit=10        -> { teamSize, entries } individual points (0 = all)
  *   POST /api/highscores  (RunResult JSON)      -> 201 { entry, rank, duplicate } | 200 if duplicate
  */
 export async function highscoreRoutes(
@@ -70,6 +72,19 @@ export async function highscoreRoutes(
           .code(400)
           .send({ error: 'invalid_team_size', message: 'teamSize must be 1-4' });
       return topFor(ts, clampLimit(req.query.limit));
+    },
+  );
+
+  app.get<{ Querystring: { teamSize?: string; limit?: string } }>(
+    '/api/scores',
+    async (req, reply): Promise<TopPlayersResponse | undefined> => {
+      const raw = req.query.teamSize ?? '0';
+      const ts = raw === '0' ? 0 : parseTeamSize(raw);
+      if (ts === null)
+        return reply
+          .code(400)
+          .send({ error: 'invalid_team_size', message: 'teamSize must be 0-4' });
+      return { teamSize: ts, entries: await repo.topPlayers(ts, clampLimit(req.query.limit)) };
     },
   );
 

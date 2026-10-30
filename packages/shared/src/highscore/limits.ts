@@ -12,6 +12,11 @@ export const HIGHSCORE_LIMITS = {
   /** Kills allowed on top of the per-second cap. */
   killsSlack: 50,
   maxKills: 1_000_000,
+  /** Upper bound on personal score points per second of survival (per marine). */
+  maxPointsPerSecondPerPlayer: 40,
+  /** Points allowed on top of the per-second cap. */
+  pointsSlack: 500,
+  maxScore: 10_000_000,
   maxWave: 1000,
   defaultLimit: 10,
   maxLimit: 100,

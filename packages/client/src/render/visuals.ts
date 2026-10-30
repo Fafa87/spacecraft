@@ -193,7 +193,6 @@ export interface WeaponVisual {
 
 export const WEAPON_VISUALS: Record<string, WeaponVisual> = {
   bolt_rifle: { muzzle: 1, muzzleColor: '#ffd070', recoil: 3, shake: 0.6, casing: true },
-  power_sword: { muzzle: 0, muzzleColor: '#9fe8ff', recoil: -4, shake: 0, casing: false },
   heavy_bolter: { muzzle: 1.35, muzzleColor: '#ffc060', recoil: 4, shake: 1.6, casing: true },
   flamer: { muzzle: 0, muzzleColor: '#ff9030', recoil: 0.5, shake: 0, casing: false },
   plasma_gun: { muzzle: 1.1, muzzleColor: '#8fe4ff', recoil: 3, shake: 1.2, casing: false },

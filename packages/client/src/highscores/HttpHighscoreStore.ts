@@ -1,5 +1,10 @@
-import type { RunResult, SubmitResponse, TopResponse } from '@sms/shared';
-import type { HighscoreStore, SubmitOutcome, TopResult } from './HighscoreStore.js';
+import type { RunResult, SubmitResponse, TopPlayersResponse, TopResponse } from '@sms/shared';
+import type {
+  HighscoreStore,
+  SubmitOutcome,
+  TopPlayersResult,
+  TopResult,
+} from './HighscoreStore.js';
 
 export class HttpError extends Error {
   constructor(
@@ -36,6 +41,15 @@ export class HttpHighscoreStore implements HighscoreStore {
     });
     if (!res.ok) throw new HttpError(res.status, `top failed: ${res.status}`);
     const body = (await res.json()) as TopResponse;
+    return { entries: body.entries, source: 'server' };
+  }
+
+  async topPlayers(teamSize: number, limit = 10): Promise<TopPlayersResult> {
+    const res = await fetch(`${this.baseUrl}/api/scores?teamSize=${teamSize}&limit=${limit}`, {
+      signal: AbortSignal.timeout(this.timeoutMs),
+    });
+    if (!res.ok) throw new HttpError(res.status, `scores failed: ${res.status}`);
+    const body = (await res.json()) as TopPlayersResponse;
     return { entries: body.entries, source: 'server' };
   }
 }

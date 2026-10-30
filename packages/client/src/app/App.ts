@@ -260,6 +260,9 @@ export class App {
     this.setUi(null);
     const game = new GameClient(conn, this.canvas, this.assets, this.audio, this.content);
     game.on('over', (o) => setTimeout(() => this.showGameOver(o.result, o.summary), 1600));
+    // Escape / ⏸ -> "leave": close the connection (a leaving host closes the room, and the
+    // squad takes the usual host-disconnect path) and go back to the main menu.
+    game.on('leave', () => this.showMenu());
     game.start();
     this.game = game;
   }

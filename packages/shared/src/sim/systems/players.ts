@@ -1,6 +1,6 @@
 import { PLAYER } from '../../constants.js';
 import { dist2 } from '../../math/vec.js';
-import type { World } from '../types.js';
+import type { Player, World } from '../types.js';
 import { playerMoveSpeed, stepPlayerMovement } from './movement.js';
 
 export function updatePlayerMovement(world: World, dt: number): void {
@@ -8,8 +8,18 @@ export function updatePlayerMovement(world: World, dt: number): void {
     if (p.state !== 'alive') continue;
     p.invuln = Math.max(0, p.invuln - dt);
     const def = world.content.weapon(p.current);
+    trackStillness(p, p.input.mx, p.input.my, dt);
     stepPlayerMovement(p, p.input.mx, p.input.my, playerMoveSpeed(def.moveSpeedMul), dt);
   }
+}
+
+/** Movement input below this magnitude counts as standing still (sticks drift a little). */
+export const STILL_INPUT = 0.15;
+
+/** Accumulates time spent not moving (bracing); any real movement input resets it. */
+export function trackStillness(p: Player, mx: number, my: number, dt: number): void {
+  if (Math.hypot(mx, my) > STILL_INPUT) p.stillTime = 0;
+  else p.stillTime += dt;
 }
 
 /** Downed / revive / bleed-out / disconnect handling and the game-over check. */

@@ -19,9 +19,12 @@ import { EnemyAudio } from './enemyAudio.js';
 import { isImmediate, playEvent, type FxContext, type NoticeKind } from './fx.js';
 import { SnapshotBuffer } from './interpolation.js';
 import { Predictor } from './prediction.js';
+import { createLeaveDialog } from '../ui/leaveDialog.js';
 
 export type GameClientEvents = {
   over: { result: RunResult; summary: PlayerSummary[] };
+  /** The player confirmed "leave the game" in the Escape / ⏸ dialog. */
+  leave: undefined;
 };
 
 /**
@@ -50,6 +53,8 @@ export class GameClient extends Emitter<GameClientEvents> {
   private cameraInit = false;
   private unsubs: Array<() => void> = [];
   private disposed = false;
+  /** Open leave-game dialog, or null. */
+  private dialog: HTMLElement | null = null;
 
   constructor(
     private readonly conn: GameConnection,
@@ -64,17 +69,19 @@ export class GameClient extends Emitter<GameClientEvents> {
     this.enemyAudio = new EnemyAudio(audio, content);
     this.input = new InputManager(canvas, {
       hitSlot: (x, y) => this.hud.slotAt(x, y),
-      onButton: (act) => act === 'mute' && this.toggleMute(),
+      onButton: (act) => (act === 'mute' ? this.toggleMute() : this.toggleLeaveDialog()),
     });
     this.input.touch.setMuted(this.audio.muted);
     this.input.onKey = (code) => {
       if (code === 'KeyM') this.toggleMute();
       if (code === 'F3') config.debug = !config.debug;
+      if (code === 'Escape') this.toggleLeaveDialog();
     };
     const s = conn.session;
     this.unsubs.push(
       s.on('snapshot', (snap) => this.onSnapshot(snap)),
       s.on('over', (o) => {
+        this.closeLeaveDialog();
         this.over = true;
         this.enemyAudio.stop();
         this.audio.playMusic('gameover');
@@ -100,6 +107,7 @@ export class GameClient extends Emitter<GameClientEvents> {
   }
 
   dispose(): void {
+    this.closeLeaveDialog();
     this.disposed = true;
     cancelAnimationFrame(this.raf);
     this.input.dispose();
@@ -107,6 +115,39 @@ export class GameClient extends Emitter<GameClientEvents> {
     this.enemyAudio.stop();
     this.canvas.classList.remove('playing');
     this.clear();
+  }
+
+  get leaveDialogOpen(): boolean {
+    return !!this.dialog;
+  }
+
+  /** Escape / ⏸: "leave the game?" — pauses solo play, multiplayer keeps running. */
+  toggleLeaveDialog(): void {
+    if (this.dialog) return this.closeLeaveDialog();
+    if (this.over || this.disposed) return;
+    const solo = this.conn.mode === 'local';
+    this.dialog = createLeaveDialog({
+      solo,
+      host: !!this.conn.host && !solo,
+      onYes: () => {
+        this.closeLeaveDialog();
+        this.emit('leave', undefined);
+      },
+      onNo: () => this.closeLeaveDialog(),
+    });
+    document.body.append(this.dialog);
+    this.canvas.classList.add('menu-open');
+    if (solo) this.conn.host?.setPaused(true);
+    (this.dialog.querySelector('#leave-no') as HTMLElement | null)?.focus();
+  }
+
+  private closeLeaveDialog(): void {
+    if (!this.dialog) return;
+    this.dialog.remove();
+    this.dialog = null;
+    this.canvas.classList.remove('menu-open');
+    if (this.conn.mode === 'local') this.conn.host?.setPaused(false);
+    this.input.takeActions(); // drop slot / reload presses made while the dialog was open
   }
 
   private toggleMute(): void {
@@ -155,7 +196,9 @@ export class GameClient extends Emitter<GameClientEvents> {
     while (this.inputAcc >= TICK_DT) {
       this.inputAcc -= TICK_DT;
       if (this.over || !me) continue;
-      const alive = me.st === 'alive';
+      // solo + dialog open: the sim is paused, send nothing (keeps prediction in step)
+      if (this.dialog && this.conn.mode === 'local') continue;
+      const alive = me.st === 'alive' && !this.dialog;
       const intent = this.input.read();
       const { x: mx, y: my } = alive ? intent.move : { x: 0, y: 0 };
       const cur = this.content.weapons.get(me.w);
@@ -252,7 +295,13 @@ export class GameClient extends Emitter<GameClientEvents> {
 
     for (const n of this.notices) n.ttl -= dt;
     this.notices = this.notices.filter((n) => n.ttl > 0);
-    const hudSnap = { ...sample.b, players: latest.players, time: latest.time, wave: latest.wave };
+    const hudSnap = {
+      ...sample.b,
+      players: latest.players,
+      time: latest.time,
+      wave: latest.wave,
+      sp: latest.sp,
+    };
     this.hud.draw(r.ctx, r.pixelRatio, r.camera.width, r.camera.height, {
       snap: hudSnap,
       me: meLatest,
@@ -266,6 +315,8 @@ export class GameClient extends Emitter<GameClientEvents> {
       roomCode: this.conn.roomCode,
       mode: this.conn.mode,
       muted: this.audio.muted,
+      camera: { x: r.camera.x, y: r.camera.y, zoom: r.camera.zoom },
+      now: now / 1000,
       debug: config.debug
         ? `tick ${latest.tick} · buf ${(sample.t * 100) | 0}% · pending ${this.predictor.pendingCount} · corr ${this.predictor.lastCorrection.toFixed(1)}px · ents ${latest.enemies.length}/${latest.projectiles.length}`
         : null,

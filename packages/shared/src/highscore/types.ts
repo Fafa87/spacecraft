@@ -10,6 +10,13 @@ export interface RunResult {
   survivalMs: number;
   wave: number;
   kills: number;
+  /**
+   * v0.4+: personal score (sum of kill points) per marine, aligned with `players`.
+   * Absent on older runs.
+   */
+  playerScores?: number[];
+  /** v0.4+: kills per marine, aligned with `players`. */
+  playerKills?: number[];
   /** ISO timestamp. */
   endedAt: string;
   version: string;
@@ -34,3 +41,26 @@ export interface TopResponse {
 }
 
 export type SubmitStatus = 'server' | 'local' | 'failed';
+
+/** One marine's personal score in a run (the individual leaderboard). */
+export interface PlayerScoreEntry {
+  /** `${runId}-${slot}` */
+  id: string;
+  runId: string;
+  /** Index of the marine in the run's `players`. */
+  slot: number;
+  name: string;
+  score: number;
+  kills: number;
+  teamSize: number;
+  survivalMs: number;
+  version: string;
+  /** ISO timestamp. */
+  at: string;
+}
+
+export interface TopPlayersResponse {
+  /** 0 = all team sizes. */
+  teamSize: number;
+  entries: PlayerScoreEntry[];
+}

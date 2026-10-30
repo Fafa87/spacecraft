@@ -1,7 +1,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import initSqlJs, { type Database } from 'sql.js';
-import type { HighscoreEntry, RunResult, SubmitResponse } from '@sms/shared';
+import {
+  playerScoreEntries,
+  type HighscoreEntry,
+  type PlayerScoreEntry,
+  type RunResult,
+  type SubmitResponse,
+} from '@sms/shared';
 import { toEntry, type HighscoreRepository } from './repository.js';
 
 const SCHEMA = `
@@ -19,7 +25,23 @@ CREATE TABLE IF NOT EXISTS highscores (
   mode TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_hs_team_time ON highscores (team_size, survival_ms DESC, submitted_at ASC);
+CREATE TABLE IF NOT EXISTS player_scores (
+  id TEXT PRIMARY KEY,
+  run_id TEXT NOT NULL,
+  slot INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  score INTEGER NOT NULL,
+  kills INTEGER NOT NULL,
+  team_size INTEGER NOT NULL,
+  survival_ms INTEGER NOT NULL,
+  version TEXT NOT NULL,
+  at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ps_team_score ON player_scores (team_size, score DESC, at ASC);
+CREATE INDEX IF NOT EXISTS idx_ps_score ON player_scores (score DESC, at ASC);
 `;
+/** v0.4 columns, added to databases created by older servers. */
+const RUN_SCORE_COLUMNS = ['player_scores', 'player_kills'];
 
 type Row = Record<string, string | number>;
 
@@ -44,6 +66,9 @@ export class SqliteHighscoreRepository implements HighscoreRepository {
     }
     this.db = new SQL.Database(buf);
     this.db.exec(SCHEMA);
+    const cols = new Set(this.all('PRAGMA table_info(highscores)').map((r) => String(r.name)));
+    for (const c of RUN_SCORE_COLUMNS)
+      if (!cols.has(c)) this.db.exec(`ALTER TABLE highscores ADD COLUMN ${c} TEXT`);
   }
 
   private all(sql: string, params: (string | number)[] = []): Row[] {
@@ -71,6 +96,8 @@ export class SqliteHighscoreRepository implements HighscoreRepository {
       submittedAt: String(r.submitted_at),
       version: String(r.version),
       mode: String(r.mode) as HighscoreEntry['mode'],
+      ...(r.player_scores ? { playerScores: JSON.parse(String(r.player_scores)) as number[] } : {}),
+      ...(r.player_kills ? { playerKills: JSON.parse(String(r.player_kills)) as number[] } : {}),
     };
   }
 
@@ -90,8 +117,8 @@ export class SqliteHighscoreRepository implements HighscoreRepository {
     }
     const e = toEntry(result);
     this.db.run(
-      `INSERT INTO highscores (id, run_id, team_size, players, survival_ms, wave, kills, ended_at, submitted_at, version, mode)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO highscores (id, run_id, team_size, players, survival_ms, wave, kills, ended_at, submitted_at, version, mode, player_scores, player_kills)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         e.id,
         e.runId,
@@ -104,8 +131,16 @@ export class SqliteHighscoreRepository implements HighscoreRepository {
         e.submittedAt,
         e.version,
         e.mode,
-      ],
+        e.playerScores ? JSON.stringify(e.playerScores) : null,
+        e.playerKills ? JSON.stringify(e.playerKills) : null,
+      ] as (string | number | null)[],
     );
+    for (const p of playerScoreEntries(e, e.submittedAt))
+      this.db.run(
+        `INSERT INTO player_scores (id, run_id, slot, name, score, kills, team_size, survival_ms, version, at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [p.id, p.runId, p.slot, p.name, p.score, p.kills, p.teamSize, p.survivalMs, p.version, p.at],
+      );
     await this.flush();
     return { entry: e, rank: this.rankOf(e), duplicate: false };
   }
@@ -115,6 +150,31 @@ export class SqliteHighscoreRepository implements HighscoreRepository {
       'SELECT * FROM highscores WHERE team_size = ? ORDER BY survival_ms DESC, submitted_at ASC LIMIT ?',
       [teamSize, limit],
     ).map((r) => this.toEntry(r));
+  }
+
+  async topPlayers(teamSize: number, limit: number): Promise<PlayerScoreEntry[]> {
+    const rows =
+      teamSize > 0
+        ? this.all(
+            'SELECT * FROM player_scores WHERE team_size = ? ORDER BY score DESC, survival_ms DESC, at ASC LIMIT ?',
+            [teamSize, limit],
+          )
+        : this.all(
+            'SELECT * FROM player_scores ORDER BY score DESC, survival_ms DESC, at ASC LIMIT ?',
+            [limit],
+          );
+    return rows.map((r) => ({
+      id: String(r.id),
+      runId: String(r.run_id),
+      slot: Number(r.slot),
+      name: String(r.name),
+      score: Number(r.score),
+      kills: Number(r.kills),
+      teamSize: Number(r.team_size),
+      survivalMs: Number(r.survival_ms),
+      version: String(r.version),
+      at: String(r.at),
+    }));
   }
 
   async count(teamSize?: number): Promise<number> {

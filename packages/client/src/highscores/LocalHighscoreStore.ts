@@ -1,12 +1,20 @@
 import {
+  comparePlayerScores,
+  playerScoreEntries,
   GAME_VERSION,
   HIGHSCORE_LIMITS,
   leaderboardBoard,
   type HighscoreEntry,
+  type PlayerScoreEntry,
   type RunResult,
 } from '@sms/shared';
 import { storage } from '../util/storage.js';
-import type { HighscoreStore, SubmitOutcome, TopResult } from './HighscoreStore.js';
+import type {
+  HighscoreStore,
+  SubmitOutcome,
+  TopPlayersResult,
+  TopResult,
+} from './HighscoreStore.js';
 
 /**
  * Keys are namespaced by leaderboard board (major.minor) — every deployed version shares the
@@ -67,6 +75,16 @@ export class LocalHighscoreStore implements HighscoreStore {
 
   async top(teamSize: number, limit: number = HIGHSCORE_LIMITS.defaultLimit): Promise<TopResult> {
     return { entries: (this.read()[teamSize] ?? []).slice(0, limit), source: 'local' };
+  }
+
+  /** Individual points from every run in this browser's tables (local + cached server runs). */
+  async topPlayers(
+    teamSize: number,
+    limit: number = HIGHSCORE_LIMITS.defaultLimit,
+  ): Promise<TopPlayersResult> {
+    const tables = this.read();
+    const runs = teamSize > 0 ? (tables[teamSize] ?? []) : Object.values(tables).flat();
+    return { entries: mergePlayerScores(runs, [], limit), source: 'local' };
   }
 
   /** Replaces the cached table with fresh server data (keeps unsynced local-only runs). */
@@ -130,4 +148,17 @@ export class LocalHighscoreStore implements HighscoreStore {
       tables[k] = tables[k].filter((e) => !(e.runId === runId && e.id.startsWith('local_')));
     this.write(tables);
   }
+}
+
+/** Run rows → individual rows, plus extra rows (e.g. from the server), deduped and sorted. */
+export function mergePlayerScores(
+  runs: HighscoreEntry[],
+  extra: PlayerScoreEntry[],
+  limit: number,
+): PlayerScoreEntry[] {
+  const byId = new Map<string, PlayerScoreEntry>();
+  for (const e of extra) byId.set(e.id, e);
+  for (const r of runs)
+    for (const p of playerScoreEntries(r, r.submittedAt)) if (!byId.has(p.id)) byId.set(p.id, p);
+  return [...byId.values()].sort(comparePlayerScores).slice(0, limit);
 }

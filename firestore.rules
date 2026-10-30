@@ -31,6 +31,46 @@ service cloud.firestore {
         && d.timestamp == request.time;
     }
 
+    // v0.4+: per-marine points / kills (personal score = sum of kill points).
+    function validMarine(d, i) {
+      return d.playerScores[i] is int && d.playerScores[i] >= 0
+        && d.playerScores[i] * 1000 <= d.survivalMs * 40 + 500000
+        && d.playerKills[i] is int && d.playerKills[i] >= 0 && d.playerKills[i] <= d.kills
+        && d.playerKills[i] * 1000 <= d.survivalMs * 25 + 50000;
+    }
+
+    function validScores(d) {
+      return d.playerScores is list && d.playerScores.size() == d.teamSize
+        && d.playerKills is list && d.playerKills.size() == d.teamSize
+        && (d.teamSize <= 0 || validMarine(d, 0))
+        && (d.teamSize <= 1 || validMarine(d, 1))
+        && (d.teamSize <= 2 || validMarine(d, 2))
+        && (d.teamSize <= 3 || validMarine(d, 3));
+    }
+
+    function boardVersion(board, d) {
+      return d.board == board
+        && d.version is string
+        && d.version.split('[.]').size() >= 3
+        && d.version.split('[.]')[0] + '.' + d.version.split('[.]')[1] == board;
+    }
+
+    // An individual score row must mirror its run, written in the same commit.
+    function validScoreRow(board, scoreId, d) {
+      let run = getAfter(/databases/$(database)/documents/boards/$(board)/highscores/$(d.runId)).data;
+      return d.slot is int && d.slot >= 0 && d.slot < 4
+        && d.runId is string && scoreId == d.runId + '-' + string(d.slot)
+        && d.timestamp == request.time
+        && run.timestamp == request.time
+        && d.slot < run.teamSize
+        && d.teamSize == run.teamSize
+        && d.name == run.names[d.slot]
+        && d.score == run.playerScores[d.slot]
+        && d.kills == run.playerKills[d.slot]
+        && d.survivalMs == run.survivalMs
+        && d.version == run.version;
+    }
+
     // Legacy v0.1.x board (frozen /v0.1.0/ build): unchanged field set, no board field.
     match /highscores/{runId} {
       allow read: if true;
@@ -40,17 +80,32 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Per-version boards (v0.2+): board = major.minor of the version, e.g. boards/0.2/highscores.
+    // Per-version boards (v0.2+): board = major.minor of the version, e.g. boards/0.4/highscores.
+    // v0.2/v0.3 (frozen builds) keep their field set; v0.4+ runs carry per-marine scores.
     match /boards/{board}/highscores/{runId} {
       allow read: if board.matches("[0-9]{1,3}[.][0-9]{1,3}");
       allow create: if board.matches("[0-9]{1,3}[.][0-9]{1,3}")
-        && request.resource.data.keys().hasOnly(['teamSize', 'names', 'survivalMs', 'kills', 'wave', 'mode', 'version', 'timestamp', 'board'])
-        && request.resource.data.keys().hasAll(['teamSize', 'names', 'survivalMs', 'kills', 'wave', 'mode', 'version', 'timestamp', 'board'])
-        && request.resource.data.board == board
-        && request.resource.data.version is string
-        && request.resource.data.version.split('[.]').size() >= 3
-        && request.resource.data.version.split('[.]')[0] + '.' + request.resource.data.version.split('[.]')[1] == board
-        && validRun(runId, request.resource.data);
+        && boardVersion(board, request.resource.data)
+        && validRun(runId, request.resource.data)
+        && ((board in ['0.2', '0.3']
+            && request.resource.data.keys().hasOnly(['teamSize', 'names', 'survivalMs', 'kills', 'wave', 'mode', 'version', 'timestamp', 'board'])
+            && request.resource.data.keys().hasAll(['teamSize', 'names', 'survivalMs', 'kills', 'wave', 'mode', 'version', 'timestamp', 'board']))
+          || (!(board in ['0.2', '0.3'])
+            && request.resource.data.keys().hasOnly(['teamSize', 'names', 'survivalMs', 'kills', 'wave', 'mode', 'version', 'timestamp', 'board', 'playerScores', 'playerKills'])
+            && request.resource.data.keys().hasAll(['teamSize', 'names', 'survivalMs', 'kills', 'wave', 'mode', 'version', 'timestamp', 'board', 'playerScores', 'playerKills'])
+            && validScores(request.resource.data)));
+      allow update, delete: if false;
+    }
+
+    // Individual leaderboard (v0.4+): boards/{board}/scores/{runId}-{slot}.
+    match /boards/{board}/scores/{scoreId} {
+      allow read: if board.matches("[0-9]{1,3}[.][0-9]{1,3}");
+      allow create: if board.matches("[0-9]{1,3}[.][0-9]{1,3}")
+        && !(board in ['0.2', '0.3'])
+        && request.resource.data.keys().hasOnly(['runId', 'slot', 'name', 'score', 'kills', 'teamSize', 'survivalMs', 'version', 'board', 'timestamp'])
+        && request.resource.data.keys().hasAll(['runId', 'slot', 'name', 'score', 'kills', 'teamSize', 'survivalMs', 'version', 'board', 'timestamp'])
+        && boardVersion(board, request.resource.data)
+        && validScoreRow(board, scoreId, request.resource.data);
       allow update, delete: if false;
     }
 
