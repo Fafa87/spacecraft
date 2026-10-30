@@ -1,0 +1,10 @@
+Music power spectrum, v0.3.0 (old_*) vs v0.4.0-dev (new_*), rendered at 22.05 kHz, 4096-pt Hann FFT, share of total power per band
+track               len s RMS dBFS centroid Hz    20-120Hz   120-500Hz  500-2000Hz 2000-6000Hz 6000-11025Hz
+new_boss             48.0    -13.3         223       58.3%       29.4%       12.3%        0.1%        0.0%
+new_combat           60.0    -16.7         242       20.0%       78.7%        1.3%        0.0%        0.0%
+new_combat_drive     60.0    -15.4         203       23.0%       74.0%        2.8%        0.1%        0.0%
+new_gameover         32.0    -15.5         266       19.0%       77.5%        3.5%        0.0%        0.0%
+new_menu             60.0    -15.4         340       19.0%       65.0%       15.9%        0.0%        0.0%
+old_battle           30.5    -12.1         327       80.4%        7.8%        8.6%        1.2%        1.6%
+old_gameover         13.7    -15.2         519       40.4%        9.1%       47.8%        1.7%        0.0%
+old_menu             29.1    -14.6         502       39.9%       15.9%       41.5%        2.6%        0.0%

@@ -88,7 +88,7 @@ export function breakdownTable(
       .map(([id, n]) => `${n}× ${escapeHtml(enemyName(id))}`)
       .join(' · ') || '—';
   const mvp = rows.length > 1 && rows[0].score > 0 ? rows[0].id : -1;
-  return `<table class="summary"><thead><tr><th></th><th>MARINE</th><th class="num">SCORE</th><th class="num">KILLS</th><th class="kinds">TOP KILLS</th><th class="num">DAMAGE</th><th class="num">FELL AT</th></tr></thead><tbody>
+  return `<table class="summary"><thead><tr><th></th><th>MARINE</th><th class="num">SCORE</th><th class="num">KILLS</th><th class="num">DAMAGE</th><th class="num">FELL AT</th></tr></thead><tbody>
     ${rows
       .map((p) => {
         const ch = opts.colors.get(p.id);
@@ -96,9 +96,9 @@ export function breakdownTable(
           total > 0 && rows.length > 1
             ? ` <span class="muted">${Math.round((p.score / total) * 100)}%</span>`
             : '';
-        return `<tr${p.id === mvp ? ' class="mvp"' : ''}><td>${ch ? chapterBadgeSvg(ch, 18) : ''}</td><td>${escapeHtml(p.name)}${p.id === mvp ? ' <span class="tag mvp">MVP</span>' : ''}</td><td class="num score">${p.score}${share}</td><td class="num">${p.kills}</td><td class="kinds">${kinds(p)}</td><td class="num">${Math.round(p.damage)}</td><td class="num">${p.diedAtMs === null ? '—' : formatTime(p.diedAtMs)}</td></tr>`;
+        return `<tr${p.id === mvp ? ' class="mvp"' : ''}><td>${ch ? chapterBadgeSvg(ch, 18) : ''}</td><td>${escapeHtml(p.name)}${p.id === mvp ? ' <span class="tag mvp">MVP</span>' : ''}<div class="kinds">${kinds(p)}</div></td><td class="num score">${p.score}${share}</td><td class="num">${p.kills}</td><td class="num">${Math.round(p.damage)}</td><td class="num">${p.diedAtMs === null ? '—' : formatTime(p.diedAtMs)}</td></tr>`;
       })
       .join('')}
-    ${rows.length > 1 ? `<tr class="total"><td></td><td>SQUAD</td><td class="num score">${total}</td><td class="num">${rows.reduce((n, p) => n + p.kills, 0)}</td><td></td><td class="num">${Math.round(rows.reduce((n, p) => n + p.damage, 0))}</td><td></td></tr>` : ''}
+    ${rows.length > 1 ? `<tr class="total"><td></td><td>SQUAD</td><td class="num score">${total}</td><td class="num">${rows.reduce((n, p) => n + p.kills, 0)}</td><td class="num">${Math.round(rows.reduce((n, p) => n + p.damage, 0))}</td><td></td></tr>` : ''}
   </tbody></table>`;
 }

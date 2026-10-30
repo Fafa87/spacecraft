@@ -74,6 +74,9 @@ describe('firestore.rules: highscores', () => {
     await assertSucceeds(
       put(good({ teamSize: 4, names: ['A', 'B', 'C', 'D'], version: '1.2.3-beta.1' })),
     );
+    await assertSucceeds(
+      put(good({ teamSize: 8, names: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] })),
+    );
     const q = query(
       collection(db(), 'highscores'),
       where('teamSize', '==', 2),
@@ -96,7 +99,7 @@ describe('firestore.rules: highscores', () => {
   const bad: [string, Record<string, unknown>][] = [
     ['extra field', { cheat: true }],
     ['teamSize 0', { teamSize: 0, names: [] }],
-    ['teamSize 5', { teamSize: 5, names: ['a', 'b', 'c', 'd', 'e'] }],
+    ['teamSize 9', { teamSize: 9, names: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] }],
     ['teamSize as string', { teamSize: '2' }],
     ['names size != teamSize', { names: ['Only'] }],
     ['name not a string', { names: ['Filip', 7] }],
@@ -111,7 +114,7 @@ describe('firestore.rules: highscores', () => {
     ['survival as float', { survivalMs: 1234.5 }],
     ['implausible kills', { kills: 7000 }],
     ['negative kills', { kills: -1 }],
-    ['implausible wave', { wave: 5 }],
+    ['implausible wave', { wave: 17 }],
     ['unknown mode', { mode: 'god' }],
     ['bad version', { version: 'hacked' }],
     ['client timestamp', { timestamp: Timestamp.fromMillis(Date.now()) }],

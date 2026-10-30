@@ -524,14 +524,14 @@ real fix).
 `npm run assets` (tools/src/generate.ts) writes the following to
 `packages/client/public/assets/generated/` (gitignored, always regenerated):
 
-- `atlas.png`: 95 procedurally drawn sprites (236 frames), drawn at 2× with `@napi-rs/canvas`
+- `atlas.png`: 102 procedurally drawn sprites (255 frames), drawn at 2× with `@napi-rs/canvas`
   and shelf-packed into a 2048×4096 atlas. It holds 8 chapter marines (walk, torso and downed
   pose), 9 Tyranids with walk/attack/death strips, wargear icons, held weapons and crates, bolts
   and plasma, flames, blood and ichor decals, Imperial floor tiles, hive ruins and creep, FX and
   shoulder badges.
 - `ui/emblem.png` and `ui/parchment.png`: our own skull-and-wings emblem and a parchment texture
   for the gothic UI.
-- `sfx/*.wav`: 61 sounds rendered as 177 WAV files (44.1 kHz, 16-bit mono) from data-driven
+- `sfx/*.wav`: 62 sounds rendered as 176 WAV files (44.1 kHz, 16-bit mono) from data-driven
   recipes (`tools/src/audio/recipes.ts`) on a small DSP toolkit (`dsp.ts`: oscillators, coloured
   noise, biquads, waveshaping, compression, reverb). One-shots get 2–4 random variants each, and
   the client picks one per play without immediate repeats. They cover every weapon (bolt rifle
