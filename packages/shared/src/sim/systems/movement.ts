@@ -24,3 +24,19 @@ export function stepPlayerMovement(
 }
 
 export const playerMoveSpeed = (moveSpeedMul: number): number => PLAYER.speed * moveSpeedMul;
+
+/**
+ * Firing slow-down state for one tick: snaps to 1 while the trigger is held, then eases back to 0
+ * over PLAYER.fireMoveRecover seconds. Pure, so the client predicts it from its own inputs.
+ */
+export function stepFireSlow(fireSlow: number, firing: boolean, dt: number): number {
+  return firing ? 1 : Math.max(0, fireSlow - dt / PLAYER.fireMoveRecover);
+}
+
+/** Marine speed with the equipped weapon: carry penalty × (eased) firing penalty. */
+export function marineMoveSpeed(
+  weapon: { moveSpeedMul: number; fireMoveMul: number },
+  fireSlow: number,
+): number {
+  return PLAYER.speed * weapon.moveSpeedMul * (1 - (1 - weapon.fireMoveMul) * fireSlow);
+}

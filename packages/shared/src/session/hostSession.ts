@@ -22,7 +22,7 @@ import {
 } from '../net/protocol.js';
 import { applyInput, stepWorld } from '../sim/simulation.js';
 import { buildSnapshot } from '../sim/snapshot.js';
-import { stepPlayerMovement, playerMoveSpeed } from '../sim/systems/movement.js';
+import { marineMoveSpeed, stepFireSlow, stepPlayerMovement } from '../sim/systems/movement.js';
 import { trackStillness } from '../sim/systems/players.js';
 import type { GameEvent, PlayerInput, World } from '../sim/types.js';
 import { createWorld } from '../sim/world.js';
@@ -309,11 +309,12 @@ export class HostSession {
         const p = world.players.find((x) => x.id === m.playerId);
         if (p && p.state === 'alive') {
           trackStillness(p, extra.mx, extra.my, TICK_DT);
+          p.fireSlow = stepFireSlow(p.fireSlow, extra.fire, TICK_DT);
           stepPlayerMovement(
             p,
             extra.mx,
             extra.my,
-            playerMoveSpeed(this.content.weapon(p.current).moveSpeedMul),
+            marineMoveSpeed(this.content.weapon(p.current), p.fireSlow),
             TICK_DT,
           );
           p.lastInputSeq = Math.max(p.lastInputSeq, extra.seq);

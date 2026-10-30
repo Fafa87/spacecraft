@@ -8,6 +8,7 @@ import { WEAPONS } from './weapons.js';
 
 export * from './types.js';
 export * from './naming.js';
+export * from './profile.js';
 export { WEAPONS, ENEMIES, DIRECTOR, CHAPTERS };
 
 /**
@@ -130,6 +131,20 @@ export class ContentRegistry {
     for (const w of this.weaponOrder) {
       if (w.heat && (w.heat.superchargeAt <= 0 || w.heat.superchargeAt >= 1))
         errors.push(`weapon ${w.id} heat.superchargeAt must be within (0, 1)`);
+      if (!(w.fireMoveMul > 0 && w.fireMoveMul <= 1))
+        errors.push(`weapon ${w.id} fireMoveMul must be within (0, 1]`);
+      if (!w.roles?.length) errors.push(`weapon ${w.id} needs at least one role tag`);
+      if (w.projectile.strength === undefined && w.projectile.explosion?.strength === undefined)
+        errors.push(`weapon ${w.id} needs a Strength (projectile.strength or explosion.strength)`);
+      for (const n of [w.projectile.strength, w.projectile.explosion?.strength])
+        if (n !== undefined && n <= 0) errors.push(`weapon ${w.id} strength must be > 0`);
+      for (const n of [w.projectile.ap, w.projectile.explosion?.ap])
+        if (n !== undefined && n < 0) errors.push(`weapon ${w.id} AP must be >= 0`);
+    }
+    for (const e of this.enemies.values()) {
+      if (!(e.toughness > 0)) errors.push(`enemy ${e.id} toughness must be > 0`);
+      if (!(Number.isInteger(e.save) && e.save >= 2 && e.save <= 7))
+        errors.push(`enemy ${e.id} save must be an integer 2..7 (7 = no save)`);
     }
     if (!this.enemies.has(this.director.bosses.enemy))
       errors.push(`director.bosses.enemy '${this.director.bosses.enemy}' is unknown`);
@@ -149,10 +164,17 @@ export class ContentRegistry {
         `need ${MAX_PLAYERS} chapters so every marine in a full squad has their own colours`,
       );
     const d = this.director;
+    const ts = d.teamScaling;
     for (const [name, arr] of [
-      ['teamScale', d.teamScale],
+      ['teamScaling.budget', ts.budget],
+      ['teamScaling.pace', ts.pace],
+      ['teamScaling.maxAlive', ts.maxAlive],
+      ['teamScaling.children', ts.children],
+      ['teamScaling.hp', ts.hp],
+      ['teamScaling.elite', ts.elite],
       ['bosses.count', d.bosses.count],
     ] as const) {
+      if (arr.some((v) => !(v > 0))) errors.push(`director.${name} entries must be > 0`);
       if (arr.length < MAX_PLAYERS)
         errors.push(`director.${name} needs ${MAX_PLAYERS} entries (team sizes 1..${MAX_PLAYERS})`);
     }

@@ -1,15 +1,19 @@
 import { PLAYER } from '../../constants.js';
 import { dist2 } from '../../math/vec.js';
 import type { Player, World } from '../types.js';
-import { playerMoveSpeed, stepPlayerMovement } from './movement.js';
+import { marineMoveSpeed, stepFireSlow, stepPlayerMovement } from './movement.js';
 
 export function updatePlayerMovement(world: World, dt: number): void {
   for (const p of world.players) {
-    if (p.state !== 'alive') continue;
+    if (p.state !== 'alive') {
+      p.fireSlow = 0;
+      continue;
+    }
     p.invuln = Math.max(0, p.invuln - dt);
     const def = world.content.weapon(p.current);
     trackStillness(p, p.input.mx, p.input.my, dt);
-    stepPlayerMovement(p, p.input.mx, p.input.my, playerMoveSpeed(def.moveSpeedMul), dt);
+    p.fireSlow = stepFireSlow(p.fireSlow, p.input.fire, dt);
+    stepPlayerMovement(p, p.input.mx, p.input.my, marineMoveSpeed(def, p.fireSlow), dt);
   }
 }
 

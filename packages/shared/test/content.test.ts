@@ -38,7 +38,8 @@ describe('director escalation', () => {
   it('bigger squads (1..8) face bigger waves', () => {
     for (let ts = 2; ts <= MAX_PLAYERS; ts++)
       expect(waveBudget(DIRECTOR, 3, ts)).toBeGreaterThan(waveBudget(DIRECTOR, 3, ts - 1));
-    expect(DIRECTOR.teamScale.length).toBeGreaterThanOrEqual(MAX_PLAYERS);
+    for (const arr of Object.values(DIRECTOR.teamScaling))
+      if (Array.isArray(arr)) expect(arr.length).toBeGreaterThanOrEqual(MAX_PLAYERS);
     expect(DIRECTOR.bosses.count.length).toBeGreaterThanOrEqual(MAX_PLAYERS);
   });
 

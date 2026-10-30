@@ -66,6 +66,8 @@ export interface Player {
   killsByType: Record<string, number>;
   /** Seconds without moving (bracing weapons fire faster after braceDelay). */
   stillTime: number;
+  /** Firing slow-down 0..1: 1 while the trigger is held, eases to 0 after release. */
+  fireSlow: number;
   damageDealt: number;
   /** Survival second this marine died (or null). */
   diedAt: number | null;
@@ -127,7 +129,9 @@ export interface Projectile {
   radius: number;
   damage: number;
   pierceLeft: number;
-  armorPierce: boolean;
+  /** 40k profile vs Tyranids (undefined strength = ignores Toughness / Save). */
+  strength?: number;
+  ap: number;
   drag: number;
   knockback: number;
   explosion?: ExplosionSpec;
@@ -187,6 +191,8 @@ export type GameEvent =
   | { e: 'breach'; i: number; t: string; b?: 1 }
   /** The group bursts out of spawn point `i`. */
   | { e: 'swarm'; i: number; n: number }
+  /** A player shot hit a Tyranid but its armour save stopped it (spark + ricochet, no marker). */
+  | { e: 'bnc'; x: number; y: number; k: string }
   /** Marine braced a bracing weapon (heavy bolter). */
   | { e: 'brace'; p: number; w: string }
   | { e: 'reload'; p: number; w: string }

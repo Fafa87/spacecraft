@@ -1,6 +1,8 @@
 import {
   Emitter,
+  marineMoveSpeed,
   playerMoveSpeed,
+  stepFireSlow,
   TICK_DT,
   type ContentRegistry,
   type PlayerSnap,
@@ -45,6 +47,8 @@ export class GameClient extends Emitter<GameClientEvents> {
   private raf = 0;
   private lastFrame = 0;
   private inputAcc = 0;
+  /** Predicted firing slow-down 0..1 (mirrors Player.fireSlow on the host). */
+  private fireSlow = 0;
   private aim = 0;
   private lastEventTick = -1;
   private hurt = 0;
@@ -229,7 +233,10 @@ export class GameClient extends Emitter<GameClientEvents> {
         slot,
         reload: actions.reload,
       });
-      this.predictor.applyLocal(sent, playerMoveSpeed(cur?.moveSpeedMul ?? 1), alive);
+      // Same firing slow-down as the host sim (shared pure helpers), driven by our own inputs.
+      this.fireSlow = alive ? stepFireSlow(this.fireSlow, sent.fire, TICK_DT) : 0;
+      const speed = cur ? marineMoveSpeed(cur, this.fireSlow) : playerMoveSpeed(1);
+      this.predictor.applyLocal(sent, speed, alive);
     }
   }
 

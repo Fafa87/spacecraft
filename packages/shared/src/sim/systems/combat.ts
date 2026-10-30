@@ -1,12 +1,14 @@
 import { PICKUP, PLAYER } from '../../constants.js';
-import type { ExplosionSpec } from '../../data/index.js';
+import { saveChance, woundMul, type ExplosionSpec } from '../../data/index.js';
 import { dist } from '../../math/vec.js';
 import { allocId } from '../world.js';
 import { dropCaps } from './director.js';
 import type { Enemy, Player, World } from '../types.js';
 
 export interface DamageOpts {
-  armorPierce?: boolean;
+  /** 40k profile (data/profile.ts); strength omitted = ignores Toughness and Save. */
+  strength?: number;
+  ap?: number;
   sourcePlayerId?: number;
   /** Knockback impulse direction & magnitude. */
   kx?: number;
@@ -14,21 +16,40 @@ export interface DamageOpts {
   knockback?: number;
 }
 
-/** Applies damage to an enemy (armor, knockback, death handling). Returns damage dealt. */
+export interface HitResult {
+  dmg: number;
+  /** The armour save stopped the hit ("armour bounced"). */
+  saved: boolean;
+}
+
+/**
+ * Applies a hit to an enemy: Strength vs Toughness scales the damage, the armour save (worsened
+ * by AP) is rolled and stops the hit outright (see data/profile.ts). Then knockback and death.
+ */
 export function damageEnemy(
   world: World,
   enemy: Enemy,
   amount: number,
   opts: DamageOpts = {},
-): number {
-  if (enemy.dead) return 0;
+): HitResult {
+  if (enemy.dead) return { dmg: 0, saved: false };
   const def = world.content.enemy(enemy.type);
-  const dmg = opts.armorPierce ? amount : Math.max(amount * 0.2, amount - def.armor);
+  let dmg = amount;
+  let saved = false;
+  if (opts.strength !== undefined && amount > 0) {
+    const sv = saveChance(def.save, opts.ap ?? 0);
+    if (sv > 0 && world.rng.chance(sv)) {
+      saved = true;
+      dmg = 0;
+    } else dmg = amount * woundMul(opts.strength, def.toughness);
+  }
   enemy.hp -= dmg;
   if (opts.knockback && (opts.kx || opts.ky)) {
     const l = Math.hypot(opts.kx ?? 0, opts.ky ?? 0) || 1;
-    enemy.vx += ((opts.kx ?? 0) / l) * (opts.knockback / def.mass);
-    enemy.vy += ((opts.ky ?? 0) / l) * (opts.knockback / def.mass);
+    // A bounced hit still shoves, a little.
+    const k = (opts.knockback / def.mass) * (saved ? 0.4 : 1);
+    enemy.vx += ((opts.kx ?? 0) / l) * k;
+    enemy.vy += ((opts.ky ?? 0) / l) * k;
   }
   const shooter =
     opts.sourcePlayerId !== undefined
@@ -36,7 +57,7 @@ export function damageEnemy(
       : undefined;
   if (shooter) shooter.damageDealt += dmg;
   if (enemy.hp <= 0) killEnemy(world, enemy, shooter);
-  return dmg;
+  return { dmg, saved };
 }
 
 export function killEnemy(world: World, enemy: Enemy, killer?: Player): void {
@@ -89,7 +110,7 @@ export interface ExplodeOpts {
   sourcePlayerId?: number;
 }
 
-/** Radial damage with linear falloff to `edgeFactor` at the rim. Ignores armor. */
+/** Radial damage with linear falloff to `edgeFactor` at the rim; the blast's own S / AP apply. */
 export function explode(
   world: World,
   x: number,
@@ -107,7 +128,8 @@ export function explode(
       const d = dist(x, y, enemy.x, enemy.y) - def.radius;
       if (d > spec.radius) continue;
       damageEnemy(world, enemy, falloff(Math.max(0, d)), {
-        armorPierce: true,
+        strength: spec.strength,
+        ap: spec.ap,
         sourcePlayerId: opts.sourcePlayerId,
         kx: enemy.x - x,
         ky: enemy.y - y,

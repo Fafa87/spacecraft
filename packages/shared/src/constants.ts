@@ -41,6 +41,8 @@ export const PLAYER = {
   /** Short invulnerability after being hit / revived (seconds). */
   hurtInvuln: 0.25,
   reviveInvuln: 2,
+  /** Seconds the firing slow-down (WeaponDef.fireMoveMul) takes to wear off after the trigger is released. */
+  fireMoveRecover: 0.35,
 } as const;
 
 export const PICKUP = {

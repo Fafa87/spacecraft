@@ -6,7 +6,16 @@ import type { DirectorConfig } from './types.js';
  * squads of 1..8 marines (MAX_PLAYERS).
  */
 export const DIRECTOR: DirectorConfig = {
-  teamScale: [1, 1.5, 2.1, 2.7, 3.25, 3.8, 4.3, 4.8],
+  // Squad size 1..8. v0.5: bigger squads face more, tougher and more elite Tyranids.
+  teamScaling: {
+    budget: [1, 1.5, 2.1, 2.7, 3.25, 3.8, 4.3, 4.8],
+    pace: [1, 1.5, 2.1, 2.7, 3.25, 3.8, 4.3, 4.8],
+    maxAlive: [1, 1.5, 2.1, 2.7, 3.25, 3.8, 4.3, 4.8],
+    children: [1, 1.5, 2.1, 2.7, 3.25, 3.8, 4.3, 4.8],
+    hp: [1, 1, 1, 1, 1, 1, 1, 1],
+    elite: [1, 1, 1, 1, 1, 1, 1, 1],
+    eliteThreat: 3,
+  },
   waves: {
     firstDelay: 4,
     breather: 8,

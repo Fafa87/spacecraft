@@ -11,6 +11,9 @@ export interface ExplosionSpec {
   edgeFactor: number;
   /** Explosions can hurt players too (enemy explosions always do). */
   friendlyFire?: boolean;
+  /** Blast Strength / AP vs Tyranid Toughness / Save (see data/profile.ts). Omit = ignores both. */
+  strength?: number;
+  ap?: number;
 }
 
 export interface ProjectileSpec {
@@ -24,8 +27,12 @@ export interface ProjectileSpec {
   damage: number;
   /** How many *additional* enemies the projectile can pass through. */
   pierce: number;
-  /** Ignores enemy armor. */
-  armorPierce?: boolean;
+  /**
+   * 40k-style profile vs Tyranids (data/profile.ts): Strength vs Toughness scales `damage`,
+   * AP (positive, 2 = "AP-2") worsens their armour save. Omit strength = ignores both.
+   */
+  strength?: number;
+  ap?: number;
   /** Velocity multiplier lost per second (0 = none, 0.9 = loses 90%/s). */
   drag?: number;
   knockback: number;
@@ -44,9 +51,22 @@ export interface HeatSpec {
   /** Fraction of max (0..1) from which shots are supercharged. */
   superchargeAt: number;
   superchargeDamageMul: number;
+  /** Supercharged shots: +Strength and +AP (plasma overcharge). */
+  superchargeStrength?: number;
+  superchargeAp?: number;
   ventTime: number;
   selfDamage: number;
 }
+
+export type WeaponRole =
+  | 'GENERALIST'
+  | 'ANTI-HORDE'
+  | 'ANTI-ELITE'
+  | 'ANTI-TANK'
+  | 'SUSTAINED'
+  | 'BLAST'
+  | 'SHORT RANGE'
+  | 'OVERCHARGE';
 
 export interface WeaponDef {
   id: string;
@@ -55,6 +75,8 @@ export interface WeaponDef {
   /** Number key used to select the weapon (1..9). Also defines HUD order. */
   slot: number;
   description: string;
+  /** Battlefield role tags shown in the HUD / pickup tooltip, e.g. ['ANTI-HORDE']. */
+  roles: WeaponRole[];
   /** Seconds between shots. */
   fireInterval: number;
   /** Hold to fire (true) vs click per shot (false). */
@@ -67,6 +89,11 @@ export interface WeaponDef {
   spread: number;
   /** Movement speed multiplier while this weapon is equipped. */
   moveSpeedMul: number;
+  /**
+   * Extra movement multiplier while the trigger is held (on top of moveSpeedMul); it eases back
+   * to 1 over PLAYER.fireMoveRecover seconds after the trigger is released.
+   */
+  fireMoveMul: number;
   /**
    * Bracing (heavy weapons): after standing still for `braceDelay` seconds the weapon fires
    * `braceFireRateMult`× faster with `braceSpreadMult`× the spread. Omit braceDelay = no bracing.
@@ -161,9 +188,12 @@ export interface EnemyDef {
   name: string;
   /** One-line flavour/role shown in docs and the sprite sheet. */
   role: string;
+  /** Wounds, in HP. */
   hp: number;
-  /** Flat damage reduction per hit (min 20% of the hit always goes through). */
-  armor: number;
+  /** 40k Toughness vs weapon Strength (data/profile.ts). */
+  toughness: number;
+  /** Armour save: 4 = 4+, 2 = 2+ (best), 7 = none. Weapon AP worsens it. */
+  save: number;
   speed: number;
   /** Steering responsiveness (1/s). */
   accel: number;
@@ -230,11 +260,32 @@ export interface WaveTableEntry {
 /** Per team size 1..MAX_PLAYERS (index = teamSize - 1). */
 export type PerTeamSize = readonly number[];
 
+/**
+ * How the swarm scales with squad size (every array: index = teamSize - 1, squads of 1..8).
+ * Tuned with `npm run sim` so average survival stays roughly flat across squad sizes.
+ */
+export interface TeamScaling {
+  /** Multiplier on each wave's threat budget (more enemies). */
+  budget: PerTeamSize;
+  /** Multiplier on the threat-per-second dispatch pace (enemies arrive faster). */
+  pace: PerTeamSize;
+  /** Multiplier on the max-alive cap. */
+  maxAlive: PerTeamSize;
+  /** Multiplier on the per-wave cap of spawner children (Rippers from Ravener tunnels...). */
+  children: PerTeamSize;
+  /** Multiplier on Tyranid HP (harder to kill), on top of the per-wave growth. */
+  hp: PerTeamSize;
+  /** Multiplier on the wave-table weight of elites (threat >= eliteThreat): more Warriors, Genestealers, Carnifexes. */
+  elite: PerTeamSize;
+  /** Enemies with at least this threat count as elites for `elite`. */
+  eliteThreat: number;
+}
+
 export interface DirectorConfig {
-  /** Multiplier on wave budgets, pacing and max alive by team size (index = teamSize - 1). */
-  teamScale: PerTeamSize;
+  /** Squad-size scaling table (more enemies, tougher, more elites, faster). */
+  teamScaling: TeamScaling;
   /**
-   * Finite waves: wave n has a fixed threat budget of (base + perWave * (n-1)^exponent) * teamScale.
+   * Finite waves: wave n has a fixed threat budget of (base + perWave * (n-1)^exponent) * teamScaling.budget.
    * The next wave starts only when every enemy of the wave (children included) is dead.
    */
   waves: {
@@ -243,13 +294,13 @@ export interface DirectorConfig {
     /** Breather between "WAVE N CLEARED" and the next wave. */
     breather: number;
     budget: { base: number; perWave: number; exponent: number };
-    /** Threat per second sent to the breaches while the roster lasts: (base + perWave*(n-1)) * teamScale. */
+    /** Threat per second sent to the breaches while the roster lasts: (base + perWave*(n-1)) * teamScaling.pace. */
     pace: { base: number; perWave: number };
     /** Breaches a wave flanks from, [min, max]. */
     flankPoints: [number, number];
     /** Enemy HP multiplier grows by this fraction per wave. */
     hpScalePerWave: number;
-    /** Children (spawner enemies) per wave at most, times teamScale. */
+    /** Children (spawner enemies) per wave at most, times teamScaling.children. */
     maxChildren: number;
     /**
      * Anti-stall: once the roster is out and at most max(remaining, fraction * total) enemies are

@@ -250,7 +250,7 @@ function spit(world: World, e: Enemy, target: Player, radius: number): void {
     radius: spec.radius,
     damage: spec.damage * e.synDamage,
     pierceLeft: 0,
-    armorPierce: false,
+    ap: 0,
     drag: spec.drag ?? 0,
     knockback: 0,
     explosion: spec.explosion,

@@ -167,7 +167,11 @@ export function fireWeapon(world: World, p: Player, def: WeaponDef, braced = fal
       radius: sc ? spec.radius * 1.35 : spec.radius,
       damage: spec.damage * dmgMul,
       pierceLeft: spec.pierce,
-      armorPierce: !!spec.armorPierce,
+      strength:
+        spec.strength !== undefined
+          ? spec.strength + (sc ? (def.heat!.superchargeStrength ?? 0) : 0)
+          : undefined,
+      ap: (spec.ap ?? 0) + (sc ? (def.heat!.superchargeAp ?? 0) : 0),
       drag: spec.drag ?? 0,
       knockback: spec.knockback,
       explosion: spec.explosion,

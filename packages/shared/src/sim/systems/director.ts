@@ -8,35 +8,56 @@ import type { Enemy, RosterGroup, World } from '../types.js';
 export const perTeam = (table: PerTeamSize, teamSize: number): number =>
   table[clamp(teamSize, 1, Math.min(MAX_PLAYERS, table.length)) - 1];
 
-const teamScale = (cfg: DirectorConfig, teamSize: number): number =>
-  perTeam(cfg.teamScale, teamSize);
-
 export function waveEntryFor(cfg: DirectorConfig, wave: number): WaveTableEntry {
   let entry = cfg.waveTable[0];
   for (const e of cfg.waveTable) if (wave >= e.fromWave) entry = e;
   return entry;
 }
 
+/**
+ * The wave table's weights for a squad: elites (threat >= teamScaling.eliteThreat) weighted up by
+ * teamScaling.elite, so bigger squads meet proportionally more Warriors, Genestealers and Carnifexes.
+ */
+export function waveWeightsFor(
+  cfg: DirectorConfig,
+  wave: number,
+  teamSize: number,
+  threatOf: (id: string) => number,
+): Record<string, number> {
+  const base = waveEntryFor(cfg, wave).weights;
+  const mul = perTeam(cfg.teamScaling.elite, teamSize);
+  if (mul === 1) return base;
+  const out: Record<string, number> = {};
+  for (const [id, w] of Object.entries(base))
+    out[id] = threatOf(id) >= cfg.teamScaling.eliteThreat ? w * mul : w;
+  return out;
+}
+
 /** Fixed threat budget of wave `wave` (1-based) for a squad. */
 export function waveBudget(cfg: DirectorConfig, wave: number, teamSize: number): number {
   const b = cfg.waves.budget;
-  return (b.base + b.perWave * Math.max(0, wave - 1) ** b.exponent) * teamScale(cfg, teamSize);
+  return (
+    (b.base + b.perWave * Math.max(0, wave - 1) ** b.exponent) *
+    perTeam(cfg.teamScaling.budget, teamSize)
+  );
 }
 
 /** Threat per second sent to the breaches while a wave's roster lasts. */
 export function wavePace(cfg: DirectorConfig, wave: number, teamSize: number): number {
   const p = cfg.waves.pace;
-  return (p.base + p.perWave * Math.max(0, wave - 1)) * teamScale(cfg, teamSize);
+  return (p.base + p.perWave * Math.max(0, wave - 1)) * perTeam(cfg.teamScaling.pace, teamSize);
 }
 
 export function maxAlive(cfg: DirectorConfig, wave: number, teamSize: number): number {
   const raw =
-    (cfg.maxAlive.base + cfg.maxAlive.perWave * Math.max(0, wave - 1)) * teamScale(cfg, teamSize);
+    (cfg.maxAlive.base + cfg.maxAlive.perWave * Math.max(0, wave - 1)) *
+    perTeam(cfg.teamScaling.maxAlive, teamSize);
   return Math.min(cfg.maxAlive.cap, Math.floor(raw));
 }
 
-export const enemyHpScale = (cfg: DirectorConfig, wave: number): number =>
-  1 + cfg.waves.hpScalePerWave * Math.max(0, wave - 1);
+/** Tyranid HP multiplier for a wave and squad size (per-wave growth × squad toughness). */
+export const enemyHpScale = (cfg: DirectorConfig, wave: number, teamSize = 1): number =>
+  (1 + cfg.waves.hpScalePerWave * Math.max(0, wave - 1)) * perTeam(cfg.teamScaling.hp, teamSize);
 
 /** Per-wave drop caps for a squad. */
 export function dropCaps(
@@ -67,17 +88,17 @@ export function buildRoster(world: World, wave: number): RosterGroup[] {
       cfg.bosses.extraPerAppearance * world.director.bossWaves;
     roster.push({ type: cfg.bosses.enemy, n, boss: true });
   }
-  const entry = waveEntryFor(cfg, wave);
+  const weights = waveWeightsFor(cfg, wave, world.teamSize, (id) => world.content.enemy(id).threat);
   let budget = waveBudget(cfg, wave, world.teamSize);
   let guard = 0;
   while (budget >= 1 && guard++ < 500) {
-    const type = world.rng.weighted(entry.weights);
+    const type = world.rng.weighted(weights);
     if (!type) break;
     const def = world.content.enemy(type);
     const affordable = Math.floor(budget / def.threat);
     if (affordable < 1) {
       // Spend the remainder on the cheapest enemy in the table.
-      const cheapest = Object.keys(entry.weights)
+      const cheapest = Object.keys(weights)
         .map((id) => world.content.enemy(id))
         .reduce((a, b) => (b.threat < a.threat ? b : a));
       if (cheapest.threat > budget) break;
@@ -158,7 +179,7 @@ export function updateDirector(world: World, dt: number): void {
   const pending = () =>
     world.enemies.reduce((n, e) => n + (e.dead ? 0 : 1), 0) + st.queue.reduce((s, q) => s + q.n, 0);
   st.dispatch += wavePace(cfg, st.wave, world.teamSize) * dt;
-  const hpMul = enemyHpScale(cfg, st.wave);
+  const hpMul = enemyHpScale(cfg, st.wave, world.teamSize);
   let guard = 0;
   while (st.roster.length && guard++ < 10) {
     const g = st.roster[0];
@@ -217,7 +238,9 @@ export function updateDirector(world: World, dt: number): void {
 function updateSpawners(world: World, dt: number): void {
   const cfg = world.content.director;
   const st = world.director;
-  const waveCap = Math.round(cfg.waves.maxChildren * teamScale(cfg, world.teamSize));
+  const waveCap = Math.round(
+    cfg.waves.maxChildren * perTeam(cfg.teamScaling.children, world.teamSize),
+  );
   const born: Enemy[] = [];
   for (const e of world.enemies) {
     if (e.dead || e.burrowed) continue;

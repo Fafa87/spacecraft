@@ -108,6 +108,7 @@ export function createPlayer(
     score: 0,
     killsByType: {},
     stillTime: 0,
+    fireSlow: 0,
     damageDealt: 0,
     diedAt: null,
   };

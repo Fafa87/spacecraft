@@ -3,13 +3,19 @@ export * from './world.js';
 export * from './simulation.js';
 export * from './snapshot.js';
 export * from './spatialHash.js';
-export { stepPlayerMovement, playerMoveSpeed } from './systems/movement.js';
+export {
+  stepPlayerMovement,
+  playerMoveSpeed,
+  marineMoveSpeed,
+  stepFireSlow,
+} from './systems/movement.js';
 export {
   waveBudget,
   wavePace,
   maxAlive,
   waveEntryFor,
   enemyHpScale,
+  waveWeightsFor,
   dropCaps,
   isBossWave,
   buildRoster,

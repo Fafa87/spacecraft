@@ -74,27 +74,40 @@ function hitEnemies(
     if (pr.explosion) {
       // Mass-reactive: direct hit (if any) and then the blast on the target.
       if (pr.damage > 0) {
-        damageEnemy(world, enemy, pr.damage, {
-          armorPierce: pr.armorPierce,
+        const res = damageEnemy(world, enemy, pr.damage, {
+          strength: pr.strength,
+          ap: pr.ap,
           sourcePlayerId: pr.ownerId,
           kx: pr.vx,
           ky: pr.vy,
           knockback: pr.knockback,
         });
+        if (res.saved)
+          world.events.push({
+            e: 'bnc',
+            x: Math.round(enemy.x),
+            y: Math.round(enemy.y),
+            k: pr.kind,
+          });
       }
       pr.x = enemy.x;
       pr.y = enemy.y;
       detonate(world, pr);
       return;
     }
-    damageEnemy(world, enemy, pr.damage, {
-      armorPierce: pr.armorPierce,
+    const res = damageEnemy(world, enemy, pr.damage, {
+      strength: pr.strength,
+      ap: pr.ap,
       sourcePlayerId: pr.ownerId,
       kx: pr.vx,
       ky: pr.vy,
       knockback: pr.knockback,
     });
-    if (pr.kind !== 'flame' && pr.kind !== 'slash')
+    if (res.saved) {
+      // Armour bounced: spark + ricochet only (throttled for the flamer's many tiny hits).
+      if (pr.kind !== 'flame' || world.rng.chance(0.08))
+        world.events.push({ e: 'bnc', x: Math.round(enemy.x), y: Math.round(enemy.y), k: pr.kind });
+    } else if (pr.kind !== 'flame' && pr.kind !== 'slash')
       world.events.push({ e: 'hit', x: Math.round(enemy.x), y: Math.round(enemy.y), k: pr.kind });
     if (pr.pierceLeft-- <= 0) pr.dead = true;
   }
