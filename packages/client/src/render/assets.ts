@@ -32,6 +32,32 @@ export class Assets {
     }
   }
 
+  private icons = new Map<string, string>();
+
+  /**
+   * First frame of a sprite as a square PNG data URL (facing up, fitted with a small margin),
+   * for DOM screens such as the kill summary. Undefined when assets are missing.
+   */
+  iconUrl(key: string, size = 40): string | undefined {
+    const cacheKey = `${key}@${size}`;
+    const hit = this.icons.get(cacheKey);
+    if (hit) return hit;
+    const s = this.manifest?.sprites[key];
+    if (!s || !this.atlas || typeof document === 'undefined') return undefined;
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const ctx = c.getContext('2d');
+    if (!ctx) return undefined;
+    const [fx, fy] = s.frames[0];
+    const k = (size * 0.92) / Math.max(s.w, s.h);
+    ctx.translate(size / 2, size / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.drawImage(this.atlas, fx, fy, s.w, s.h, (-s.w * k) / 2, (-s.h * k) / 2, s.w * k, s.h * k);
+    const url = c.toDataURL('image/png');
+    this.icons.set(cacheKey, url);
+    return url;
+  }
+
   sprite(key: string): SpriteEntry | undefined {
     return this.manifest?.sprites[key];
   }

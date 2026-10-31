@@ -65,14 +65,20 @@ export function killEnemy(world: World, enemy: Enemy, killer?: Player): void {
   enemy.dead = true;
   const def = world.content.enemy(enemy.type);
   world.stats.kills++;
+  world.stats.killsByType[enemy.type] = (world.stats.killsByType[enemy.type] ?? 0) + 1;
   if (killer) {
     killer.kills++;
     killer.score += def.points;
     killer.killsByType[enemy.type] = (killer.killsByType[enemy.type] ?? 0) + 1;
   }
   world.events.push({ e: 'die', t: enemy.type, x: Math.round(enemy.x), y: Math.round(enemy.y) });
+  // A death blast (e.g. a shot Spore Mine) credits its kills to whoever popped it.
   if (def.explode?.onDeath)
-    explode(world, enemy.x, enemy.y, def.explode, { hurtsPlayers: true, hurtsEnemies: true });
+    explode(world, enemy.x, enemy.y, def.explode, {
+      hurtsPlayers: true,
+      hurtsEnemies: true,
+      creditPlayerId: killer?.id,
+    });
   // Drops come out of the wave's medkit budget (bosses always drop); children never drop.
   const st = world.director;
   const roll = !enemy.child && world.rng.chance(def.medkitDropChance);
@@ -108,6 +114,11 @@ export interface ExplodeOpts {
   hurtsPlayers: boolean;
   hurtsEnemies: boolean;
   sourcePlayerId?: number;
+  /**
+   * Credits enemy kills/damage to this marine without making it a "player-fired" blast
+   * (full damage to marines). Used for chain blasts set off by a kill.
+   */
+  creditPlayerId?: number;
 }
 
 /** Radial damage with linear falloff to `edgeFactor` at the rim; the blast's own S / AP apply. */
@@ -130,7 +141,7 @@ export function explode(
       damageEnemy(world, enemy, falloff(Math.max(0, d)), {
         strength: spec.strength,
         ap: spec.ap,
-        sourcePlayerId: opts.sourcePlayerId,
+        sourcePlayerId: opts.sourcePlayerId ?? opts.creditPlayerId,
         kx: enemy.x - x,
         ky: enemy.y - y,
         knockback: 260,

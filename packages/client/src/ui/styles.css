@@ -850,3 +850,84 @@ body.touch-mode .leave-dialog .hint {
 canvas#game.playing.menu-open {
   cursor: auto;
 }
+
+/* ---- v0.6: full kill tally on the game-over card ---- */
+.tally h2 {
+  margin: 12px 0 4px;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+}
+.tally h2 .muted {
+  font-size: 13px;
+  margin-left: 6px;
+}
+table.kills {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+table.kills th,
+table.kills td {
+  padding: 2px 5px;
+}
+table.kills th.marine {
+  font-size: 10px;
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+table.kills th.marine svg {
+  vertical-align: middle;
+  margin-right: 3px;
+}
+table.kills td.ico {
+  width: 30px;
+  padding: 0;
+}
+table.kills td.ico img {
+  width: 28px;
+  height: 28px;
+  display: block;
+  image-rendering: auto;
+}
+table.kills td.num {
+  text-align: right;
+  white-space: nowrap;
+}
+table.kills td.tot {
+  font-weight: bold;
+}
+table.kills td.zero {
+  opacity: 0.35;
+}
+table.kills tr.none td {
+  opacity: 0.38;
+}
+table.kills tr.boss td.xeno,
+table.kills tr.boss td.tot {
+  color: #ff7a5c;
+}
+table.kills tr.boss:not(.none) {
+  background: rgba(190, 40, 20, 0.16);
+}
+table.kills tr.elite td.xeno {
+  color: var(--accent);
+}
+table.kills tr.elite:not(.none) + tr.swarm,
+table.kills tr.boss + tr.elite,
+table.kills tr.boss + tr.swarm {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.tag.boss {
+  background: rgba(200, 40, 20, 0.3);
+  color: #ffb39e;
+}
+.tag.elite {
+  background: rgba(255, 192, 74, 0.18);
+  color: var(--accent);
+}
+.tally .note {
+  font-size: 11px;
+  margin-top: 4px;
+}

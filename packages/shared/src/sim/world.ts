@@ -49,7 +49,7 @@ export function createWorld(
     events: [],
     teamSize: players.length,
     over: false,
-    stats: { kills: 0, shots: 0 },
+    stats: { kills: 0, shots: 0, killsByType: {} },
   };
   const cx = ARENA.width / 2;
   const cy = ARENA.height / 2;

@@ -7,6 +7,7 @@ import {
   type ContentRegistry,
   type PlayerSnap,
   type PlayerSummary,
+  type SquadSummary,
   type RunResult,
   type Snapshot,
 } from '@sms/shared';
@@ -25,7 +26,7 @@ import { createLeaveDialog } from '../ui/leaveDialog.js';
 import { isRotateBlocked, onRotateBlockedChange } from '../input/orientation.js';
 
 export type GameClientEvents = {
-  over: { result: RunResult; summary: PlayerSummary[] };
+  over: { result: RunResult; summary: PlayerSummary[]; squad?: SquadSummary };
   /** The player confirmed "leave the game" in the Escape / ⏸ dialog. */
   leave: undefined;
 };

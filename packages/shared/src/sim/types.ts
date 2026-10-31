@@ -266,5 +266,10 @@ export interface World {
   teamSize: number;
   over: boolean;
   /** Totals for the run summary. */
-  stats: { kills: number; shots: number };
+  stats: {
+    kills: number;
+    shots: number;
+    /** Every kill of the run per enemy type id, credited to a marine or not (chain blasts). */
+    killsByType: Record<string, number>;
+  };
 }

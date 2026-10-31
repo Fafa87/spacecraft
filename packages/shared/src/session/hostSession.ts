@@ -18,6 +18,7 @@ import {
   type HostMessage,
   type LobbyPlayer,
   type PlayerSummary,
+  type SquadSummary,
   type SessionPhase,
 } from '../net/protocol.js';
 import { applyInput, stepWorld } from '../sim/simulation.js';
@@ -368,7 +369,8 @@ export class HostSession {
       damage: Math.round(p.damageDealt),
       diedAtMs: p.diedAt === null ? null : Math.round(p.diedAt * 1000),
     }));
-    this.broadcast({ t: 'over', result, summary });
+    const squad: SquadSummary = { killsByType: { ...world.stats.killsByType } };
+    this.broadcast({ t: 'over', result, summary, squad });
     this.broadcastLobby();
     this.opts.log?.(
       `[room ${this.roomCode}] run over: ${(result.survivalMs / 1000).toFixed(1)}s, ${result.kills} kills`,

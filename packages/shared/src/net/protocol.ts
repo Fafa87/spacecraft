@@ -28,6 +28,15 @@ export interface PlayerSummary {
   diedAtMs: number | null;
 }
 
+/** Squad-wide totals of a run (v0.6+; older hosts omit it). */
+export interface SquadSummary {
+  /**
+   * Every kill per enemy type id, including the ones no marine was credited with
+   * (e.g. Tyranids caught in a self-detonating Spore Mine's blast).
+   */
+  killsByType: Record<string, number>;
+}
+
 export type ClientMessage =
   /** `chapter` = preferred chapter id; the host picks a free one if taken. */
   | { t: 'join'; name: string; protocol: number; chapter?: string }
@@ -50,7 +59,7 @@ export type HostMessage =
     }
   | { t: 'start'; seed: number; players: LobbyPlayer[] }
   | { t: 'snap'; s: Snapshot }
-  | { t: 'over'; result: RunResult; summary: PlayerSummary[] }
+  | { t: 'over'; result: RunResult; summary: PlayerSummary[]; squad?: SquadSummary }
   | { t: 'submitted'; runId: string; status: SubmitStatus; rank?: number }
   | { t: 'error'; code: ErrorCode; message: string }
   | { t: 'pong'; ts: number };

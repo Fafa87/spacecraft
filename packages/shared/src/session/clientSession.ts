@@ -7,6 +7,7 @@ import type {
   LobbyPlayer,
   PlayerSummary,
   SessionPhase,
+  SquadSummary,
 } from '../net/protocol.js';
 import type { Snapshot } from '../sim/snapshot.js';
 import type { PlayerInput } from '../sim/types.js';
@@ -25,7 +26,7 @@ export type ClientSessionEvents = {
   lobby: LobbyInfo;
   start: { seed: number; players: LobbyPlayer[] };
   snapshot: Snapshot;
-  over: { result: RunResult; summary: PlayerSummary[] };
+  over: { result: RunResult; summary: PlayerSummary[]; squad?: SquadSummary };
   submitted: { runId: string; status: SubmitStatus; rank?: number };
   error: { code: ErrorCode; message: string };
   pong: { rtt: number };
@@ -115,7 +116,7 @@ export class ClientSession extends Emitter<ClientSessionEvents> {
         this.emit('snapshot', m.s);
         break;
       case 'over':
-        this.emit('over', { result: m.result, summary: m.summary });
+        this.emit('over', { result: m.result, summary: m.summary, squad: m.squad });
         break;
       case 'submitted':
         this.emit('submitted', { runId: m.runId, status: m.status, rank: m.rank });

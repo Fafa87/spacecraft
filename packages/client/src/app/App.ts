@@ -2,6 +2,7 @@ import {
   defaultContent,
   type ContentRegistry,
   type PlayerSummary,
+  type SquadSummary,
   type RunResult,
 } from '@sms/shared';
 import { AudioEngine } from '../audio/AudioEngine.js';
@@ -259,7 +260,7 @@ export class App {
     this.gameOverUi = null;
     this.setUi(null);
     const game = new GameClient(conn, this.canvas, this.assets, this.audio, this.content);
-    game.on('over', (o) => setTimeout(() => this.showGameOver(o.result, o.summary), 1600));
+    game.on('over', (o) => setTimeout(() => this.showGameOver(o.result, o.summary, o.squad), 1600));
     // Escape / ⏸ -> "leave": close the connection (a leaving host closes the room, and the
     // squad takes the usual host-disconnect path) and go back to the main menu.
     game.on('leave', () => this.showMenu());
@@ -269,7 +270,7 @@ export class App {
 
   private gameOverUi: ReturnType<typeof createGameOverScreen> | null = null;
 
-  private showGameOver(result: RunResult, summary: PlayerSummary[]): void {
+  private showGameOver(result: RunResult, summary: PlayerSummary[], squad?: SquadSummary): void {
     const conn = this.conn;
     if (!conn || this.screen !== 'game') return;
     this.screen = 'over';
@@ -279,7 +280,14 @@ export class App {
     const ui = createGameOverScreen(
       result,
       summary,
-      { store: this.store, canRestart: conn.session.isOwner, colors, content: this.content },
+      {
+        store: this.store,
+        canRestart: conn.session.isOwner,
+        colors,
+        content: this.content,
+        squad,
+        icon: (key) => this.assets.iconUrl(key),
+      },
       {
         again: () => {
           // Back to lobby; solo auto-starts from there, squads return to the room screen.
