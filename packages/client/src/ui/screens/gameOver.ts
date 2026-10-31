@@ -44,13 +44,15 @@ export function createGameOverScreen(
         <div class="muted">wave ${result.wave} · ${result.kills} kills · ${result.teamSize}-marine squad</div></div>
       <div class="submit" id="submit">Submitting score…</div>
 ${breakdownTable(summary, opts)}
-${killTally(summary, opts)}
       <div class="row">
         <button id="menu">MAIN MENU</button>
         ${opts.canRestart ? '<button id="again" class="primary">DEPLOY AGAIN</button>' : '<span class="muted">Waiting for squad leader…</span>'}
       </div>
     </div>
-    <div class="card scores"><h2>LEADERBOARDS</h2><div id="hs"></div></div>
+    <div class="side">
+      <div class="card tally-card">${killTally(summary, opts)}</div>
+      <div class="card scores"><h2>LEADERBOARDS</h2><div id="hs"></div></div>
+    </div>
   </div>`);
   const hsHost = $(el, '#hs');
   const mountTable = () => {

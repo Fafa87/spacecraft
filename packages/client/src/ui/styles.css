@@ -853,9 +853,7 @@ canvas#game.playing.menu-open {
 
 /* ---- v0.6: full kill tally on the game-over card ---- */
 .tally h2 {
-  margin: 12px 0 4px;
-  font-size: 15px;
-  letter-spacing: 0.08em;
+  margin: 0 0 6px;
 }
 .tally h2 .muted {
   font-size: 13px;
@@ -872,7 +870,7 @@ table.kills td {
 }
 table.kills th.marine {
   font-size: 10px;
-  max-width: 64px;
+  max-width: 96px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -930,4 +928,10 @@ table.kills tr.boss + tr.swarm {
 .tally .note {
   font-size: 11px;
   margin-top: 4px;
+}
+.gameover .side {
+  min-width: 0;
+}
+.tally {
+  overflow-x: auto;
 }
