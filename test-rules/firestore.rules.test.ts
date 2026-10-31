@@ -197,7 +197,8 @@ describe('firestore.rules: per-version boards (boards/{board}/highscores)', () =
     ['version from another board', v2({ version: '0.1.0' })],
     ['version major differs', v2({ version: '1.2.0' })],
     ['bad board path', v2({ board: 'abc' }), 'abc'],
-    ['board with patch', good({ version: '0.2.0', board: '0.2.0' }), '0.2.0'],
+    ['full-version board of another version', good({ version: '0.2.0', board: '0.2.1' }), '0.2.1'],
+    ['four-part board', good({ version: '0.2.0', board: '0.2.0.1' }), '0.2.0.1'],
     ['implausible run', v2({ survivalMs: 99_999_999 })],
     ['extra field', v2({ cheat: true })],
   ];
@@ -476,5 +477,60 @@ describe('FirestoreHighscoreStore on a v0.4 board: individual leaderboard (REST)
       body: JSON.stringify(body),
     });
     expect(res.status).toBe(403);
+  });
+});
+
+describe('v0.5.1+: one board per release (boards/<full version>, REST)', () => {
+  const cfg = (board: string) => ({
+    apiKey: 'fake-api-key',
+    projectId: PROJECT,
+    baseUrl: `http://${host}:${port}/v1`,
+    board,
+  });
+  const run = (patch: Partial<RunResult> = {}): RunResult => ({
+    runId: id(),
+    teamSize: 2,
+    players: ['Filip', 'Mróz'],
+    survivalMs: 200_000,
+    kills: 120,
+    wave: 3,
+    endedAt: new Date().toISOString(),
+    version: '0.5.1',
+    mode: 'p2p',
+    playerScores: [300, 120],
+    playerKills: [80, 40],
+    ...patch,
+  });
+  const post = async (board: string, r: RunResult) =>
+    (
+      await fetch(endpoint(cfg(board), 'commit'), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(commitBody(cfg(board), r)),
+      })
+    ).status;
+
+  it('v0.5.1 writes and reads its own board, separate from v0.5.0', async () => {
+    const s051 = new FirestoreHighscoreStore(cfg('0.5.1'));
+    const s050 = new FirestoreHighscoreStore(cfg('0.5'));
+    expect((await s051.submit(run())).status).toBe('server');
+    expect((await s050.submit(run({ version: '0.5.0', playerScores: [50, 10] }))).status).toBe(
+      'server',
+    );
+    expect((await s051.topPlayers(2, 10)).entries.map((e) => e.score)).toEqual([300, 120]);
+    expect((await s050.topPlayers(2, 10)).entries.map((e) => e.score)).toEqual([50, 10]);
+    expect((await s051.top(2)).entries).toHaveLength(1);
+  });
+
+  it('accepts a -suffix of the same version (check:firestore uses 0.5.1-test)', async () => {
+    expect(await post('0.5.1', run({ version: '0.5.1-test' }))).toBe(200);
+  });
+
+  it.each([
+    ['another patch', '0.5.2'],
+    ['the minor board version', '0.5.0'],
+    ['a longer patch', '0.5.10'],
+  ])('rejects %s on boards/0.5.1', async (_l, version) => {
+    expect(await post('0.5.1', run({ version }))).toBe(403);
   });
 });

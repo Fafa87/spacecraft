@@ -1,6 +1,6 @@
 /** Global tunables. Gameplay content (weapons, enemies, waves) lives in `data/`. */
 
-export const GAME_VERSION = '0.5.0';
+export const GAME_VERSION = '0.5.1';
 /** Bump whenever the wire protocol or data tables change incompatibly. */
 export const PROTOCOL_VERSION = 5;
 

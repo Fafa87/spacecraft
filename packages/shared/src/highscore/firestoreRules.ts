@@ -18,11 +18,20 @@ export const FIRESTORE_COLLECTION = 'highscores';
  * every board.
  */
 export const FIRESTORE_BOARDS = 'boards';
-/** Board id for a game version: "0.2.3" → "0.2". */
+/**
+ * From this version on every release gets its own board keyed by the full version
+ * ("0.5.1"), so even a patch release starts with an empty table. Earlier versions keep their
+ * major.minor boards ("0.5" = v0.5.0, "0.4" = v0.4.x).
+ */
+export const PATCH_BOARDS_FROM: readonly [number, number, number] = [0, 5, 1];
+/** Board id for a game version: "0.2.3" → "0.2", "0.5.0" → "0.5", "0.5.1(-x)" → "0.5.1". */
 export function leaderboardBoard(version: string): string {
-  const m = /^(\d{1,3})\.(\d{1,3})\./.exec(version);
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})/.exec(version);
   if (!m) throw new Error(`bad version ${version}`);
-  return `${m[1]}.${m[2]}`;
+  const v = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const [a, b, c] = PATCH_BOARDS_FROM;
+  const patchBoard = v[0] !== a ? v[0] > a : v[1] !== b ? v[1] > b : v[2] >= c;
+  return patchBoard ? `${v[0]}.${v[1]}.${v[2]}` : `${v[0]}.${v[1]}`;
 }
 /** Fields of a legacy (v0.1.x, top-level collection) run. */
 export const FIRESTORE_LEGACY_FIELDS = [
@@ -148,11 +157,20 @@ ${nameChecks}
 ${perMarine};
     }
 
+    function validBoard(board) {
+      return board.matches("[0-9]{1,3}[.][0-9]{1,3}([.][0-9]{1,3})?");
+    }
+
+    // major.minor boards (v0.2 .. v0.5.0) take every patch of that minor; full-version boards
+    // (v0.5.1+, e.g. boards/0.5.1) only that exact version (a -suffix such as -test allowed).
     function boardVersion(board, d) {
       return d.board == board
         && d.version is string
         && d.version.split('[.]').size() >= 3
-        && d.version.split('[.]')[0] + '.' + d.version.split('[.]')[1] == board;
+        && ((board.matches("[0-9]{1,3}[.][0-9]{1,3}")
+            && d.version.split('[.]')[0] + '.' + d.version.split('[.]')[1] == board)
+          || (board.matches("[0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}")
+            && d.version.split('[-+]')[0] == board));
     }
 
     // An individual score row must mirror its run, written in the same commit.
@@ -180,11 +198,12 @@ ${perMarine};
       allow update, delete: if false;
     }
 
-    // Per-version boards (v0.2+): board = major.minor of the version, e.g. boards/0.4/highscores.
+    // Per-version boards (v0.2+): boards/0.4/highscores (major.minor, up to v0.5.0), then one
+    // board per release from v0.5.1: boards/0.5.1/highscores.
     // v0.2/v0.3 (frozen builds) keep their field set; v0.4+ runs carry per-marine scores.
     match /${FIRESTORE_BOARDS}/{board}/${FIRESTORE_COLLECTION}/{runId} {
-      allow read: if board.matches("[0-9]{1,3}[.][0-9]{1,3}");
-      allow create: if board.matches("[0-9]{1,3}[.][0-9]{1,3}")
+      allow read: if validBoard(board);
+      allow create: if validBoard(board)
         && boardVersion(board, request.resource.data)
         && validRun(runId, request.resource.data)
         && ((board in [${scoreless}]
@@ -199,8 +218,8 @@ ${perMarine};
 
     // Individual leaderboard (v0.4+): boards/{board}/scores/{runId}-{slot}.
     match /${FIRESTORE_BOARDS}/{board}/${FIRESTORE_SCORES}/{scoreId} {
-      allow read: if board.matches("[0-9]{1,3}[.][0-9]{1,3}");
-      allow create: if board.matches("[0-9]{1,3}[.][0-9]{1,3}")
+      allow read: if validBoard(board);
+      allow create: if validBoard(board)
         && !(board in [${scoreless}])
         && request.resource.data.keys().hasOnly([${scoreFields}])
         && request.resource.data.keys().hasAll([${scoreFields}])

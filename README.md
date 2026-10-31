@@ -282,8 +282,9 @@ The site is served from the **`gh-pages` branch** (Pages source "Deploy from a b
 /spacecraft/v0.4.0/          frozen v0.4.0
 /spacecraft/v0.4.1/          frozen v0.4.1
 /spacecraft/v0.4.2/          frozen v0.4.2
-/spacecraft/v0.5.0/          frozen v0.5.0 …
-/spacecraft/versions.json    {"latest":"0.5.0","versions":[{"version","date","title","path"}…]} (newest first)
+/spacecraft/v0.5.0/          frozen v0.5.0
+/spacecraft/v0.5.1/          frozen v0.5.1 …
+/spacecraft/versions.json    {"latest":"0.5.1","versions":[{"version","date","title","path"}…]} (newest first)
 ```
 
 The menu's **Previous versions** link reads `versions.json` from the site root (a frozen build
@@ -294,14 +295,14 @@ loaded. Each version keeps its own localStorage highscore table and its own Fire
 **Release checklist**
 
 1. Bump `GAME_VERSION` in `packages/shared/src/constants.ts` (and the `version` in the
-   `package.json` files). A minor or major bump starts a **new, empty leaderboard**. If the
-   board pattern changes, re-publish `firestore.rules`.
+   `package.json` files). Since v0.5.1 **every release** (patch included) starts a **new, empty
+   leaderboard** (`boards/<version>`). If the board pattern changes, re-publish `firestore.rules`.
 2. Run `npm run lint && npm run typecheck && npm test` (plus `npm run test:rules` when rules
    changed). Then commit and push `master` (never force).
 3. Tag and release, targeting the exact commit:
    ```bash
-   git tag -a v0.5.0 -m "v0.5.0: Hive Siege — squad scaling, WH40k weapon profiles" && git push origin v0.5.0
-   gh release create v0.5.0 --target "$(git rev-parse HEAD)" --title "v0.5.0 · Hive Siege" --notes-file notes.md
+   git tag -a v0.5.1 -m "v0.5.1: full kill summary" && git push origin v0.5.1
+   gh release create v0.5.1 --target "$(git rev-parse HEAD)" --title "v0.5.1 · Hive Siege" --notes-file notes.md
    ```
 4. Deploy: `npm run deploy:pages` builds the current checkout twice (into `/` and
    `/v<GAME_VERSION>/`) and adds a worktree of `origin/gh-pages`. In it, it replaces only the root
@@ -313,7 +314,7 @@ loaded. Each version keeps its own localStorage highscore table and its own Fire
      (`git worktree add /tmp/v010 v0.1.0 && cd /tmp/v010 && npm ci && BASE_PATH=/spacecraft/v0.1.0/ npm run build:pages`),
      then installed with `--add 0.1.0=/tmp/v010/packages/client/dist`.
 5. Check it live: `npx tsx scripts/pages-check.ts https://fafa87.github.io/spacecraft/` (also run
-   it on `/v0.1.0/`, `/v0.2.0/`, `/v0.3.0/`, `/v0.4.0/`, `/v0.4.1/`, `/v0.4.2/` and `/v0.5.0/`). It checks the menu, assets under the base path, local scores,
+   it on `/v0.1.0/`, `/v0.2.0/`, `/v0.3.0/`, `/v0.4.0/`, `/v0.4.1/`, `/v0.4.2/`, `/v0.5.0/` and `/v0.5.1/`). It checks the menu, assets under the base path, local scores,
    a P2P room, a solo run and the console.
 
 CI option: a `pages.yml` workflow that runs the same steps on `v*` tags
@@ -432,14 +433,17 @@ Like [Pulp Wars](https://nadbordrozd.github.io/pulp_wars/), the static build tal
 Firestore over its REST API**, straight from the browser: a public web `apiKey`, no auth and no
 SDK (`packages/client/src/highscores/FirestoreHighscoreStore.ts`, about 3 KB).
 
-- **Data:** one board per game **major.minor** version, at `boards/{board}/highscores/{runId}`
-  (for example `boards/0.2/highscores`). Fields: `teamSize`, `names[]`, `survivalMs`, `kills`,
+- **Data:** one board per game version, at `boards/{board}/highscores/{runId}`: **major.minor**
+  up to v0.5.0 (for example `boards/0.2/highscores`, `boards/0.5` = v0.5.0), then the **full
+  version** from v0.5.1 on (`boards/0.5.1/highscores`). Fields: `teamSize`, `names[]`, `survivalMs`, `kills`,
   `wave`, `mode`, `version`, `board` and `timestamp` (server `REQUEST_TIME`).
 - **Per-version boards:** a release that changes the game (a minor or major bump) starts with an
-  **empty** leaderboard, and nothing is ever deleted. Patch releases (0.2.1) share their minor's board.
+  **empty** leaderboard, and nothing is ever deleted. Up to v0.5.0 patch releases (0.4.1) shared
+  their minor's board; from v0.5.1 every release, patches included, gets its own.
   - The frozen `/spacecraft/v0.1.0/` build still reads and writes the legacy top-level
     `highscores` collection (8 fields, no `board`), so v0.1.0 keeps its own board and keeps working.
-  - The rules enforce `board ==` the path segment `==` major.minor of `version`, so a v0.2 client
+  - The rules enforce `board ==` the path segment `==` major.minor of `version` (or, for a
+    three-part board, the full `version` without its `-suffix`), so a v0.2 client
     can't post into another version's board.
   - All boards use the collection id `highscores`, so the **one existing composite index**
     (`teamSize` ASC, `survivalMs` DESC, scope Collection) serves every board; the v0.4 individual

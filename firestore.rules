@@ -56,11 +56,20 @@ service cloud.firestore {
         && (d.teamSize <= 7 || validMarine(d, 7));
     }
 
+    function validBoard(board) {
+      return board.matches("[0-9]{1,3}[.][0-9]{1,3}([.][0-9]{1,3})?");
+    }
+
+    // major.minor boards (v0.2 .. v0.5.0) take every patch of that minor; full-version boards
+    // (v0.5.1+, e.g. boards/0.5.1) only that exact version (a -suffix such as -test allowed).
     function boardVersion(board, d) {
       return d.board == board
         && d.version is string
         && d.version.split('[.]').size() >= 3
-        && d.version.split('[.]')[0] + '.' + d.version.split('[.]')[1] == board;
+        && ((board.matches("[0-9]{1,3}[.][0-9]{1,3}")
+            && d.version.split('[.]')[0] + '.' + d.version.split('[.]')[1] == board)
+          || (board.matches("[0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}")
+            && d.version.split('[-+]')[0] == board));
     }
 
     // An individual score row must mirror its run, written in the same commit.
@@ -88,11 +97,12 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Per-version boards (v0.2+): board = major.minor of the version, e.g. boards/0.4/highscores.
+    // Per-version boards (v0.2+): boards/0.4/highscores (major.minor, up to v0.5.0), then one
+    // board per release from v0.5.1: boards/0.5.1/highscores.
     // v0.2/v0.3 (frozen builds) keep their field set; v0.4+ runs carry per-marine scores.
     match /boards/{board}/highscores/{runId} {
-      allow read: if board.matches("[0-9]{1,3}[.][0-9]{1,3}");
-      allow create: if board.matches("[0-9]{1,3}[.][0-9]{1,3}")
+      allow read: if validBoard(board);
+      allow create: if validBoard(board)
         && boardVersion(board, request.resource.data)
         && validRun(runId, request.resource.data)
         && ((board in ['0.2', '0.3']
@@ -107,8 +117,8 @@ service cloud.firestore {
 
     // Individual leaderboard (v0.4+): boards/{board}/scores/{runId}-{slot}.
     match /boards/{board}/scores/{scoreId} {
-      allow read: if board.matches("[0-9]{1,3}[.][0-9]{1,3}");
-      allow create: if board.matches("[0-9]{1,3}[.][0-9]{1,3}")
+      allow read: if validBoard(board);
+      allow create: if validBoard(board)
         && !(board in ['0.2', '0.3'])
         && request.resource.data.keys().hasOnly(['runId', 'slot', 'name', 'score', 'kills', 'teamSize', 'survivalMs', 'version', 'board', 'timestamp'])
         && request.resource.data.keys().hasAll(['runId', 'slot', 'name', 'score', 'kills', 'teamSize', 'survivalMs', 'version', 'board', 'timestamp'])

@@ -150,14 +150,19 @@ describe('per-version boards', () => {
     expect(endpoint(bcfg, 'runAggregationQuery')).toContain(`${DOCS}/boards/0.2:runAggregation`);
     expect(topQuery(bcfg, 1, 10).structuredQuery.from).toEqual([{ collectionId: 'highscores' }]);
   });
-  it('board id is major.minor of the version', () => {
+  it('board id is major.minor up to v0.5.0, then the full version (one board per release)', () => {
     expect(leaderboardBoard('0.2.0')).toBe('0.2');
-    expect(leaderboardBoard('12.30.4-beta.1')).toBe('12.30');
-    expect(leaderboardBoard(GAME_VERSION)).toBe('0.5');
+    expect(leaderboardBoard('0.4.2')).toBe('0.4');
+    expect(leaderboardBoard('0.5.0')).toBe('0.5');
+    expect(leaderboardBoard('0.5.1')).toBe('0.5.1');
+    expect(leaderboardBoard('0.5.1-test')).toBe('0.5.1');
+    expect(leaderboardBoard('0.6.0')).toBe('0.6.0');
+    expect(leaderboardBoard('12.30.4-beta.1')).toBe('12.30.4');
+    expect(leaderboardBoard(GAME_VERSION)).toBe('0.5.1');
     expect(() => leaderboardBoard('x')).toThrow();
   });
   it('the game build uses its own board', () => {
-    expect(config.firebase === null || config.firebase.board === '0.5').toBe(true);
+    expect(config.firebase === null || config.firebase.board === '0.5.1').toBe(true);
   });
 });
 
