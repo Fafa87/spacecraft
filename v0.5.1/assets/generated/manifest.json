@@ -1,0 +1,3224 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-31T01:57:03.722Z",
+  "atlas": {
+    "image": "atlas.png",
+    "width": 2048,
+    "height": 4096
+  },
+  "sprites": {
+    "marine_ultramarines": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          6
+        ]
+      },
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          1754,
+          1756
+        ],
+        [
+          1900,
+          1756
+        ],
+        [
+          2,
+          1902
+        ],
+        [
+          148,
+          1902
+        ],
+        [
+          294,
+          1902
+        ],
+        [
+          440,
+          1902
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_ultramarines_top": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          1608,
+          1756
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_ultramarines_down": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          1462,
+          1756
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "badge_ultramarines": {
+      "w": 64,
+      "h": 64,
+      "scale": 2,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          620,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "ui"
+    },
+    "marine_blood_angels": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          6
+        ]
+      },
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          878,
+          1318
+        ],
+        [
+          1024,
+          1318
+        ],
+        [
+          1170,
+          1318
+        ],
+        [
+          1316,
+          1318
+        ],
+        [
+          1462,
+          1318
+        ],
+        [
+          1608,
+          1318
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_blood_angels_top": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          732,
+          1318
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_blood_angels_down": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          586,
+          1318
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "badge_blood_angels": {
+      "w": 64,
+      "h": 64,
+      "scale": 2,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          224,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "ui"
+    },
+    "marine_dark_angels": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          6
+        ]
+      },
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          2,
+          1464
+        ],
+        [
+          148,
+          1464
+        ],
+        [
+          294,
+          1464
+        ],
+        [
+          440,
+          1464
+        ],
+        [
+          586,
+          1464
+        ],
+        [
+          732,
+          1464
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_dark_angels_top": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          1900,
+          1318
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_dark_angels_down": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          1754,
+          1318
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "badge_dark_angels": {
+      "w": 64,
+      "h": 64,
+      "scale": 2,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          290,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "ui"
+    },
+    "marine_imperial_fists": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          6
+        ]
+      },
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          1170,
+          1464
+        ],
+        [
+          1316,
+          1464
+        ],
+        [
+          1462,
+          1464
+        ],
+        [
+          1608,
+          1464
+        ],
+        [
+          1754,
+          1464
+        ],
+        [
+          1900,
+          1464
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_imperial_fists_top": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          1024,
+          1464
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_imperial_fists_down": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          878,
+          1464
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "badge_imperial_fists": {
+      "w": 64,
+      "h": 64,
+      "scale": 2,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          356,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "ui"
+    },
+    "marine_space_wolves": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          6
+        ]
+      },
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          586,
+          1756
+        ],
+        [
+          732,
+          1756
+        ],
+        [
+          878,
+          1756
+        ],
+        [
+          1024,
+          1756
+        ],
+        [
+          1170,
+          1756
+        ],
+        [
+          1316,
+          1756
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_space_wolves_top": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          440,
+          1756
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_space_wolves_down": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          294,
+          1756
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "badge_space_wolves": {
+      "w": 64,
+      "h": 64,
+      "scale": 2,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          554,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "ui"
+    },
+    "marine_salamanders": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          6
+        ]
+      },
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          1462,
+          1610
+        ],
+        [
+          1608,
+          1610
+        ],
+        [
+          1754,
+          1610
+        ],
+        [
+          1900,
+          1610
+        ],
+        [
+          2,
+          1756
+        ],
+        [
+          148,
+          1756
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_salamanders_top": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          1316,
+          1610
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_salamanders_down": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          1170,
+          1610
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "badge_salamanders": {
+      "w": 64,
+      "h": 64,
+      "scale": 2,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          488,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "ui"
+    },
+    "marine_white_scars": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          6
+        ]
+      },
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          878,
+          1902
+        ],
+        [
+          1024,
+          1902
+        ],
+        [
+          1170,
+          1902
+        ],
+        [
+          1316,
+          1902
+        ],
+        [
+          1462,
+          1902
+        ],
+        [
+          1608,
+          1902
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_white_scars_top": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          732,
+          1902
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_white_scars_down": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          586,
+          1902
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "badge_white_scars": {
+      "w": 64,
+      "h": 64,
+      "scale": 2,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          686,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "ui"
+    },
+    "marine_raven_guard": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          6
+        ]
+      },
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          294,
+          1610
+        ],
+        [
+          440,
+          1610
+        ],
+        [
+          586,
+          1610
+        ],
+        [
+          732,
+          1610
+        ],
+        [
+          878,
+          1610
+        ],
+        [
+          1024,
+          1610
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_raven_guard_top": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          148,
+          1610
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "marine_raven_guard_down": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          2,
+          1610
+        ]
+      ],
+      "source": "procedural",
+      "group": "player"
+    },
+    "badge_raven_guard": {
+      "w": 64,
+      "h": 64,
+      "scale": 2,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          422,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "ui"
+    },
+    "icon_bolt_rifle": {
+      "w": 128,
+      "h": 56,
+      "scale": 2,
+      "ax": 64,
+      "ay": 28,
+      "frames": [
+        [
+          1874,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "icon"
+    },
+    "icon_heavy_bolter": {
+      "w": 128,
+      "h": 56,
+      "scale": 2,
+      "ax": 64,
+      "ay": 28,
+      "frames": [
+        [
+          262,
+          2740
+        ]
+      ],
+      "source": "procedural",
+      "group": "icon"
+    },
+    "icon_flamer": {
+      "w": 128,
+      "h": 56,
+      "scale": 2,
+      "ax": 64,
+      "ay": 28,
+      "frames": [
+        [
+          2,
+          2740
+        ]
+      ],
+      "source": "procedural",
+      "group": "icon"
+    },
+    "icon_plasma_gun": {
+      "w": 128,
+      "h": 56,
+      "scale": 2,
+      "ax": 64,
+      "ay": 28,
+      "frames": [
+        [
+          522,
+          2740
+        ]
+      ],
+      "source": "procedural",
+      "group": "icon"
+    },
+    "icon_meltagun": {
+      "w": 128,
+      "h": 56,
+      "scale": 2,
+      "ax": 64,
+      "ay": 28,
+      "frames": [
+        [
+          392,
+          2740
+        ]
+      ],
+      "source": "procedural",
+      "group": "icon"
+    },
+    "icon_frag_grenade": {
+      "w": 128,
+      "h": 56,
+      "scale": 2,
+      "ax": 64,
+      "ay": 28,
+      "frames": [
+        [
+          132,
+          2740
+        ]
+      ],
+      "source": "procedural",
+      "group": "icon"
+    },
+    "held_bolt_rifle": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          1622,
+          1156
+        ]
+      ],
+      "source": "procedural",
+      "group": "weapon"
+    },
+    "held_heavy_bolter": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          148,
+          1318
+        ]
+      ],
+      "source": "procedural",
+      "group": "weapon"
+    },
+    "held_flamer": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          1768,
+          1156
+        ]
+      ],
+      "source": "procedural",
+      "group": "weapon"
+    },
+    "held_plasma_gun": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          440,
+          1318
+        ]
+      ],
+      "source": "procedural",
+      "group": "weapon"
+    },
+    "held_meltagun": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          294,
+          1318
+        ]
+      ],
+      "source": "procedural",
+      "group": "weapon"
+    },
+    "held_frag_grenade": {
+      "w": 144,
+      "h": 144,
+      "scale": 2,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          2,
+          1318
+        ]
+      ],
+      "source": "procedural",
+      "group": "weapon"
+    },
+    "crate_bolt_rifle": {
+      "w": 96,
+      "h": 96,
+      "scale": 2,
+      "ax": 48,
+      "ay": 48,
+      "frames": [
+        [
+          1010,
+          2438
+        ],
+        [
+          1108,
+          2438
+        ]
+      ],
+      "source": "procedural",
+      "group": "pickup"
+    },
+    "crate_heavy_bolter": {
+      "w": 96,
+      "h": 96,
+      "scale": 2,
+      "ax": 48,
+      "ay": 48,
+      "frames": [
+        [
+          1598,
+          2438
+        ],
+        [
+          1696,
+          2438
+        ]
+      ],
+      "source": "procedural",
+      "group": "pickup"
+    },
+    "crate_flamer": {
+      "w": 96,
+      "h": 96,
+      "scale": 2,
+      "ax": 48,
+      "ay": 48,
+      "frames": [
+        [
+          1206,
+          2438
+        ],
+        [
+          1304,
+          2438
+        ]
+      ],
+      "source": "procedural",
+      "group": "pickup"
+    },
+    "crate_plasma_gun": {
+      "w": 96,
+      "h": 96,
+      "scale": 2,
+      "ax": 48,
+      "ay": 48,
+      "frames": [
+        [
+          2,
+          2568
+        ],
+        [
+          100,
+          2568
+        ]
+      ],
+      "source": "procedural",
+      "group": "pickup"
+    },
+    "crate_meltagun": {
+      "w": 96,
+      "h": 96,
+      "scale": 2,
+      "ax": 48,
+      "ay": 48,
+      "frames": [
+        [
+          1794,
+          2438
+        ],
+        [
+          1892,
+          2438
+        ]
+      ],
+      "source": "procedural",
+      "group": "pickup"
+    },
+    "crate_frag_grenade": {
+      "w": 96,
+      "h": 96,
+      "scale": 2,
+      "ax": 48,
+      "ay": 48,
+      "frames": [
+        [
+          1402,
+          2438
+        ],
+        [
+          1500,
+          2438
+        ]
+      ],
+      "source": "procedural",
+      "group": "pickup"
+    },
+    "medkit": {
+      "w": 80,
+      "h": 80,
+      "scale": 2,
+      "ax": 40,
+      "ay": 40,
+      "frames": [
+        [
+          1178,
+          2568
+        ],
+        [
+          1260,
+          2568
+        ]
+      ],
+      "source": "procedural",
+      "group": "pickup"
+    },
+    "enemy_hormagaunt": {
+      "w": 128,
+      "h": 128,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          6
+        ],
+        "attack": [
+          6,
+          3
+        ],
+        "death": [
+          9,
+          4
+        ]
+      },
+      "ax": 64,
+      "ay": 64,
+      "frames": [
+        [
+          2,
+          2178
+        ],
+        [
+          132,
+          2178
+        ],
+        [
+          652,
+          2178
+        ],
+        [
+          782,
+          2178
+        ],
+        [
+          912,
+          2178
+        ],
+        [
+          1042,
+          2178
+        ],
+        [
+          1172,
+          2178
+        ],
+        [
+          1302,
+          2178
+        ],
+        [
+          1432,
+          2178
+        ],
+        [
+          1562,
+          2178
+        ],
+        [
+          262,
+          2178
+        ],
+        [
+          392,
+          2178
+        ],
+        [
+          522,
+          2178
+        ]
+      ],
+      "source": "procedural",
+      "group": "enemy"
+    },
+    "enemy_termagant": {
+      "w": 128,
+      "h": 128,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          6
+        ],
+        "attack": [
+          6,
+          3
+        ],
+        "death": [
+          9,
+          4
+        ]
+      },
+      "ax": 64,
+      "ay": 64,
+      "frames": [
+        [
+          1692,
+          2178
+        ],
+        [
+          1822,
+          2178
+        ],
+        [
+          392,
+          2308
+        ],
+        [
+          522,
+          2308
+        ],
+        [
+          652,
+          2308
+        ],
+        [
+          782,
+          2308
+        ],
+        [
+          912,
+          2308
+        ],
+        [
+          1042,
+          2308
+        ],
+        [
+          1172,
+          2308
+        ],
+        [
+          1302,
+          2308
+        ],
+        [
+          2,
+          2308
+        ],
+        [
+          132,
+          2308
+        ],
+        [
+          262,
+          2308
+        ]
+      ],
+      "source": "procedural",
+      "group": "enemy"
+    },
+    "enemy_ripper": {
+      "w": 72,
+      "h": 72,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          4
+        ],
+        "attack": [
+          4,
+          2
+        ],
+        "death": [
+          6,
+          3
+        ]
+      },
+      "ax": 36,
+      "ay": 36,
+      "frames": [
+        [
+          1488,
+          2568
+        ],
+        [
+          1562,
+          2568
+        ],
+        [
+          1636,
+          2568
+        ],
+        [
+          1710,
+          2568
+        ],
+        [
+          1784,
+          2568
+        ],
+        [
+          1858,
+          2568
+        ],
+        [
+          1932,
+          2568
+        ],
+        [
+          2,
+          2666
+        ],
+        [
+          76,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "enemy"
+    },
+    "enemy_genestealer": {
+      "w": 128,
+      "h": 128,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          6
+        ],
+        "attack": [
+          6,
+          3
+        ],
+        "death": [
+          9,
+          4
+        ]
+      },
+      "ax": 64,
+      "ay": 64,
+      "frames": [
+        [
+          260,
+          2048
+        ],
+        [
+          390,
+          2048
+        ],
+        [
+          910,
+          2048
+        ],
+        [
+          1040,
+          2048
+        ],
+        [
+          1170,
+          2048
+        ],
+        [
+          1300,
+          2048
+        ],
+        [
+          1430,
+          2048
+        ],
+        [
+          1560,
+          2048
+        ],
+        [
+          1690,
+          2048
+        ],
+        [
+          1820,
+          2048
+        ],
+        [
+          520,
+          2048
+        ],
+        [
+          650,
+          2048
+        ],
+        [
+          780,
+          2048
+        ]
+      ],
+      "source": "procedural",
+      "group": "enemy"
+    },
+    "enemy_warrior": {
+      "w": 200,
+      "h": 200,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          6
+        ],
+        "attack": [
+          6,
+          3
+        ],
+        "death": [
+          9,
+          4
+        ]
+      },
+      "ax": 100,
+      "ay": 100,
+      "frames": [
+        [
+          608,
+          752
+        ],
+        [
+          810,
+          752
+        ],
+        [
+          1618,
+          752
+        ],
+        [
+          1820,
+          752
+        ],
+        [
+          2,
+          954
+        ],
+        [
+          204,
+          954
+        ],
+        [
+          406,
+          954
+        ],
+        [
+          608,
+          954
+        ],
+        [
+          810,
+          954
+        ],
+        [
+          1012,
+          954
+        ],
+        [
+          1012,
+          752
+        ],
+        [
+          1214,
+          752
+        ],
+        [
+          1416,
+          752
+        ]
+      ],
+      "source": "procedural",
+      "group": "enemy"
+    },
+    "enemy_ravener": {
+      "w": 200,
+      "h": 200,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          6
+        ],
+        "attack": [
+          6,
+          3
+        ],
+        "death": [
+          9,
+          4
+        ]
+      },
+      "ax": 100,
+      "ay": 100,
+      "frames": [
+        [
+          2,
+          550
+        ],
+        [
+          204,
+          550
+        ],
+        [
+          1012,
+          550
+        ],
+        [
+          1214,
+          550
+        ],
+        [
+          1416,
+          550
+        ],
+        [
+          1618,
+          550
+        ],
+        [
+          1820,
+          550
+        ],
+        [
+          2,
+          752
+        ],
+        [
+          204,
+          752
+        ],
+        [
+          406,
+          752
+        ],
+        [
+          406,
+          550
+        ],
+        [
+          608,
+          550
+        ],
+        [
+          810,
+          550
+        ]
+      ],
+      "source": "procedural",
+      "group": "enemy"
+    },
+    "enemy_biovore": {
+      "w": 160,
+      "h": 160,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          4
+        ],
+        "attack": [
+          4,
+          3
+        ],
+        "death": [
+          7,
+          4
+        ]
+      },
+      "ax": 80,
+      "ay": 80,
+      "frames": [
+        [
+          1796,
+          954
+        ],
+        [
+          2,
+          1156
+        ],
+        [
+          326,
+          1156
+        ],
+        [
+          488,
+          1156
+        ],
+        [
+          650,
+          1156
+        ],
+        [
+          812,
+          1156
+        ],
+        [
+          974,
+          1156
+        ],
+        [
+          1136,
+          1156
+        ],
+        [
+          1298,
+          1156
+        ],
+        [
+          1460,
+          1156
+        ],
+        [
+          164,
+          1156
+        ]
+      ],
+      "source": "procedural",
+      "group": "enemy"
+    },
+    "enemy_spore_mine": {
+      "w": 96,
+      "h": 96,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          4
+        ],
+        "death": [
+          4,
+          3
+        ]
+      },
+      "ax": 48,
+      "ay": 48,
+      "frames": [
+        [
+          296,
+          2568
+        ],
+        [
+          394,
+          2568
+        ],
+        [
+          492,
+          2568
+        ],
+        [
+          590,
+          2568
+        ],
+        [
+          688,
+          2568
+        ],
+        [
+          786,
+          2568
+        ],
+        [
+          884,
+          2568
+        ]
+      ],
+      "source": "procedural",
+      "group": "enemy"
+    },
+    "enemy_carnifex": {
+      "w": 272,
+      "h": 272,
+      "scale": 2,
+      "anims": {
+        "walk": [
+          0,
+          6
+        ],
+        "attack": [
+          6,
+          3
+        ],
+        "death": [
+          9,
+          5
+        ]
+      },
+      "ax": 136,
+      "ay": 136,
+      "frames": [
+        [
+          2,
+          2
+        ],
+        [
+          276,
+          2
+        ],
+        [
+          1646,
+          2
+        ],
+        [
+          2,
+          276
+        ],
+        [
+          276,
+          276
+        ],
+        [
+          550,
+          276
+        ],
+        [
+          824,
+          276
+        ],
+        [
+          1098,
+          276
+        ],
+        [
+          1372,
+          276
+        ],
+        [
+          1646,
+          276
+        ],
+        [
+          550,
+          2
+        ],
+        [
+          824,
+          2
+        ],
+        [
+          1098,
+          2
+        ],
+        [
+          1372,
+          2
+        ]
+      ],
+      "source": "procedural",
+      "group": "enemy"
+    },
+    "proj_bolt": {
+      "w": 48,
+      "h": 20,
+      "scale": 2,
+      "ax": 24,
+      "ay": 10,
+      "frames": [
+        [
+          1158,
+          2740
+        ]
+      ],
+      "source": "procedural",
+      "group": "projectile"
+    },
+    "proj_heavy_bolt": {
+      "w": 60,
+      "h": 24,
+      "scale": 2,
+      "ax": 30,
+      "ay": 12,
+      "frames": [
+        [
+          1028,
+          2740
+        ]
+      ],
+      "source": "procedural",
+      "group": "projectile"
+    },
+    "proj_flame": {
+      "w": 72,
+      "h": 72,
+      "scale": 2,
+      "ax": 36,
+      "ay": 36,
+      "frames": [
+        [
+          150,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "projectile"
+    },
+    "proj_plasma": {
+      "w": 68,
+      "h": 40,
+      "scale": 2,
+      "ax": 34,
+      "ay": 20,
+      "frames": [
+        [
+          742,
+          2740
+        ]
+      ],
+      "source": "procedural",
+      "group": "projectile"
+    },
+    "proj_plasma_super": {
+      "w": 88,
+      "h": 56,
+      "scale": 2,
+      "ax": 44,
+      "ay": 28,
+      "frames": [
+        [
+          652,
+          2740
+        ]
+      ],
+      "source": "procedural",
+      "group": "projectile"
+    },
+    "proj_melta": {
+      "w": 96,
+      "h": 36,
+      "scale": 2,
+      "ax": 48,
+      "ay": 18,
+      "frames": [
+        [
+          812,
+          2740
+        ]
+      ],
+      "source": "procedural",
+      "group": "projectile"
+    },
+    "proj_frag": {
+      "w": 32,
+      "h": 32,
+      "scale": 2,
+      "ax": 16,
+      "ay": 16,
+      "frames": [
+        [
+          956,
+          2740
+        ]
+      ],
+      "source": "procedural",
+      "group": "projectile"
+    },
+    "proj_fleshborer": {
+      "w": 36,
+      "h": 28,
+      "scale": 2,
+      "ax": 18,
+      "ay": 14,
+      "frames": [
+        [
+          990,
+          2740
+        ]
+      ],
+      "source": "procedural",
+      "group": "projectile"
+    },
+    "proj_deathspitter": {
+      "w": 44,
+      "h": 32,
+      "scale": 2,
+      "ax": 22,
+      "ay": 16,
+      "frames": [
+        [
+          910,
+          2740
+        ]
+      ],
+      "source": "procedural",
+      "group": "projectile"
+    },
+    "proj_spore": {
+      "w": 64,
+      "h": 64,
+      "scale": 2,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          1280,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "projectile"
+    },
+    "decal_blood_0": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          950,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "decal"
+    },
+    "decal_blood_1": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          1016,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "decal"
+    },
+    "decal_blood_2": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          1082,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "decal"
+    },
+    "decal_acid_0": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          752,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "decal"
+    },
+    "decal_acid_1": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          818,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "decal"
+    },
+    "decal_acid_2": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          884,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "decal"
+    },
+    "decal_scorch_0": {
+      "w": 96,
+      "h": 96,
+      "ax": 48,
+      "ay": 48,
+      "frames": [
+        [
+          198,
+          2568
+        ]
+      ],
+      "source": "procedural",
+      "group": "decal"
+    },
+    "decal_scorch_1": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          1148,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "decal"
+    },
+    "fx_explosion": {
+      "w": 128,
+      "h": 128,
+      "ax": 64,
+      "ay": 64,
+      "frames": [
+        [
+          1432,
+          2308
+        ],
+        [
+          1562,
+          2308
+        ],
+        [
+          1692,
+          2308
+        ],
+        [
+          1822,
+          2308
+        ],
+        [
+          2,
+          2438
+        ],
+        [
+          132,
+          2438
+        ],
+        [
+          262,
+          2438
+        ],
+        [
+          392,
+          2438
+        ]
+      ],
+      "source": "procedural",
+      "group": "fx"
+    },
+    "fx_muzzle": {
+      "w": 32,
+      "h": 24,
+      "ax": 16,
+      "ay": 12,
+      "frames": [
+        [
+          1090,
+          2740
+        ],
+        [
+          1124,
+          2740
+        ]
+      ],
+      "source": "procedural",
+      "group": "fx"
+    },
+    "fx_particle": {
+      "w": 16,
+      "h": 16,
+      "ax": 8,
+      "ay": 8,
+      "frames": [
+        [
+          1208,
+          2740
+        ]
+      ],
+      "source": "procedural",
+      "group": "fx"
+    },
+    "fx_spark": {
+      "w": 16,
+      "h": 6,
+      "ax": 8,
+      "ay": 3,
+      "frames": [
+        [
+          1226,
+          2740
+        ]
+      ],
+      "source": "procedural",
+      "group": "fx"
+    },
+    "fx_ring": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          1214,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "fx"
+    },
+    "fx_burrow": {
+      "w": 96,
+      "h": 96,
+      "scale": 1.5,
+      "ax": 48,
+      "ay": 48,
+      "frames": [
+        [
+          982,
+          2568
+        ],
+        [
+          1080,
+          2568
+        ]
+      ],
+      "source": "procedural",
+      "group": "fx"
+    },
+    "fx_synapse": {
+      "w": 128,
+      "h": 128,
+      "ax": 64,
+      "ay": 64,
+      "frames": [
+        [
+          522,
+          2438
+        ]
+      ],
+      "source": "procedural",
+      "group": "fx"
+    },
+    "shadow": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          1346,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "fx"
+    },
+    "tile_floor_0": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          1412,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "tile"
+    },
+    "tile_floor_1": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          1478,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "tile"
+    },
+    "tile_floor_2": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          1544,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "tile"
+    },
+    "tile_floor_3": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          1610,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "tile"
+    },
+    "tile_grate": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          1676,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "tile"
+    },
+    "tile_hazard": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          1742,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "tile"
+    },
+    "tile_seal": {
+      "w": 64,
+      "h": 64,
+      "ax": 32,
+      "ay": 32,
+      "frames": [
+        [
+          1808,
+          2666
+        ]
+      ],
+      "source": "procedural",
+      "group": "tile"
+    },
+    "prop_rubble_0": {
+      "w": 120,
+      "h": 120,
+      "scale": 1.5,
+      "ax": 60,
+      "ay": 60,
+      "frames": [
+        [
+          652,
+          2438
+        ]
+      ],
+      "source": "procedural",
+      "group": "prop"
+    },
+    "prop_rubble_1": {
+      "w": 120,
+      "h": 120,
+      "scale": 1.5,
+      "ax": 60,
+      "ay": 60,
+      "frames": [
+        [
+          774,
+          2438
+        ]
+      ],
+      "source": "procedural",
+      "group": "prop"
+    },
+    "prop_pillar": {
+      "w": 144,
+      "h": 144,
+      "scale": 1.5,
+      "ax": 72,
+      "ay": 72,
+      "frames": [
+        [
+          1754,
+          1902
+        ]
+      ],
+      "source": "procedural",
+      "group": "prop"
+    },
+    "prop_skull_pile": {
+      "w": 112,
+      "h": 112,
+      "scale": 2,
+      "ax": 56,
+      "ay": 56,
+      "frames": [
+        [
+          896,
+          2438
+        ]
+      ],
+      "source": "procedural",
+      "group": "prop"
+    },
+    "prop_barricade": {
+      "w": 144,
+      "h": 72,
+      "scale": 1.5,
+      "ax": 72,
+      "ay": 36,
+      "frames": [
+        [
+          1342,
+          2568
+        ]
+      ],
+      "source": "procedural",
+      "group": "prop"
+    },
+    "creep_0": {
+      "w": 192,
+      "h": 192,
+      "ax": 96,
+      "ay": 96,
+      "frames": [
+        [
+          1214,
+          954
+        ]
+      ],
+      "source": "procedural",
+      "group": "tile"
+    },
+    "creep_1": {
+      "w": 192,
+      "h": 192,
+      "ax": 96,
+      "ay": 96,
+      "frames": [
+        [
+          1408,
+          954
+        ]
+      ],
+      "source": "procedural",
+      "group": "tile"
+    },
+    "creep_2": {
+      "w": 192,
+      "h": 192,
+      "ax": 96,
+      "ay": 96,
+      "frames": [
+        [
+          1602,
+          954
+        ]
+      ],
+      "source": "procedural",
+      "group": "tile"
+    },
+    "ui_emblem": {
+      "w": 256,
+      "h": 128,
+      "scale": 2,
+      "ax": 128,
+      "ay": 64,
+      "frames": [
+        [
+          2,
+          2048
+        ]
+      ],
+      "source": "procedural",
+      "group": "ui"
+    }
+  },
+  "sounds": {
+    "shoot_bolt_rifle": {
+      "file": "sfx/shoot_bolt_rifle_0.wav",
+      "variants": [
+        "sfx/shoot_bolt_rifle_0.wav",
+        "sfx/shoot_bolt_rifle_1.wav",
+        "sfx/shoot_bolt_rifle_2.wav",
+        "sfx/shoot_bolt_rifle_3.wav"
+      ],
+      "volume": 0.62,
+      "maxVoices": 6,
+      "durationSec": 0.509,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 6
+    },
+    "shoot_heavy_bolter": {
+      "file": "sfx/shoot_heavy_bolter_0.wav",
+      "variants": [
+        "sfx/shoot_heavy_bolter_0.wav",
+        "sfx/shoot_heavy_bolter_1.wav",
+        "sfx/shoot_heavy_bolter_2.wav",
+        "sfx/shoot_heavy_bolter_3.wav"
+      ],
+      "volume": 0.58,
+      "maxVoices": 8,
+      "durationSec": 0.43,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 6
+    },
+    "flamer_ignite": {
+      "file": "sfx/flamer_ignite_0.wav",
+      "variants": [
+        "sfx/flamer_ignite_0.wav",
+        "sfx/flamer_ignite_1.wav",
+        "sfx/flamer_ignite_2.wav"
+      ],
+      "volume": 0.6,
+      "maxVoices": 4,
+      "durationSec": 0.639,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 6
+    },
+    "flamer_loop": {
+      "file": "sfx/flamer_loop_0.wav",
+      "variants": [
+        "sfx/flamer_loop_0.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 4,
+      "durationSec": 2,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 6,
+      "loop": true
+    },
+    "flamer_tail": {
+      "file": "sfx/flamer_tail_0.wav",
+      "variants": [
+        "sfx/flamer_tail_0.wav",
+        "sfx/flamer_tail_1.wav",
+        "sfx/flamer_tail_2.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 4,
+      "durationSec": 0.572,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 5
+    },
+    "shoot_plasma": {
+      "file": "sfx/shoot_plasma_0.wav",
+      "variants": [
+        "sfx/shoot_plasma_0.wav",
+        "sfx/shoot_plasma_1.wav",
+        "sfx/shoot_plasma_2.wav",
+        "sfx/shoot_plasma_3.wav"
+      ],
+      "volume": 0.6,
+      "maxVoices": 5,
+      "durationSec": 0.603,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 7
+    },
+    "shoot_plasma_super": {
+      "file": "sfx/shoot_plasma_super_0.wav",
+      "variants": [
+        "sfx/shoot_plasma_super_0.wav",
+        "sfx/shoot_plasma_super_1.wav",
+        "sfx/shoot_plasma_super_2.wav"
+      ],
+      "volume": 0.72,
+      "maxVoices": 3,
+      "durationSec": 1.329,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 8,
+      "duck": 0.25
+    },
+    "plasma_whine": {
+      "file": "sfx/plasma_whine_0.wav",
+      "variants": [
+        "sfx/plasma_whine_0.wav"
+      ],
+      "volume": 0.3,
+      "maxVoices": 1,
+      "durationSec": 1.5,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 4,
+      "loop": true
+    },
+    "overheat": {
+      "file": "sfx/overheat_0.wav",
+      "variants": [
+        "sfx/overheat_0.wav",
+        "sfx/overheat_1.wav",
+        "sfx/overheat_2.wav"
+      ],
+      "volume": 0.6,
+      "maxVoices": 2,
+      "durationSec": 1.206,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 7
+    },
+    "plasma_impact": {
+      "file": "sfx/plasma_impact_0.wav",
+      "variants": [
+        "sfx/plasma_impact_0.wav",
+        "sfx/plasma_impact_1.wav",
+        "sfx/plasma_impact_2.wav"
+      ],
+      "volume": 0.42,
+      "maxVoices": 4,
+      "durationSec": 0.304,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 3
+    },
+    "shoot_melta": {
+      "file": "sfx/shoot_melta_0.wav",
+      "variants": [
+        "sfx/shoot_melta_0.wav",
+        "sfx/shoot_melta_1.wav",
+        "sfx/shoot_melta_2.wav"
+      ],
+      "volume": 0.72,
+      "maxVoices": 3,
+      "durationSec": 1.354,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 8,
+      "duck": 0.15
+    },
+    "melta_impact": {
+      "file": "sfx/melta_impact_0.wav",
+      "variants": [
+        "sfx/melta_impact_0.wav",
+        "sfx/melta_impact_1.wav",
+        "sfx/melta_impact_2.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 3,
+      "durationSec": 0.3,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 4
+    },
+    "throw_grenade": {
+      "file": "sfx/throw_grenade_0.wav",
+      "variants": [
+        "sfx/throw_grenade_0.wav",
+        "sfx/throw_grenade_1.wav",
+        "sfx/throw_grenade_2.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 3,
+      "durationSec": 0.404,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 4
+    },
+    "explosion": {
+      "file": "sfx/explosion_0.wav",
+      "variants": [
+        "sfx/explosion_0.wav",
+        "sfx/explosion_1.wav",
+        "sfx/explosion_2.wav"
+      ],
+      "volume": 0.85,
+      "maxVoices": 4,
+      "durationSec": 2.216,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 9,
+      "duck": 0.4
+    },
+    "bolt_impact": {
+      "file": "sfx/bolt_impact_0.wav",
+      "variants": [
+        "sfx/bolt_impact_0.wav",
+        "sfx/bolt_impact_1.wav",
+        "sfx/bolt_impact_2.wav",
+        "sfx/bolt_impact_3.wav"
+      ],
+      "volume": 0.42,
+      "maxVoices": 4,
+      "durationSec": 0.107,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 3
+    },
+    "brace_heavy": {
+      "file": "sfx/brace_heavy_0.wav",
+      "variants": [
+        "sfx/brace_heavy_0.wav",
+        "sfx/brace_heavy_1.wav",
+        "sfx/brace_heavy_2.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 2,
+      "durationSec": 0.668,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 5
+    },
+    "heavy_bolt_impact": {
+      "file": "sfx/heavy_bolt_impact_0.wav",
+      "variants": [
+        "sfx/heavy_bolt_impact_0.wav",
+        "sfx/heavy_bolt_impact_1.wav",
+        "sfx/heavy_bolt_impact_2.wav",
+        "sfx/heavy_bolt_impact_3.wav"
+      ],
+      "volume": 0.45,
+      "maxVoices": 4,
+      "durationSec": 0.147,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 3
+    },
+    "reload_bolter": {
+      "file": "sfx/reload_bolter_0.wav",
+      "variants": [
+        "sfx/reload_bolter_0.wav",
+        "sfx/reload_bolter_1.wav",
+        "sfx/reload_bolter_2.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 2,
+      "durationSec": 0.978,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 4
+    },
+    "reload_heavy": {
+      "file": "sfx/reload_heavy_0.wav",
+      "variants": [
+        "sfx/reload_heavy_0.wav",
+        "sfx/reload_heavy_1.wav",
+        "sfx/reload_heavy_2.wav"
+      ],
+      "volume": 0.55,
+      "maxVoices": 2,
+      "durationSec": 1.25,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 4
+    },
+    "reload_flamer": {
+      "file": "sfx/reload_flamer_0.wav",
+      "variants": [
+        "sfx/reload_flamer_0.wav",
+        "sfx/reload_flamer_1.wav",
+        "sfx/reload_flamer_2.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 2,
+      "durationSec": 1.017,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 4
+    },
+    "reload_plasma": {
+      "file": "sfx/reload_plasma_0.wav",
+      "variants": [
+        "sfx/reload_plasma_0.wav",
+        "sfx/reload_plasma_1.wav",
+        "sfx/reload_plasma_2.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 2,
+      "durationSec": 1.314,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 4
+    },
+    "reload_melta": {
+      "file": "sfx/reload_melta_0.wav",
+      "variants": [
+        "sfx/reload_melta_0.wav",
+        "sfx/reload_melta_1.wav",
+        "sfx/reload_melta_2.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 2,
+      "durationSec": 1.094,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 4
+    },
+    "reload_grenade": {
+      "file": "sfx/reload_grenade_0.wav",
+      "variants": [
+        "sfx/reload_grenade_0.wav",
+        "sfx/reload_grenade_1.wav",
+        "sfx/reload_grenade_2.wav"
+      ],
+      "volume": 0.45,
+      "maxVoices": 2,
+      "durationSec": 0.263,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 3
+    },
+    "carapace_ricochet": {
+      "file": "sfx/carapace_ricochet_0.wav",
+      "variants": [
+        "sfx/carapace_ricochet_0.wav",
+        "sfx/carapace_ricochet_1.wav",
+        "sfx/carapace_ricochet_2.wav",
+        "sfx/carapace_ricochet_3.wav"
+      ],
+      "volume": 0.32,
+      "maxVoices": 3,
+      "durationSec": 0.339,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 2
+    },
+    "armour_hit": {
+      "file": "sfx/armour_hit_0.wav",
+      "variants": [
+        "sfx/armour_hit_0.wav",
+        "sfx/armour_hit_1.wav",
+        "sfx/armour_hit_2.wav",
+        "sfx/armour_hit_3.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 3,
+      "durationSec": 0.634,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 6
+    },
+    "player_hurt": {
+      "file": "sfx/player_hurt_0.wav",
+      "variants": [
+        "sfx/player_hurt_0.wav",
+        "sfx/player_hurt_1.wav",
+        "sfx/player_hurt_2.wav",
+        "sfx/player_hurt_3.wav"
+      ],
+      "volume": 0.55,
+      "maxVoices": 2,
+      "durationSec": 0.515,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 7
+    },
+    "player_down": {
+      "file": "sfx/player_down_0.wav",
+      "variants": [
+        "sfx/player_down_0.wav",
+        "sfx/player_down_1.wav",
+        "sfx/player_down_2.wav"
+      ],
+      "volume": 0.65,
+      "maxVoices": 2,
+      "durationSec": 1.823,
+      "source": "procedural",
+      "bus": "weapons",
+      "priority": 8
+    },
+    "revive": {
+      "file": "sfx/revive_0.wav",
+      "variants": [
+        "sfx/revive_0.wav",
+        "sfx/revive_1.wav",
+        "sfx/revive_2.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 2,
+      "durationSec": 1.642,
+      "source": "procedural",
+      "bus": "ui",
+      "priority": 6
+    },
+    "ui_click": {
+      "file": "sfx/ui_click_0.wav",
+      "variants": [
+        "sfx/ui_click_0.wav",
+        "sfx/ui_click_1.wav"
+      ],
+      "volume": 0.4,
+      "maxVoices": 3,
+      "durationSec": 0.05,
+      "source": "procedural",
+      "bus": "ui",
+      "priority": 2
+    },
+    "pickup": {
+      "file": "sfx/pickup_0.wav",
+      "variants": [
+        "sfx/pickup_0.wav",
+        "sfx/pickup_1.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 3,
+      "durationSec": 0.636,
+      "source": "procedural",
+      "bus": "ui",
+      "priority": 5
+    },
+    "unlock": {
+      "file": "sfx/unlock_0.wav",
+      "variants": [
+        "sfx/unlock_0.wav"
+      ],
+      "volume": 0.55,
+      "maxVoices": 2,
+      "durationSec": 1.756,
+      "source": "procedural",
+      "bus": "ui",
+      "priority": 6
+    },
+    "wave_cleared": {
+      "file": "sfx/wave_cleared_0.wav",
+      "variants": [
+        "sfx/wave_cleared_0.wav"
+      ],
+      "volume": 0.6,
+      "maxVoices": 1,
+      "durationSec": 3.252,
+      "source": "procedural",
+      "bus": "ui",
+      "priority": 7
+    },
+    "surge": {
+      "file": "sfx/surge_0.wav",
+      "variants": [
+        "sfx/surge_0.wav"
+      ],
+      "volume": 0.55,
+      "maxVoices": 1,
+      "durationSec": 2.475,
+      "source": "procedural",
+      "bus": "ui",
+      "priority": 7
+    },
+    "crate_drop": {
+      "file": "sfx/crate_drop_0.wav",
+      "variants": [
+        "sfx/crate_drop_0.wav",
+        "sfx/crate_drop_1.wav"
+      ],
+      "volume": 0.6,
+      "maxVoices": 2,
+      "durationSec": 1.493,
+      "source": "procedural",
+      "bus": "ui",
+      "priority": 6
+    },
+    "boss_horn": {
+      "file": "sfx/boss_horn_0.wav",
+      "variants": [
+        "sfx/boss_horn_0.wav"
+      ],
+      "volume": 0.75,
+      "maxVoices": 1,
+      "durationSec": 3.045,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 9,
+      "duck": 0.5
+    },
+    "nid_die_small": {
+      "file": "sfx/nid_die_small_0.wav",
+      "variants": [
+        "sfx/nid_die_small_0.wav",
+        "sfx/nid_die_small_1.wav",
+        "sfx/nid_die_small_2.wav",
+        "sfx/nid_die_small_3.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 6,
+      "durationSec": 0.615,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 3
+    },
+    "nid_die_mid": {
+      "file": "sfx/nid_die_mid_0.wav",
+      "variants": [
+        "sfx/nid_die_mid_0.wav",
+        "sfx/nid_die_mid_1.wav",
+        "sfx/nid_die_mid_2.wav",
+        "sfx/nid_die_mid_3.wav"
+      ],
+      "volume": 0.55,
+      "maxVoices": 4,
+      "durationSec": 0.739,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 4
+    },
+    "nid_die_big": {
+      "file": "sfx/nid_die_big_0.wav",
+      "variants": [
+        "sfx/nid_die_big_0.wav",
+        "sfx/nid_die_big_1.wav",
+        "sfx/nid_die_big_2.wav"
+      ],
+      "volume": 0.65,
+      "maxVoices": 3,
+      "durationSec": 1.364,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 6
+    },
+    "nid_die_huge": {
+      "file": "sfx/nid_die_huge_0.wav",
+      "variants": [
+        "sfx/nid_die_huge_0.wav",
+        "sfx/nid_die_huge_1.wav"
+      ],
+      "volume": 0.85,
+      "maxVoices": 1,
+      "durationSec": 2.785,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 9,
+      "duck": 0.35
+    },
+    "nid_squish": {
+      "file": "sfx/nid_squish_0.wav",
+      "variants": [
+        "sfx/nid_squish_0.wav",
+        "sfx/nid_squish_1.wav",
+        "sfx/nid_squish_2.wav",
+        "sfx/nid_squish_3.wav"
+      ],
+      "volume": 0.42,
+      "maxVoices": 5,
+      "durationSec": 0.468,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 2
+    },
+    "nid_slash": {
+      "file": "sfx/nid_slash_0.wav",
+      "variants": [
+        "sfx/nid_slash_0.wav",
+        "sfx/nid_slash_1.wav",
+        "sfx/nid_slash_2.wav",
+        "sfx/nid_slash_3.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 5,
+      "durationSec": 0.604,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 5
+    },
+    "stealer_rend": {
+      "file": "sfx/stealer_rend_0.wav",
+      "variants": [
+        "sfx/stealer_rend_0.wav",
+        "sfx/stealer_rend_1.wav",
+        "sfx/stealer_rend_2.wav"
+      ],
+      "volume": 0.52,
+      "maxVoices": 4,
+      "durationSec": 0.689,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 5
+    },
+    "stealer_skitter": {
+      "file": "sfx/stealer_skitter_0.wav",
+      "variants": [
+        "sfx/stealer_skitter_0.wav",
+        "sfx/stealer_skitter_1.wav",
+        "sfx/stealer_skitter_2.wav"
+      ],
+      "volume": 0.32,
+      "maxVoices": 4,
+      "durationSec": 0.745,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 2
+    },
+    "nid_spit": {
+      "file": "sfx/nid_spit_0.wav",
+      "variants": [
+        "sfx/nid_spit_0.wav",
+        "sfx/nid_spit_1.wav",
+        "sfx/nid_spit_2.wav",
+        "sfx/nid_spit_3.wav"
+      ],
+      "volume": 0.45,
+      "maxVoices": 5,
+      "durationSec": 0.61,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 4
+    },
+    "nid_chitter": {
+      "file": "sfx/nid_chitter_0.wav",
+      "variants": [
+        "sfx/nid_chitter_0.wav",
+        "sfx/nid_chitter_1.wav",
+        "sfx/nid_chitter_2.wav"
+      ],
+      "volume": 0.4,
+      "maxVoices": 4,
+      "durationSec": 0.538,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 3
+    },
+    "nid_hiss": {
+      "file": "sfx/nid_hiss_0.wav",
+      "variants": [
+        "sfx/nid_hiss_0.wav",
+        "sfx/nid_hiss_1.wav",
+        "sfx/nid_hiss_2.wav",
+        "sfx/nid_hiss_3.wav"
+      ],
+      "volume": 0.35,
+      "maxVoices": 3,
+      "durationSec": 0.67,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 2
+    },
+    "horma_windup": {
+      "file": "sfx/horma_windup_0.wav",
+      "variants": [
+        "sfx/horma_windup_0.wav",
+        "sfx/horma_windup_1.wav",
+        "sfx/horma_windup_2.wav",
+        "sfx/horma_windup_3.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 4,
+      "durationSec": 0.726,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 6
+    },
+    "horma_shriek": {
+      "file": "sfx/horma_shriek_0.wav",
+      "variants": [
+        "sfx/horma_shriek_0.wav",
+        "sfx/horma_shriek_1.wav",
+        "sfx/horma_shriek_2.wav",
+        "sfx/horma_shriek_3.wav"
+      ],
+      "volume": 0.5,
+      "maxVoices": 4,
+      "durationSec": 0.64,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 6
+    },
+    "nid_shriek": {
+      "file": "sfx/nid_shriek_0.wav",
+      "variants": [
+        "sfx/nid_shriek_0.wav",
+        "sfx/nid_shriek_1.wav"
+      ],
+      "volume": 0.6,
+      "maxVoices": 2,
+      "durationSec": 1.663,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 7,
+      "duck": 0.2
+    },
+    "nid_emerge": {
+      "file": "sfx/nid_emerge_0.wav",
+      "variants": [
+        "sfx/nid_emerge_0.wav",
+        "sfx/nid_emerge_1.wav"
+      ],
+      "volume": 0.7,
+      "maxVoices": 2,
+      "durationSec": 1.562,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 7
+    },
+    "ravener_burrow": {
+      "file": "sfx/ravener_burrow_0.wav",
+      "variants": [
+        "sfx/ravener_burrow_0.wav",
+        "sfx/ravener_burrow_1.wav",
+        "sfx/ravener_burrow_2.wav"
+      ],
+      "volume": 0.45,
+      "maxVoices": 3,
+      "durationSec": 0.749,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 3
+    },
+    "biovore_thoomp": {
+      "file": "sfx/biovore_thoomp_0.wav",
+      "variants": [
+        "sfx/biovore_thoomp_0.wav",
+        "sfx/biovore_thoomp_1.wav",
+        "sfx/biovore_thoomp_2.wav"
+      ],
+      "volume": 0.6,
+      "maxVoices": 3,
+      "durationSec": 1.165,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 6
+    },
+    "nid_spore_burst": {
+      "file": "sfx/nid_spore_burst_0.wav",
+      "variants": [
+        "sfx/nid_spore_burst_0.wav",
+        "sfx/nid_spore_burst_1.wav",
+        "sfx/nid_spore_burst_2.wav"
+      ],
+      "volume": 0.55,
+      "maxVoices": 3,
+      "durationSec": 0.589,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 5
+    },
+    "nid_crush": {
+      "file": "sfx/nid_crush_0.wav",
+      "variants": [
+        "sfx/nid_crush_0.wav",
+        "sfx/nid_crush_1.wav",
+        "sfx/nid_crush_2.wav"
+      ],
+      "volume": 0.7,
+      "maxVoices": 2,
+      "durationSec": 0.649,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 8
+    },
+    "carnifex_roar": {
+      "file": "sfx/carnifex_roar_0.wav",
+      "variants": [
+        "sfx/carnifex_roar_0.wav",
+        "sfx/carnifex_roar_1.wav"
+      ],
+      "volume": 0.85,
+      "maxVoices": 2,
+      "durationSec": 2.485,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 9,
+      "duck": 0.4
+    },
+    "carnifex_charge": {
+      "file": "sfx/carnifex_charge_0.wav",
+      "variants": [
+        "sfx/carnifex_charge_0.wav",
+        "sfx/carnifex_charge_1.wav"
+      ],
+      "volume": 0.8,
+      "maxVoices": 2,
+      "durationSec": 1.876,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 8,
+      "duck": 0.25
+    },
+    "carnifex_step": {
+      "file": "sfx/carnifex_step_0.wav",
+      "variants": [
+        "sfx/carnifex_step_0.wav",
+        "sfx/carnifex_step_1.wav",
+        "sfx/carnifex_step_2.wav",
+        "sfx/carnifex_step_3.wav"
+      ],
+      "volume": 0.55,
+      "maxVoices": 3,
+      "durationSec": 0.553,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 4
+    },
+    "dust_land": {
+      "file": "sfx/dust_land_0.wav",
+      "variants": [
+        "sfx/dust_land_0.wav",
+        "sfx/dust_land_1.wav",
+        "sfx/dust_land_2.wav"
+      ],
+      "volume": 0.35,
+      "maxVoices": 4,
+      "durationSec": 0.104,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 2
+    },
+    "breach_telegraph": {
+      "file": "sfx/breach_telegraph_0.wav",
+      "variants": [
+        "sfx/breach_telegraph_0.wav",
+        "sfx/breach_telegraph_1.wav",
+        "sfx/breach_telegraph_2.wav"
+      ],
+      "volume": 0.6,
+      "maxVoices": 3,
+      "durationSec": 1.8,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 7
+    },
+    "breach_burst": {
+      "file": "sfx/breach_burst_0.wav",
+      "variants": [
+        "sfx/breach_burst_0.wav",
+        "sfx/breach_burst_1.wav",
+        "sfx/breach_burst_2.wav"
+      ],
+      "volume": 0.6,
+      "maxVoices": 3,
+      "durationSec": 1.178,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 6
+    },
+    "synapse_drone": {
+      "file": "sfx/synapse_drone_0.wav",
+      "variants": [
+        "sfx/synapse_drone_0.wav"
+      ],
+      "volume": 0.4,
+      "maxVoices": 1,
+      "durationSec": 4,
+      "source": "procedural",
+      "bus": "enemies",
+      "priority": 5,
+      "loop": true
+    },
+    "amb_swarm": {
+      "file": "sfx/amb_swarm_0.wav",
+      "variants": [
+        "sfx/amb_swarm_0.wav"
+      ],
+      "volume": 0.45,
+      "maxVoices": 1,
+      "durationSec": 6,
+      "source": "procedural",
+      "bus": "ambience",
+      "priority": 3,
+      "loop": true
+    },
+    "amb_hive": {
+      "file": "sfx/amb_hive_0.wav",
+      "variants": [
+        "sfx/amb_hive_0.wav"
+      ],
+      "volume": 0.2,
+      "maxVoices": 1,
+      "durationSec": 8,
+      "source": "procedural",
+      "bus": "ambience",
+      "priority": 1,
+      "loop": true
+    }
+  },
+  "music": {
+    "menu": {
+      "file": "music/menu.wav",
+      "volume": 0.32,
+      "loop": true,
+      "durationSec": 60,
+      "source": "procedural"
+    },
+    "combat": {
+      "file": "music/combat.wav",
+      "volume": 0.3,
+      "loop": true,
+      "durationSec": 60,
+      "source": "procedural"
+    },
+    "combat_drive": {
+      "file": "music/combat_drive.wav",
+      "volume": 0.34,
+      "loop": true,
+      "durationSec": 60,
+      "source": "procedural",
+      "layerOf": "combat"
+    },
+    "boss": {
+      "file": "music/boss.wav",
+      "volume": 0.36,
+      "loop": true,
+      "durationSec": 48,
+      "source": "procedural"
+    },
+    "gameover": {
+      "file": "music/gameover.wav",
+      "volume": 0.3,
+      "loop": true,
+      "durationSec": 32,
+      "source": "procedural"
+    }
+  }
+}
