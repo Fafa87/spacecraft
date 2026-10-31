@@ -1,4 +1,4 @@
-import { GAME_VERSION, sanitizeName, type ContentRegistry } from '@sms/shared';
+import { GAME_VERSION, leaderboardBoard, sanitizeName, type ContentRegistry } from '@sms/shared';
 import type { HighscoreStore } from '../../highscores/index.js';
 import { storage } from '../../util/storage.js';
 import { $, html } from '../dom.js';
@@ -61,7 +61,7 @@ export function createMenuScreen(actions: MenuActions, opts: MenuOptions): HTMLE
         <div id="mixer"></div>
         <div class="muted small" id="meta">v${GAME_VERSION} · <span id="status">checking highscore server…</span>${opts.dedicated ? ' · dedicated host mode' : ' · P2P (browser-hosted)'}</div>
       </div>
-      <div class="card scores"><h2>HONOURED DEAD · v${GAME_VERSION.split('.').slice(0, 2).join('.')} BOARD</h2></div>
+      <div class="card scores"><h2>HONOURED DEAD · v${leaderboardBoard(GAME_VERSION)} BOARD</h2></div>
     </div>
     <p class="disclaimer">Unofficial, non-commercial fan project. Not affiliated with or endorsed by Games Workshop. Warhammer 40,000 and related marks are trademarks of Games Workshop Ltd. All art and sound here is procedurally generated.</p>
   </div>`);
