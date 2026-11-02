@@ -211,7 +211,35 @@ with, so do not open the host on `localhost`.
 Vite setup this is `vite --host`). Open `http://<your-LAN-IP>:5173` on the PC (e.g. `http://192.168.1.20:5173`) and host a room,
 then scan the QR with a phone on the same Wi-Fi. For P2P co-op in dev, the PeerJS signaling
 server (:9000) must also be reachable from the phone. The deployed GitHub Pages build uses the
-public PeerJS cloud, so it needs nothing extra.
+public PeerJS cloud for signaling.
+
+### Phones on mobile data (TURN relay)
+
+WebRTC connects the two browsers directly, using STUN to find each side's public address. That
+works on Wi-Fi and most home networks, but **when both phones are on cellular data** the
+carriers' CGNAT / symmetric NAT usually blocks a direct path. The only fix is a **TURN relay**
+that forwards the traffic. PeerJS's old built-in relay (`turn.peerjs.com`) is gone, so the game
+ships STUN-only unless a TURN server is configured at build time (see `.env.example`):
+
+- `VITE_TURN_CREDENTIALS_URL`: a URL that returns an ICE-server array, fetched at join/host
+  time with a 4 s timeout, e.g. Metered's
+  `https://<app>.metered.live/api/v1/turn/credentials?apiKey=<key>`; or
+- `VITE_TURN_URLS` (comma-separated) + `VITE_TURN_USERNAME` + `VITE_TURN_CREDENTIAL`, e.g.
+  `turn:global.relay.metered.ca:80,turn:global.relay.metered.ca:80?transport=tcp,turn:global.relay.metered.ca:443,turns:global.relay.metered.ca:443?transport=tcp`
+  (UDP, TCP and TLS on 443 for strict carriers); or
+- `VITE_ICE_SERVERS`: a full JSON `RTCIceServer[]`.
+
+TURN credentials end up in the public JS bundle (any browser-side TURN config does), so use a
+quota-limited relay account. Without TURN, a failed join tells players to put both phones on the
+same Wi-Fi or use a hotspot.
+
+### iPhone: full screen
+
+Safari on iPhone has no fullscreen for web pages (Android goes fullscreen + landscape on the first
+tap). The game shows a one-time Polish hint: **Udostępnij → „Do ekranu początkowego”**. Launched
+from that home-screen icon, the game runs without Safari's bars (manifest + apple meta tags,
+`start_url` "." so each `/vX.Y.Z/` installs that version). The hint is not shown again after
+dismissal (`sms.iosHint.dismissed` in localStorage) or inside the installed app.
 
 ### Client URL parameters
 
@@ -224,6 +252,10 @@ public PeerJS cloud, so it needs nothing extra.
 - `?demo=hive` starts a solo showcase: a staged late-game fight with every Tyranid type, all
   wargear and a sturdy marine. Nothing is submitted (used for screenshots).
 - `?firestore=0` turns the Firestore leaderboard off (local scores only), for tests.
+- `?relay=1` forces WebRTC through the TURN relay only (`iceTransportPolicy: 'relay'`), to
+  prove the relay works: with no working TURN the join fails.
+- `?turnApi=<url>` uses that TURN credentials URL for this session (overrides
+  `VITE_TURN_CREDENTIALS_URL`), to try a relay without rebuilding.
 
 ## Commands
 
@@ -262,13 +294,14 @@ public PeerJS cloud, so it needs nothing extra.
 
 Client build-time env:
 
-| Variable                                                                    | Default                                                 | Meaning                                                                                                                              |
-| --------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `BASE_PATH`                                                                 | `/`                                                     | Public base path (Vite `base`), e.g. `/spacecraft/` for GitHub Pages                                                                 |
-| `VITE_HIGHSCORE_URL`                                                        | dev: `http://<page host>:8787`; prod: none              | Highscore server. With none set, a production build uses local (browser) highscores quietly and hides the dedicated WS host          |
-| `VITE_FIREBASE_API_KEY` / `VITE_FIREBASE_PROJECT_ID`                        | `.env.production`: project `spacecraft-5f703`           | Firestore global leaderboard (see "Highscores with Firebase"). Takes priority over `VITE_HIGHSCORE_URL`; `?firestore=0` turns it off |
-| `VITE_FIRESTORE_URL`                                                        | `https://firestore.googleapis.com/v1`                   | Firestore REST base, e.g. `http://127.0.0.1:8080/v1` for the emulator                                                                |
-| `VITE_PEER_HOST` / `VITE_PEER_PORT` / `VITE_PEER_PATH` / `VITE_PEER_SECURE` | dev: local server via `/api/config`; prod: PeerJS cloud | PeerJS signaling server                                                                                                              |
+| Variable                                                                                                            | Default                                                 | Meaning                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `BASE_PATH`                                                                                                         | `/`                                                     | Public base path (Vite `base`), e.g. `/spacecraft/` for GitHub Pages                                                                 |
+| `VITE_HIGHSCORE_URL`                                                                                                | dev: `http://<page host>:8787`; prod: none              | Highscore server. With none set, a production build uses local (browser) highscores quietly and hides the dedicated WS host          |
+| `VITE_FIREBASE_API_KEY` / `VITE_FIREBASE_PROJECT_ID`                                                                | `.env.production`: project `spacecraft-5f703`           | Firestore global leaderboard (see "Highscores with Firebase"). Takes priority over `VITE_HIGHSCORE_URL`; `?firestore=0` turns it off |
+| `VITE_FIRESTORE_URL`                                                                                                | `https://firestore.googleapis.com/v1`                   | Firestore REST base, e.g. `http://127.0.0.1:8080/v1` for the emulator                                                                |
+| `VITE_PEER_HOST` / `VITE_PEER_PORT` / `VITE_PEER_PATH` / `VITE_PEER_SECURE`                                         | dev: local server via `/api/config`; prod: PeerJS cloud | PeerJS signaling server                                                                                                              |
+| `VITE_TURN_CREDENTIALS_URL` / `VITE_TURN_URLS` + `VITE_TURN_USERNAME` + `VITE_TURN_CREDENTIAL` / `VITE_ICE_SERVERS` | none (STUN only)                                        | TURN relay for players on mobile data (see "Phones on mobile data")                                                                  |
 
 ## Versions, releases and deploy (GitHub Pages)
 

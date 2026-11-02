@@ -101,7 +101,10 @@ export class TouchInput implements InputSource {
     on(this.layer, 'touchcancel', (e) => this.onEnd(e));
     // No long-press menus / pull-to-refresh / pinch while playing.
     on(this.layer, 'contextmenu', (e) => e.preventDefault());
-    on(document, 'touchmove', (e) => e.preventDefault());
+    // …but menus / the game-over summary drawn over the canvas (#ui) must stay touch-scrollable.
+    on(document, 'touchmove', (e) => {
+      if (!isInScrollableUi(e.target)) e.preventDefault();
+    });
     on(document, 'gesturestart' as keyof HTMLElementEventMap, (e) => e.preventDefault());
 
     this.layer.querySelectorAll<HTMLButtonElement>('button[data-act]').forEach((b) => {
@@ -208,4 +211,10 @@ async function toggleFullscreen(): Promise<void> {
   } catch {
     /* not allowed (e.g. iOS Safari) — ignore */
   }
+}
+
+/** Touches inside the visible #ui overlay (menus, game-over summary) scroll normally. */
+export function isInScrollableUi(target: EventTarget | null): boolean {
+  const el = target as Element | null;
+  return !!el && typeof el.closest === 'function' && !!el.closest('#ui:not(.hidden)');
 }

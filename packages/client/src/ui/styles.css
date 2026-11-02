@@ -940,3 +940,162 @@ table.kills tr.boss + tr.swarm {
 .tally {
   overflow-x: auto;
 }
+
+/* ---- game-over summary: desktop = two columns, phone landscape = tabs ---- */
+#ui {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.gameover .go-left,
+.gameover .side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.gameover .go-tabs {
+  display: none;
+}
+.gameover .squad-card .summary {
+  margin: 0;
+}
+.gameover .go-tabs button.active {
+  background: linear-gradient(rgba(170, 128, 50, 0.7), rgba(80, 56, 22, 0.8));
+  color: #fff3d6;
+}
+/* short landscape phones (e.g. 844×390, 667×375, 740×360): one screen, nothing off-screen.
+   Left: result + tabs + MAIN MENU / DEPLOY AGAIN (always visible); right: the chosen panel,
+   which scrolls on its own with the finger. */
+@media (max-height: 500px) and (min-width: 560px) {
+  .screen.gameover {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    grid-template-columns: minmax(210px, 34%) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 10px;
+    align-items: stretch;
+  }
+  .gameover .go-left,
+  .gameover .side {
+    display: contents;
+  }
+  .gameover .go-main {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 10px 12px;
+  }
+  .gameover h1.dead {
+    font-size: 19px;
+    margin: 0 0 2px;
+    line-height: 1.15;
+  }
+  .gameover .survived {
+    margin: 2px 0;
+  }
+  .gameover .survived .big {
+    font-size: 30px;
+    line-height: 1.1;
+  }
+  .gameover .survived .muted {
+    font-size: 11px;
+  }
+  .gameover .submit {
+    font-size: 11px;
+    padding: 4px 6px;
+    margin: 4px 0;
+  }
+  .gameover .go-tabs {
+    display: flex;
+    gap: 4px;
+    margin: 6px 0 4px;
+  }
+  .gameover .go-tabs button {
+    flex: 1;
+    padding: 7px 2px;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    min-width: 0;
+  }
+  .gameover .go-actions {
+    margin: auto 0 0;
+    padding-top: 6px;
+    gap: 6px;
+  }
+  .gameover .go-actions button {
+    padding: 9px 6px;
+    font-size: 12px;
+  }
+  .gameover .go-panel {
+    grid-column: 2;
+    grid-row: 1;
+    display: none;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+    padding: 10px 12px;
+  }
+  .gameover .go-panel.active {
+    display: block;
+  }
+  .gameover .go-panel h2 {
+    margin-bottom: 6px;
+  }
+}
+
+/* iPhone: "add to home screen" hint (Safari has no page fullscreen). Above #ui, below dialogs
+   and the rotate overlay; clear of the notch / home indicator. */
+.ios-hint {
+  position: fixed;
+  left: max(10px, env(safe-area-inset-left));
+  right: max(10px, env(safe-area-inset-right));
+  bottom: max(10px, env(safe-area-inset-bottom));
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 10px 12px;
+  border: 1px solid var(--brass, #c49648);
+  border-radius: 6px;
+  background: rgba(14, 10, 8, 0.94);
+  color: #eadcb6;
+  font-size: 13px;
+  line-height: 1.35;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
+}
+.ios-hint-text {
+  flex: 1;
+}
+.ios-hint .ios-share {
+  display: inline-block;
+  padding: 0 4px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  font-size: 11px;
+}
+.ios-hint button {
+  flex: none;
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.ios-hint .ios-hint-close {
+  min-width: 36px;
+  font-size: 18px;
+}
+body.rotate-blocked .ios-hint {
+  display: none;
+}
+/* never cover the touch controls during a mission */
+#ui.hidden ~ .ios-hint {
+  display: none;
+}

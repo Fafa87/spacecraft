@@ -37,23 +37,42 @@ export function createGameOverScreen(
   },
   actions: GameOverActions,
 ): { el: HTMLElement; setSubmit(s: SubmitInfo): void } {
-  const el = html(`<div class="screen gameover">
-    <div class="card">
-      <h1 class="dead">THE LINE HAS FALLEN</h1>
-      <div class="survived"><span class="muted">SURVIVED</span><div class="big">${formatTime(result.survivalMs)}</div>
-        <div class="muted">wave ${result.wave} · ${result.kills} kills · ${result.teamSize}-marine squad</div></div>
-      <div class="submit" id="submit">Submitting score…</div>
-${breakdownTable(summary, opts)}
-      <div class="row">
-        <button id="menu">MAIN MENU</button>
-        ${opts.canRestart ? '<button id="again" class="primary">DEPLOY AGAIN</button>' : '<span class="muted">Waiting for squad leader…</span>'}
+  const el = html(`<div class="screen gameover" data-tab="squad">
+    <div class="go-left">
+      <div class="card go-main">
+        <h1 class="dead">THE LINE HAS FALLEN</h1>
+        <div class="survived"><span class="muted">SURVIVED</span><div class="big">${formatTime(result.survivalMs)}</div>
+          <div class="muted">wave ${result.wave} · ${result.kills} kills · ${result.teamSize}-marine squad</div></div>
+        <div class="submit" id="submit">Submitting score…</div>
+        <nav class="go-tabs" role="tablist">
+          <button data-tab="squad" role="tab" class="active">SQUAD</button>
+          <button data-tab="xenos" role="tab">XENOS</button>
+          <button data-tab="scores" role="tab">LEADERBOARDS</button>
+        </nav>
+        <div class="row go-actions">
+          <button id="menu">MAIN MENU</button>
+          ${opts.canRestart ? '<button id="again" class="primary">DEPLOY AGAIN</button>' : '<span class="muted">Waiting for squad leader…</span>'}
+        </div>
       </div>
+      <div class="card go-panel squad-card active" data-panel="squad">${breakdownTable(summary, opts)}</div>
     </div>
     <div class="side">
-      <div class="card tally-card">${killTally(summary, opts)}</div>
-      <div class="card scores"><h2>LEADERBOARDS</h2><div id="hs"></div></div>
+      <div class="card go-panel tally-card" data-panel="xenos">${killTally(summary, opts)}</div>
+      <div class="card go-panel scores" data-panel="scores"><h2>LEADERBOARDS</h2><div id="hs"></div></div>
     </div>
   </div>`);
+  // Compact (phone landscape) layout shows one panel at a time; tabs are hidden on big screens.
+  el.querySelectorAll<HTMLButtonElement>('.go-tabs button').forEach((b) =>
+    b.addEventListener('click', () => {
+      const tab = b.dataset.tab!;
+      el.dataset.tab = tab;
+      el.querySelectorAll('.go-tabs button').forEach((x) => x.classList.toggle('active', x === b));
+      el.querySelectorAll<HTMLElement>('.go-panel').forEach((p) => {
+        p.classList.toggle('active', p.dataset.panel === tab);
+        if (p.dataset.panel === tab) p.scrollTop = 0;
+      });
+    }),
+  );
   const hsHost = $(el, '#hs');
   const mountTable = () => {
     hsHost.innerHTML = '';
