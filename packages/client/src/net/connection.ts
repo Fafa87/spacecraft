@@ -1,5 +1,5 @@
 import { prefs } from '../ui/prefs.js';
-import Peer, { type PeerOptions } from 'peerjs';
+import Peer, { type DataConnection, type PeerOptions } from 'peerjs';
 import {
   ClientSession,
   createLocalLinkPair,
@@ -13,6 +13,8 @@ import {
 import { config, getServerInfo } from '../config.js';
 import { PeerLink } from './PeerLink.js';
 import { BrowserWsLink } from './WsLink.js';
+import { forceRelay, hasTurn, iceServers } from './ice.js';
+import { classifyPeerError, JoinError, joinErrorMessage, type JoinFailure } from './joinErrors.js';
 
 /**
  * A live connection to a game room. The UI only ever talks to `session`
@@ -53,7 +55,16 @@ export function createLocalGame(name: string, submit: SubmitFn): GameConnection 
 }
 
 async function peerOptions(): Promise<PeerOptions> {
-  const base: PeerOptions = { debug: config.debug ? 2 : 0 };
+  // Explicit ICE servers: PeerJS's default TURN relay is discontinued (see net/ice.ts).
+  const base: PeerOptions = {
+    debug: config.debug ? 2 : 0,
+    config: {
+      iceServers: await iceServers(),
+      sdpSemantics: 'unified-plan',
+      // ?relay=1 forces every connection through TURN (to verify the relay works).
+      ...(forceRelay() ? { iceTransportPolicy: 'relay' } : {}),
+    } as RTCConfiguration,
+  };
   if (config.peerOverride) return { ...base, ...config.peerOverride };
   // The self-hosted signaling server (from /api/config) is only used in dev; production
   // builds use the public PeerJS cloud unless VITE_PEER_HOST points elsewhere.
@@ -75,8 +86,8 @@ function openPeer(id: string | undefined, opts: PeerOptions): Promise<Peer> {
     const peer = id ? new Peer(id, opts) : new Peer(opts);
     const timer = setTimeout(() => {
       peer.destroy();
-      reject(new Error('Could not reach the PeerJS signaling server.'));
-    }, 8000);
+      reject(new JoinError('signaling', joinErrorMessage('signaling', '', false)));
+    }, 10000);
     peer.once('open', () => {
       clearTimeout(timer);
       resolve(peer);
@@ -84,7 +95,14 @@ function openPeer(id: string | undefined, opts: PeerOptions): Promise<Peer> {
     peer.once('error', (err) => {
       clearTimeout(timer);
       peer.destroy();
-      reject(err);
+      const type = (err as { type?: string }).type;
+      const kind = classifyPeerError(type);
+      // unavailable-id is handled by the caller (room code collision → pick another code).
+      reject(
+        kind && kind !== 'not-found' && type !== 'unavailable-id'
+          ? Object.assign(new JoinError(kind, joinErrorMessage(kind, '', false)), { type })
+          : err,
+      );
     });
   });
 }
@@ -112,10 +130,26 @@ export async function hostPeerGame(name: string, submit: SubmitFn): Promise<Game
   peer.on('connection', (conn) => {
     conn.on('open', () => host.addLink(new PeerLink(conn)));
   });
-  peer.on('disconnected', () => {
-    // Lost the signaling server: existing WebRTC connections keep working, but new joins need it.
-    if (!peer!.destroyed) peer!.reconnect();
-  });
+  // Lost the signaling server (e.g. the phone locked or the app switched to share the link):
+  // existing WebRTC connections keep working, but new joins need it, so re-register the code as
+  // soon as possible — on the event, when the page is visible again, and when back online.
+  const live = peer;
+  const reregister = () => {
+    if (!live.destroyed && live.disconnected) {
+      try {
+        live.reconnect();
+      } catch (e) {
+        console.warn('[peer] reconnect failed', e);
+      }
+    }
+  };
+  live.on('disconnected', () => setTimeout(reregister, 500));
+  const onVisible = () => document.visibilityState === 'visible' && reregister();
+  document.addEventListener('visibilitychange', onVisible);
+  addEventListener('online', reregister);
+  live.on('error', (err) =>
+    console.warn('[peer] host error', (err as { type?: string }).type, err),
+  );
   const [hostSide, clientSide] = createLocalLinkPair('host-local');
   host.addLink(hostSide);
   const session = new ClientSession(clientSide, name, prefs.chapter());
@@ -126,37 +160,100 @@ export async function hostPeerGame(name: string, submit: SubmitFn): Promise<Game
     session,
     host,
     close: () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      removeEventListener('online', reregister);
       host.close();
       session.close();
-      peer!.destroy();
+      live.destroy();
     },
   };
 }
 
-/** Join someone else's P2P room by code. */
-export async function joinPeerGame(rawCode: string, name: string): Promise<GameConnection> {
+/** How long a join may take in total, and how long "room not found" is retried. */
+export const JOIN_TIMEOUT_MS = 30000;
+export const NOT_FOUND_RETRY_MS = 12000;
+
+/**
+ * Join someone else's P2P room by code.
+ *
+ * Retries "peer-unavailable" for a few seconds (a phone host that briefly lost the signaling
+ * server re-registers its code), watches the WebRTC connection itself (NegotiationFailed /
+ * ICE "failed" are emitted on the DataConnection, not the Peer), and rejects with a JoinError
+ * that tells the player what actually went wrong.
+ */
+export async function joinPeerGame(
+  rawCode: string,
+  name: string,
+  onProgress?: (msg: string) => void,
+): Promise<GameConnection> {
   const code = normalizeRoomCode(rawCode);
   if (code.length < 4) throw new Error('Enter a valid room code.');
-  const peer = await openPeer(undefined, await peerOptions());
-  const conn = peer.connect(peerIdFor(code), { reliable: true, serialization: 'raw' });
-  await new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`Room ${code} not found (timed out).`)), 10000);
-    conn.on('open', () => {
-      clearTimeout(timer);
-      resolve();
+  if (typeof RTCPeerConnection === 'undefined')
+    throw new JoinError('unsupported', joinErrorMessage('unsupported', code, false));
+  const opts = await peerOptions();
+  const relay = hasTurn((opts.config?.iceServers as RTCIceServer[] | undefined) ?? []);
+  onProgress?.('Łączenie z serwerem parowania…');
+  const peer = await openPeer(undefined, opts);
+  const started = Date.now();
+  let conn: DataConnection | null = null;
+  try {
+    conn = await new Promise<DataConnection>((resolve, reject) => {
+      let done = false;
+      let current: DataConnection | null = null;
+      let iceSeen = false; // the host answered and ICE checks started
+      let retryTimer: ReturnType<typeof setTimeout> | undefined;
+      const finish = (kind: JoinFailure | null, ok?: DataConnection) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        clearTimeout(retryTimer);
+        peer.off('error', onPeerError);
+        if (ok) resolve(ok);
+        else reject(new JoinError(kind!, joinErrorMessage(kind!, code, relay)));
+      };
+      const timer = setTimeout(() => finish(iceSeen ? 'ice-failed' : 'timeout'), JOIN_TIMEOUT_MS);
+      const attempt = () => {
+        if (done) return;
+        onProgress?.(`Szukanie pokoju ${code}…`);
+        const c = peer.connect(peerIdFor(code), { reliable: true, serialization: 'raw' });
+        current = c;
+        c.on('open', () => finish(null, c));
+        c.on('error', (err) => {
+          console.warn('[join] connection error', (err as { type?: string }).type, err);
+          if (c === current)
+            finish(classifyPeerError((err as { type?: string }).type) ?? 'ice-failed');
+        });
+        // PeerJS creates the RTCPeerConnection synchronously in connect(); watch ICE directly.
+        const pc = c.peerConnection as RTCPeerConnection | undefined;
+        pc?.addEventListener('iceconnectionstatechange', () => {
+          const st = pc.iceConnectionState;
+          if (st === 'checking') {
+            iceSeen = true;
+            onProgress?.(`Pokój ${code} znaleziony — zestawianie połączenia…`);
+          }
+          if (st === 'failed' && c === current) finish('ice-failed');
+        });
+      };
+      const onPeerError = (err: unknown) => {
+        const type = (err as { type?: string }).type;
+        console.warn('[join] peer error', type, err);
+        const kind = classifyPeerError(type) ?? 'timeout';
+        if (kind === 'not-found' && Date.now() - started < NOT_FOUND_RETRY_MS) {
+          current?.close();
+          current = null;
+          retryTimer = setTimeout(attempt, 1500);
+          return;
+        }
+        finish(kind);
+      };
+      peer.on('error', onPeerError);
+      attempt();
     });
-    peer.on('error', (err) => {
-      clearTimeout(timer);
-      reject(
-        (err as { type?: string }).type === 'peer-unavailable'
-          ? new Error(`Room ${code} not found.`)
-          : err,
-      );
-    });
-  }).catch((err) => {
+  } catch (err) {
     peer.destroy();
     throw err;
-  });
+  }
+  onProgress?.('Połączono — dołączanie do drużyny…');
   const session = new ClientSession(new PeerLink(conn), name, prefs.chapter());
   session.join();
   return {

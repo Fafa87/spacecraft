@@ -73,6 +73,14 @@ export class App {
     this.ui.classList.toggle('hidden', !el);
   }
 
+  /** Join progress line (under the JOIN button / in the menu's error slot). */
+  private progress(message: string): void {
+    const el = this.ui.querySelector<HTMLElement>('#err');
+    if (!el) return;
+    el.textContent = message;
+    el.classList.add('progress');
+  }
+
   private serverStatus(): Promise<string> {
     if (config.firebase) return Promise.resolve('global leaderboard (Firestore)');
     if (!config.hasServer) return Promise.resolve('local scores (saved in this browser)');
@@ -98,7 +106,9 @@ export class App {
         {
           join: (name) =>
             void this.connect(() =>
-              config.useDedicatedHost ? connectDedicated(name, code) : joinPeerGame(code, name),
+              config.useDedicatedHost
+                ? connectDedicated(name, code)
+                : joinPeerGame(code, name, (m) => this.progress(m)),
             ),
           menu: () => this.leaveJoinFlow(),
         },
@@ -138,7 +148,9 @@ export class App {
             ),
           join: (name, code) =>
             void this.connect(() =>
-              config.useDedicatedHost ? connectDedicated(name, code) : joinPeerGame(code, name),
+              config.useDedicatedHost
+                ? connectDedicated(name, code)
+                : joinPeerGame(code, name, (m) => this.progress(m)),
             ),
         },
         {

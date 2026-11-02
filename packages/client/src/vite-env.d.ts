@@ -15,6 +15,14 @@ interface ImportMetaEnv {
   readonly VITE_PEER_PORT?: string;
   readonly VITE_PEER_PATH?: string;
   readonly VITE_PEER_SECURE?: string;
+  /** TURN relay for P2P (see net/ice.ts): credentials endpoint returning iceServers JSON. */
+  readonly VITE_TURN_CREDENTIALS_URL?: string;
+  /** JSON RTCIceServer[] used for P2P. */
+  readonly VITE_ICE_SERVERS?: string;
+  /** Comma-separated turn:/turns: URLs + static credentials. */
+  readonly VITE_TURN_URLS?: string;
+  readonly VITE_TURN_USERNAME?: string;
+  readonly VITE_TURN_CREDENTIAL?: string;
 }
 
 interface ImportMeta {
