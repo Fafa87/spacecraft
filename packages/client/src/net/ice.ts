@@ -69,9 +69,13 @@ export function staticIceServers(env: IceEnv): RTCIceServer[] {
   return [];
 }
 
-/** STUN first, then the configured relays; STUN entries already present are not repeated. */
+/**
+ * Google/Cloudflare STUN first, then everything configured (extra STUN such as the relay
+ * provider's, and the TURN relays); URLs already in the default STUN list are not repeated.
+ */
 export function withStun(servers: RTCIceServer[]): RTCIceServer[] {
-  const extra = servers.filter((s) => !urlsOf(s).every((u) => /^stun:/.test(u)));
+  const known = new Set(STUN_SERVERS.flatMap(urlsOf));
+  const extra = servers.filter((s) => !urlsOf(s).every((u) => known.has(u)));
   return [...STUN_SERVERS, ...extra];
 }
 

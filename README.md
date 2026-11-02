@@ -229,8 +229,9 @@ ships STUN-only unless a TURN server is configured at build time (see `.env.exam
   (UDP, TCP and TLS on 443 for strict carriers); or
 - `VITE_ICE_SERVERS`: a full JSON `RTCIceServer[]`.
 
-TURN credentials end up in the public JS bundle (any browser-side TURN config does), so use a
-quota-limited relay account. Without TURN, a failed join tells players to put both phones on the
+Since v0.5.2 the deployed build uses a Metered relay (`VITE_ICE_SERVERS` in `.env.production`:
+UDP/TCP on 80, UDP on 443 and TLS on 443). TURN credentials end up in the public JS bundle (any
+browser-side TURN config does), so use a quota-limited relay account. Without TURN, a failed join tells players to put both phones on the
 same Wi-Fi or use a hotspot.
 
 ### iPhone: full screen
@@ -320,8 +321,9 @@ The site is served from the **`gh-pages` branch** (Pages source "Deploy from a b
 /spacecraft/v0.4.1/          frozen v0.4.1
 /spacecraft/v0.4.2/          frozen v0.4.2
 /spacecraft/v0.5.0/          frozen v0.5.0
-/spacecraft/v0.5.1/          frozen v0.5.1 …
-/spacecraft/versions.json    {"latest":"0.5.1","versions":[{"version","date","title","path"}…]} (newest first)
+/spacecraft/v0.5.1/          frozen v0.5.1
+/spacecraft/v0.5.2/          frozen v0.5.2 …
+/spacecraft/versions.json    {"latest":"0.5.2","versions":[{"version","date","title","path"}…]} (newest first)
 ```
 
 The menu's **Previous versions** link reads `versions.json` from the site root (a frozen build
@@ -351,7 +353,7 @@ loaded. Each version keeps its own localStorage highscore table and its own Fire
      (`git worktree add /tmp/v010 v0.1.0 && cd /tmp/v010 && npm ci && BASE_PATH=/spacecraft/v0.1.0/ npm run build:pages`),
      then installed with `--add 0.1.0=/tmp/v010/packages/client/dist`.
 5. Check it live: `npx tsx scripts/pages-check.ts https://fafa87.github.io/spacecraft/` (also run
-   it on `/v0.1.0/`, `/v0.2.0/`, `/v0.3.0/`, `/v0.4.0/`, `/v0.4.1/`, `/v0.4.2/`, `/v0.5.0/` and `/v0.5.1/`). It checks the menu, assets under the base path, local scores,
+   it on `/v0.1.0/`, `/v0.2.0/`, `/v0.3.0/`, `/v0.4.0/`, `/v0.4.1/`, `/v0.4.2/`, `/v0.5.0/`, `/v0.5.1/` and `/v0.5.2/`). It checks the menu, assets under the base path, local scores,
    a P2P room, a solo run and the console.
 
 CI option: a `pages.yml` workflow that runs the same steps on `v*` tags

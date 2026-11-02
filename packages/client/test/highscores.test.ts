@@ -58,8 +58,8 @@ describe('LocalHighscoreStore', () => {
 
 describe('local storage is per leaderboard board', () => {
   it('uses board-namespaced keys and ignores the v0.1 table on the same origin', async () => {
-    expect(LOCAL_KEY).toBe('sms.highscores.board-0.5.1');
-    expect(LOCAL_SUBMITTED_KEY).toBe('sms.highscores.submitted.board-0.5.1');
+    expect(LOCAL_KEY).toBe('sms.highscores.board-0.5.2');
+    expect(LOCAL_SUBMITTED_KEY).toBe('sms.highscores.submitted.board-0.5.2');
     const old = { '1': [{ ...run(999_000), id: 'x', submittedAt: '2026-01-01T00:00:00Z' }] };
     localStorage.setItem('sms.highscores.v1', JSON.stringify(old));
     const s = new LocalHighscoreStore();

@@ -41,6 +41,18 @@ describe('ICE servers', () => {
     expect(hasTurn(withStun(s))).toBe(true);
   });
 
+  it('keeps the default STUN, adds the provider STUN + TURN set, skips duplicate STUN', () => {
+    const cfg = [
+      { urls: 'stun:stun.relay.metered.ca:80' },
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'turns:global.relay.metered.ca:443?transport=tcp', username: 'u', credential: 'c' },
+    ];
+    const all = withStun(cfg).flatMap((s) => (Array.isArray(s.urls) ? s.urls : [s.urls]));
+    expect(all.filter((u) => u === 'stun:stun.l.google.com:19302')).toHaveLength(1);
+    expect(all).toContain('stun:stun.relay.metered.ca:80');
+    expect(all).toContain('turns:global.relay.metered.ca:443?transport=tcp');
+  });
+
   it('accepts iceServers arrays, {iceServers} objects and single servers', () => {
     const one = { urls: 'turn:x:3478', username: 'a', credential: 'b' };
     expect(parseIceServers([one, { bogus: 1 }])).toEqual([one]);
