@@ -38,12 +38,46 @@ function isTouchPhone(): boolean {
   );
 }
 
+type FsDocument = Document & {
+  webkitFullscreenEnabled?: boolean;
+  webkitFullscreenElement?: Element | null;
+};
+type FsElement = HTMLElement & { webkitRequestFullscreen?: (opts?: FullscreenOptions) => unknown };
+
+/**
+ * Feature detection only (no user-agent checks): true when this browser lets a page go
+ * fullscreen (standard API or the webkit-prefixed one). iPhone Safari reports false today; if it
+ * ever enables it, the game uses it automatically and the home-screen hint is not shown.
+ */
+export function canFullscreen(
+  doc: FsDocument | undefined = typeof document === 'undefined' ? undefined : document,
+): boolean {
+  if (!doc) return false;
+  const el = doc.documentElement as FsElement;
+  return (
+    (typeof el.requestFullscreen === 'function' && doc.fullscreenEnabled === true) ||
+    (typeof el.webkitRequestFullscreen === 'function' && doc.webkitFullscreenEnabled === true)
+  );
+}
+
+export function isFullscreen(): boolean {
+  const doc = document as FsDocument;
+  return !!(doc.fullscreenElement ?? doc.webkitFullscreenElement);
+}
+
+async function enterFullscreen(): Promise<void> {
+  const doc = document as FsDocument;
+  const el = doc.documentElement as FsElement;
+  if (isFullscreen() || !canFullscreen(doc)) return;
+  if (typeof el.requestFullscreen === 'function' && doc.fullscreenEnabled)
+    await el.requestFullscreen({ navigationUI: 'hide' }).catch(() => undefined);
+  else await Promise.resolve(el.webkitRequestFullscreen?.()).catch(() => undefined);
+}
+
 /** Fullscreen + landscape lock. Must run inside a user gesture. Never throws. */
 export async function requestLandscape(): Promise<boolean> {
   try {
-    const el = document.documentElement;
-    if (!document.fullscreenElement && el.requestFullscreen && document.fullscreenEnabled)
-      await el.requestFullscreen({ navigationUI: 'hide' }).catch(() => undefined);
+    await enterFullscreen();
     const o = screen.orientation as
       (ScreenOrientation & { lock?: (o: string) => Promise<void> }) | undefined;
     if (!o?.lock) return false;

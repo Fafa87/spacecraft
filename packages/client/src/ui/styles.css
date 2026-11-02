@@ -1099,3 +1099,19 @@ body.rotate-blocked .ios-hint {
 #ui.hidden ~ .ios-hint {
   display: none;
 }
+
+.ios-hint-alt {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+@media (max-height: 400px) {
+  .ios-hint {
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+  .ios-hint button {
+    min-height: 32px;
+  }
+}

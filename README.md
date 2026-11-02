@@ -236,10 +236,14 @@ same Wi-Fi or use a hotspot.
 ### iPhone: full screen
 
 Safari on iPhone has no fullscreen for web pages (Android goes fullscreen + landscape on the first
-tap). The game shows a one-time Polish hint: **Udostępnij → „Do ekranu początkowego”**. Launched
-from that home-screen icon, the game runs without Safari's bars (manifest + apple meta tags,
-`start_url` "." so each `/vX.Y.Z/` installs that version). The hint is not shown again after
-dismissal (`sms.iosHint.dismissed` in localStorage) or inside the installed app.
+tap). Fullscreen support is feature-detected (`document.fullscreenEnabled` / webkit prefix), never
+by user agent: if iPhone Safari ever enables it, the first tap goes fullscreen and no hint is shown.
+Until then the game shows a one-time Polish hint: **⋯ lub Udostępnij → Do ekranu początkowego**,
+then launch the game from the icon. Launched from the home screen, the game runs without Safari's
+bars (manifest + apple meta tags, `start_url` "." so each `/vX.Y.Z/` installs that version). A
+smaller second line offers the quicker, partial option: page menu next to the address bar →
+**Ukryj pasek narzędzi**. The hint is not shown again after dismissal (`sms.iosHint.dismissed` in
+localStorage) or inside the installed app.
 
 ### Client URL parameters
 

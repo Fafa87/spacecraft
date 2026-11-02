@@ -4,7 +4,7 @@ import {
   type ContinuousIntent,
   type InputSource,
 } from './InputSource.js';
-import { requestLandscape } from './orientation.js';
+import { canFullscreen, isFullscreen, requestLandscape } from './orientation.js';
 import { VirtualStick, type StickVector } from './joystick.js';
 
 /** Tuning for the twin-stick layout (CSS px). */
@@ -72,8 +72,7 @@ export class TouchInput implements InputSource {
     host: HTMLElement,
     private readonly opts: TouchInputOptions = {},
   ) {
-    const canFullscreen =
-      !!document.documentElement.requestFullscreen && document.fullscreenEnabled;
+    const canFs = canFullscreen();
     this.layer = document.createElement('div');
     this.layer.className = 'touch-layer';
     this.layer.innerHTML = `
@@ -81,7 +80,7 @@ export class TouchInput implements InputSource {
         <button class="tb" data-act="menu" aria-label="Menu / leave game">⏸</button>
         <button class="tb" data-act="mute" aria-label="Mute">🔊</button>
         <button class="tb main" data-act="reload" aria-label="Reload">⟳<span>RELOAD</span></button>
-        ${canFullscreen ? '<button class="tb" data-act="fullscreen" aria-label="Fullscreen">⛶</button>' : ''}
+        ${canFs ? '<button class="tb" data-act="fullscreen" aria-label="Fullscreen">⛶</button>' : ''}
       </div>`;
     host.append(this.layer);
 
@@ -204,8 +203,11 @@ export class TouchInput implements InputSource {
 
 async function toggleFullscreen(): Promise<void> {
   try {
-    if (document.fullscreenElement) await document.exitFullscreen();
-    else {
+    if (isFullscreen()) {
+      const doc = document as Document & { webkitExitFullscreen?: () => unknown };
+      if (document.exitFullscreen) await document.exitFullscreen();
+      else await doc.webkitExitFullscreen?.();
+    } else {
       await requestLandscape();
     }
   } catch {

@@ -1,3 +1,4 @@
+import { canFullscreen } from '../input/orientation.js';
 import { storage } from '../util/storage.js';
 
 /**
@@ -17,6 +18,8 @@ export interface IosEnv {
   standalone?: boolean;
   /** matchMedia('(display-mode: standalone|fullscreen)') */
   displayModeApp: boolean;
+  /** the page can go fullscreen itself (feature-detected) — then the game just does that */
+  fullscreenApi?: boolean;
 }
 
 /** iPhone / iPod / iPad (iPadOS reports itself as MacIntel with touch). */
@@ -27,9 +30,12 @@ export function isIos(env: Pick<IosEnv, 'userAgent' | 'platform' | 'maxTouchPoin
   );
 }
 
-/** Pure rule (unit tested): iOS browser tab (not the home-screen app), not dismissed yet. */
+/**
+ * Pure rule (unit tested): iOS browser tab (not the home-screen app), no usable Fullscreen API
+ * (if iPhone Safari ever ships one, the first tap goes fullscreen instead), not dismissed yet.
+ */
 export function shouldShowIosHint(env: IosEnv, dismissed: boolean): boolean {
-  return isIos(env) && !env.standalone && !env.displayModeApp && !dismissed;
+  return isIos(env) && !env.standalone && !env.displayModeApp && !env.fullscreenApi && !dismissed;
 }
 
 function currentEnv(): IosEnv {
@@ -43,11 +49,14 @@ function currentEnv(): IosEnv {
       matchMedia?.('(display-mode: standalone)').matches ||
       matchMedia?.('(display-mode: fullscreen)').matches ||
       false,
+    fullscreenApi: canFullscreen(),
   };
 }
 
 export const IOS_HINT_TEXT =
-  'Pełny ekran na iPhonie: stuknij <b>Udostępnij</b> <span class="ios-share" aria-hidden="true">⬆︎</span> → <b>„Do ekranu początkowego”</b>, potem uruchamiaj grę z nowej ikony — bez pasków Safari.';
+  'Pełny ekran na iPhonie: w Safari stuknij <b>⋯</b> lub <b>Udostępnij</b> <span class="ios-share" aria-hidden="true">⬆︎</span> → <b>Do ekranu początkowego</b>, potem uruchamiaj grę z ikony.';
+export const IOS_HINT_ALT =
+  'Szybciej, ale częściowo: menu strony obok paska adresu → <b>Ukryj pasek narzędzi</b>.';
 
 /** Shows the hint once per device until dismissed. Returns the element (or null). */
 export function initIosInstallHint(root: HTMLElement = document.body): HTMLElement | null {
@@ -55,7 +64,7 @@ export function initIosInstallHint(root: HTMLElement = document.body): HTMLEleme
   const el = document.createElement('div');
   el.className = 'ios-hint';
   el.setAttribute('role', 'note');
-  el.innerHTML = `<span class="ios-hint-text">📱 ${IOS_HINT_TEXT}</span>
+  el.innerHTML = `<span class="ios-hint-text">📱 ${IOS_HINT_TEXT}<small class="ios-hint-alt">${IOS_HINT_ALT}</small></span>
     <button class="ios-hint-ok" type="button">OK, nie pokazuj</button>
     <button class="ios-hint-close" type="button" aria-label="Zamknij">×</button>`;
   const dismiss = (remember: boolean) => {

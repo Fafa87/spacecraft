@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { isIos, shouldShowIosHint } from '../src/ui/iosInstallHint.js';
 import { isInScrollableUi } from '../src/input/TouchInput.js';
+import { canFullscreen } from '../src/input/orientation.js';
 
 const IPHONE =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
@@ -32,6 +33,24 @@ describe('iPhone home-screen hint', () => {
     expect(shouldShowIosHint(env({ standalone: true }), false)).toBe(false);
     expect(shouldShowIosHint(env({ displayModeApp: true }), false)).toBe(false);
     expect(shouldShowIosHint(env({ userAgent: ANDROID, platform: 'Linux' }), false)).toBe(false);
+  });
+
+  it('is not shown when the browser can go fullscreen itself (feature-detected)', () => {
+    expect(shouldShowIosHint(env({ fullscreenApi: false }), false)).toBe(true);
+    expect(shouldShowIosHint(env({ fullscreenApi: true }), false)).toBe(false);
+  });
+
+  it('canFullscreen detects the standard or webkit API, never by user agent', () => {
+    const doc = (o: Record<string, unknown>, el: Record<string, unknown>) =>
+      ({ ...o, documentElement: el }) as unknown as Document;
+    const fn = () => undefined;
+    expect(canFullscreen(doc({ fullscreenEnabled: true }, { requestFullscreen: fn }))).toBe(true);
+    expect(canFullscreen(doc({ fullscreenEnabled: false }, { requestFullscreen: fn }))).toBe(false);
+    expect(canFullscreen(doc({}, {}))).toBe(false); // iPhone Safari today
+    expect(
+      canFullscreen(doc({ webkitFullscreenEnabled: true }, { webkitRequestFullscreen: fn })),
+    ).toBe(true);
+    expect(canFullscreen(undefined)).toBe(false);
   });
 });
 
