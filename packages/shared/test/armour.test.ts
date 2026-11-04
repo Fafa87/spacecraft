@@ -5,6 +5,7 @@ import {
   armourMul,
   defaultContent,
   enemyProjectileDeflectChances,
+  projectileDeflectChance,
   MARINE_DEFLECTION as D,
   MARINE_DIRECTIONAL_ARMOUR as A,
 } from '../src/data/index.js';
@@ -215,19 +216,30 @@ function deflections(kind: string, deg: number, n: number, seed = 99): number {
 }
 
 describe('front-plate deflection (ricochet)', () => {
-  it('chance per enemy projectile: weakest = 30 %, stronger lower, explosive never', () => {
+  it('chance per enemy projectile: fleshborer 60 %, deathspitter 14.7 %, explosive never', () => {
     const t = enemyProjectileDeflectChances(defaultContent.enemies.values());
-    expect(t.fleshborer).toBeCloseTo(0.3, 9); // 7 dmg, the weakest shot
-    expect(t.deathspitter).toBeCloseTo((0.3 * 7) / 10, 9); // 10 dmg -> 21 %
+    expect(t.fleshborer).toBeCloseTo(0.3 * 2, 9); // weakest shot: v0.6.0 30 % doubled
+    expect(t.deathspitter).toBeCloseTo(0.21 * 0.7, 9); // stronger shot: v0.6.0 21 % − 30 %
     expect(t.spore).toBe(0); // Biovore spore bursts on impact
+    // every ranged enemy in the game has an explicit entry (or is explosive)
+    for (const e of defaultContent.enemies.values()) {
+      const pr = e.ranged?.projectile;
+      if (pr && !pr.explosion) expect(D.chanceByProjectile).toHaveProperty(pr.kind);
+    }
   });
 
-  it('clamps to [minChance, maxChance]', () => {
+  it('explicit table; unknown direct shots get the default; explosive/harmless get 0', () => {
+    expect(projectileDeflectChance({ kind: 'fleshborer', damage: 7 })).toBe(0.6);
+    expect(projectileDeflectChance({ kind: 'fleshborer', damage: 999 })).toBe(0.6); // not damage-based
+    expect(projectileDeflectChance({ kind: 'future_spitter', damage: 12 })).toBe(D.defaultChance);
+    expect(projectileDeflectChance({ kind: 'toString', damage: 12 })).toBe(D.defaultChance);
+    expect(projectileDeflectChance({ kind: 'fleshborer', damage: 7, explosion: {} })).toBe(0);
+    expect(projectileDeflectChance({ kind: 'future_spitter', damage: 0 })).toBe(0);
+    expect(D.defaultChance).toBeGreaterThan(0);
+    expect(D.defaultChance).toBeLessThanOrEqual(0.6);
     const mk = (kind: string, damage: number) => ({ ranged: { projectile: { kind, damage } } });
-    const t = enemyProjectileDeflectChances([mk('weak', 2), mk('mid', 4), mk('huge', 100), {}]);
-    expect(t.weak).toBe(D.maxChance);
-    expect(t.mid).toBeCloseTo(0.15, 9);
-    expect(t.huge).toBe(D.minChance);
+    const t = enemyProjectileDeflectChances([mk('deathspitter', 10), mk('new', 4), {}]);
+    expect(t).toEqual({ deathspitter: 0.147, new: D.defaultChance });
   });
 
   it('only front-arc hits can deflect; observed rate matches the table', () => {
@@ -236,10 +248,10 @@ describe('front-plate deflection (ricochet)', () => {
     expect(deflections('deathspitter', -100, 400)).toBe(0);
     expect(deflections('spore', 0, 400)).toBe(0);
     const n = 3000;
-    expect(deflections('fleshborer', 0, n) / n).toBeGreaterThan(0.27);
-    expect(deflections('fleshborer', 0, n) / n).toBeLessThan(0.33);
-    expect(deflections('deathspitter', 20, n) / n).toBeGreaterThan(0.18);
-    expect(deflections('deathspitter', 20, n) / n).toBeLessThan(0.24);
+    expect(deflections('fleshborer', 0, n) / n).toBeGreaterThan(0.57);
+    expect(deflections('fleshborer', 0, n) / n).toBeLessThan(0.63);
+    expect(deflections('deathspitter', 20, n) / n).toBeGreaterThan(0.125);
+    expect(deflections('deathspitter', 20, n) / n).toBeLessThan(0.17);
   });
 
   it('a deflected shot does no damage, flies off forwards, hits nobody and fades fast', () => {

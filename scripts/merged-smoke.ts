@@ -107,13 +107,15 @@ try {
           url: location.href,
           armour: document.querySelector('#pancerz')?.textContent?.includes('×0,7') ?? false,
           ricochet:
-            t.includes('Rykoszet z przedniego pancerza') && t.includes('30%') && t.includes('21%'),
+            t.includes('Rykoszet z przedniego pancerza') &&
+            t.includes('60%') &&
+            t.includes('14,7%'),
           compendium: t.includes('Pancerz kierunkowy i rykoszety') && t.includes('Bronie'),
         };
       });
       check(/rules\.html/.test(r.url), `ZASADY link opens ${r.url}${popup ? ' (new tab)' : ''}`);
       check(r.armour, 'rules: armour section (#pancerz) with ×0,7 front multiplier');
-      check(r.ricochet && r.compendium, 'rules: compendium armour + ricochet tables (30% / 21%)');
+      check(r.ricochet && r.compendium, 'rules: compendium armour + ricochet tables (60% / 14,7%)');
       await rp.evaluate(() => document.querySelector('#pancerz')!.scrollIntoView());
       await rp.screenshot({ path: out('merged-rules-armour.png') });
       await rp.evaluate(() =>

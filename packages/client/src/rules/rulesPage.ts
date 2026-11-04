@@ -1,7 +1,6 @@
 /** Rules & instructions (Polish), plus the generated compendium. */
 import {
   GAME_VERSION,
-  MARINE_DEFLECTION,
   MARINE_DIRECTIONAL_ARMOUR,
   MARINE_SPRINT,
   MAX_PLAYERS,
@@ -29,7 +28,7 @@ export function rulesHtml(c: ContentRegistry): string {
   const A = MARINE_DIRECTIONAL_ARMOUR;
   const SP = MARINE_SPRINT;
   const sec = (v: number) => `${String(Number(v.toFixed(2))).replace('.', ',')} s`;
-  const pc = (v: number) => `${Math.round(v * 100)}%`;
+  const pc = (v: number) => `${String(Number((v * 100).toFixed(1))).replace('.', ',')}%`;
   const mul = (v: number) => `×${String(v).replace('.', ',')}`;
   const num = (v: number) => String(Number(v.toFixed(2))).replace('.', ',');
   const soloDrops = dropRates(d, 1);
@@ -137,7 +136,7 @@ export function rulesHtml(c: ContentRegistry): string {
     <li><b>Boki</b> — obrażenia <b>${mul(A.side)}</b></li>
     <li><b>Tył</b> (±${A.rearArcDeg}° od pleców) — obrażenia <b>${mul(A.rear)}</b></li>
   </ul>
-  <p><b>Rykoszet</b>: pocisk Tyranida, który trafi w przedni pancerz, może się od niego odbić — nie zadaje wtedy obrażeń, a od marine sypią się iskry. Najsłabsze pociski odbijają się w ${pc(MARINE_DEFLECTION.maxChance)} przypadków, mocniejsze rzadziej (najmniej ${pc(MARINE_DEFLECTION.minChance)}): ${deflList}.${noDefl ? ` Pocisk wybuchowy (${noDefl}) nigdy się nie odbija.` : ''} Ciosy wręcz i wybuchy nie odbijają się nigdy.</p>
+  <p><b>Rykoszet</b>: pocisk Tyranida, który trafi w przedni pancerz, może się od niego odbić — nie zadaje wtedy obrażeń, a od marine sypią się iskry. Szansa zależy od rodzaju pocisku — najsłabsze odbijają się najczęściej, mocniejsze rzadziej: ${deflList}.${noDefl ? ` Pocisk wybuchowy (${noDefl}) nigdy się nie odbija.` : ''} Ciosy wręcz i wybuchy nie odbijają się nigdy.</p>
   <p>Przegrzanie plazmy rani zawsze tak samo, niezależnie od kierunku. Twój wybuch, który zahaczy brata, liczy się od środka wybuchu.</p>
 </section>
 <section id="wrogowie"><h2>Tyranidzi</h2><ul>

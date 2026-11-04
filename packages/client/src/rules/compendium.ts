@@ -390,7 +390,7 @@ export function armourTables(c: ContentRegistry): string {
         esc(p.kind),
         p.explosion ? `wybuch ${n(p.explosion.damage)}` : `${n(p.damage)}`,
         p.explosion ? '—' : `${n(hit, 1)}`,
-        ch > 0 ? pct(ch) : '0% (wybuchowy)',
+        ch > 0 ? pct(ch, 1) : '0% (wybuchowy)',
         p.explosion ? '—' : n(hit * (1 - ch), 2),
       ];
     });
@@ -408,7 +408,7 @@ export function armourTables(c: ContentRegistry): string {
   return `${arcs}
   <p class="muted">Kąt liczony między kierunkiem celowania marine a kierunkiem do źródła: atakujący (wręcz, szarża), kierunek, z którego nadleciał pocisk, albo środek wybuchu. Obrażenia bez kierunku (przegrzanie plazmy) — ×${n(A.side, 2)}. Wybuchy i ciosy wręcz też dostają mnożnik strony, ale nie mają rykoszetu. Mnożnik działa razem z synapsą (obrażenia × synapsa × strona).</p>
   <h4>Rykoszet z przedniego pancerza</h4>${defl}
-  <p class="muted">Szansa = ${pct(D.maxChance)} × (obrażenia najsłabszego pocisku Tyranidów / obrażenia tego pocisku), w granicach ${pct(D.minChance)}–${pct(D.maxChance)}. Liczą się bazowe obrażenia pocisku (synapsa ich nie zmienia). Odbity pocisk nie rani nikogo, odlatuje lustrzanie od pancerza (±${n((D.jitter * 180) / Math.PI, 0)}°, ${pct(D.speedMul)} prędkości) i znika po ${n(D.fadeTime, 2)} s.</p>`;
+  <p class="muted">Szansa jest stała dla każdego rodzaju pocisku (tabela w danych gry); nowy pocisk bez wpisu dostaje ${pct(D.defaultChance, 1)}, pociski wybuchowe 0%. Synapsa jej nie zmienia. Odbity pocisk nie rani nikogo, odlatuje lustrzanie od pancerza (±${n((D.jitter * 180) / Math.PI, 0)}°, ${pct(D.speedMul)} prędkości) i znika po ${n(D.fadeTime, 2)} s.</p>`;
 }
 
 /** Full compendium body (inside the <details>). */
