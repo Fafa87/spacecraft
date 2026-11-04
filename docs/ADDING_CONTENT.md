@@ -255,7 +255,9 @@ which just wraps `DIRECTOR` and `ARENA`, so tune the live game in `data/director
 1. Create `maps/<id>.ts`, usually derived from the wave map:
    ```ts
    export const WAVE_HARD = defineMap(WAVE_MAP, {
-     id: 'wave_hard', name: 'Hive Siege II', tier: 2,
+     id: 'wave_hard',
+     name: 'Hive Siege II',
+     tier: 2,
      director: { waves: { hpScalePerWave: 0.09 }, bosses: { firstWave: 2 } },
    });
    ```
