@@ -3,7 +3,6 @@
  * so the page is always correct for the version it ships with. Pure functions -> HTML strings.
  */
 import {
-  ARENA,
   GAME_VERSION,
   MARINE_DEFLECTION,
   MARINE_DIRECTIONAL_ARMOUR,
@@ -312,7 +311,7 @@ export function waveTable(c: ContentRegistry, waves = 15): string {
   <p class="muted">W większej drużynie wagi elit mnożone są przez „udział elit” z tabeli wyżej.</p>`;
 }
 
-export function marineTable(): string {
+export function marineTable(c: ContentRegistry): string {
   return table(
     ['Parametr', 'Wartość'],
     [
@@ -331,7 +330,7 @@ export function marineTable(): string {
         `×${n(MARINE_DIRECTIONAL_ARMOUR.front, 2)} / ×${n(MARINE_DIRECTIONAL_ARMOUR.side, 2)} / ×${n(MARINE_DIRECTIONAL_ARMOUR.rear, 2)} obrażeń`,
       ],
       ['Apteczka', `+${PICKUP.medkitHeal} życia, leży ${PICKUP.lifetime} s`],
-      ['Arena', `${ARENA.width} × ${ARENA.height} px`],
+      ['Arena', `${c.map.arena.width} × ${c.map.arena.height} px`],
       ['Symulacja', `${TICK_RATE} ticków/s`],
     ],
   );
@@ -386,7 +385,7 @@ export function armourTables(c: ContentRegistry): string {
 export function compendiumHtml(c: ContentRegistry): string {
   return `
   <p class="muted">Wszystkie liczby są generowane z kodu gry v${GAME_VERSION}. Odległości w pikselach areny, czasy w sekundach. DPS = średnie obrażenia na sekundę przy trafieniu każdym pociskiem, z uwzględnieniem S vs T i pancerza (bez zasięgu, ciepła i zaparcia). Po kropce: czas zabicia jednego wroga z bazowym życiem (fala 1, solo).</p>
-  <h3>Space Marine</h3>${marineTable()}
+  <h3>Space Marine</h3>${marineTable(c)}
   <h3>Pancerz kierunkowy i rykoszety</h3>${armourTables(c)}
   <h3>Bronie</h3>${weaponTable(c)}
   <h4>Cechy specjalne</h4>${weaponSpecials(c)}
