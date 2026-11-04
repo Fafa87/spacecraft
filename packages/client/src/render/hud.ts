@@ -101,11 +101,16 @@ export class Hud {
     private readonly content: ContentRegistry,
   ) {}
 
-  /** Weapon slot rects in CSS px from the last frame (touch hit-testing). */
+  /** Weapon slot rects in HUD units from the last frame (touch hit-testing). */
   private slotRects: SlotRect[] = [];
+  /** Last frame's HUD scale + safe-area inset, to map CSS px into HUD units. */
+  private lastUi = 1;
+  private lastIns: Insets = NO_INSETS;
 
   /** Returns the owned weapon slot under a CSS-px point, or 0. */
-  slotAt(x: number, y: number): number {
+  slotAt(cx: number, cy: number): number {
+    const x = (cx - this.lastIns.left) / this.lastUi;
+    const y = (cy - this.lastIns.top) / this.lastUi;
     const pad = 6;
     const hit = this.slotRects.find(
       (r) => x >= r.x - pad && x <= r.x + r.w + pad && y >= r.y - pad && y <= r.y + r.h + pad,
@@ -117,6 +122,8 @@ export class Hud {
     const touch = !!s.touch;
     const ui = hudScale(cw, ch, touch);
     const ins = s.inset ?? NO_INSETS;
+    this.lastUi = ui;
+    this.lastIns = ins;
     // Everything below works in "HUD units" = CSS px / ui, inside the safe area.
     const w = (cw - ins.left - ins.right) / ui;
     const h = (ch - ins.top - ins.bottom) / ui;
@@ -640,8 +647,11 @@ export class Hud {
         ctx.font = F(600, 11);
         ctx.fillStyle = `rgba(${color},0.5)`;
         ctx.fillText(st.kind === 'move' ? 'MOVE' : 'AIM · FIRE', hx, hy + 4);
+        if (st.sprintRing) this.sprintRing(ctx, hx, hy, st.sprintRing, false, true);
         continue;
       }
+      if (st.sprintRing)
+        this.sprintRing(ctx, st.origin.x, st.origin.y, st.sprintRing, !!st.sprintLit, false);
       ctx.fillStyle = `rgba(${color},0.12)`;
       ctx.strokeStyle = `rgba(${color},0.5)`;
       ctx.lineWidth = 2;
@@ -654,6 +664,39 @@ export class Hud {
       ctx.arc(st.knob.x, st.knob.y, st.radius * 0.45, 0, Math.PI * 2);
       ctx.fill();
     }
+  }
+
+  /** Move stick's outer "sprint zone": push the thumb out here to sprint (lit while sprinting). */
+  private sprintRing(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    r: number,
+    lit: boolean,
+    hint: boolean,
+  ): void {
+    ctx.save();
+    ctx.setLineDash(lit ? [] : [6, 6]);
+    ctx.lineWidth = lit ? 5 : 2;
+    ctx.strokeStyle = lit
+      ? 'rgba(255,192,74,0.9)'
+      : hint
+        ? 'rgba(232,217,176,0.14)'
+        : 'rgba(255,192,74,0.38)';
+    if (lit) {
+      ctx.shadowColor = 'rgba(255,170,40,0.8)';
+      ctx.shadowBlur = 12;
+    }
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.setLineDash([]);
+    ctx.textAlign = 'center';
+    ctx.font = F(700, 9);
+    ctx.fillStyle = lit ? 'rgba(255,214,130,0.95)' : `rgba(232,217,176,${hint ? 0.3 : 0.55})`;
+    ctx.fillText(lit ? '» SPRINT «' : '» SPRINT', x, y - r - 5);
+    ctx.restore();
   }
 
   private stateBanner(ctx: CanvasRenderingContext2D, w: number, h: number, me: PlayerSnap): void {

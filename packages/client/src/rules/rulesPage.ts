@@ -69,7 +69,8 @@ export function rulesHtml(c: ContentRegistry): string {
     <div><h3>Telefon / tablet</h3><ul>
       <li><b>Lewy kciuk</b> (lewa połowa ekranu) — ruch</li>
       <li><b>Prawy kciuk</b> — celowanie i automatyczny ogień</li>
-      <li><b>» SPRINT</b> (przy lewej krawędzi) — dotknij, żeby włączyć sprint, dotknij znowu albo puść drążek ruchu, żeby wyłączyć</li>
+      <li><b>Sprint lewym kciukiem</b> — wypchnij drążek ruchu poza jego okrąg, do zewnętrznego pierścienia „» SPRINT” (zapala się na złoto); sprintujesz, dopóki trzymasz kciuk w pierścieniu, cofnięcie do środka kończy sprint</li>
+      <li><b>» SPRINT</b> (prawy dolny róg) — albo dotknij prawym kciukiem, żeby włączyć sprint; dotknij znowu albo puść drążek ruchu, żeby wyłączyć</li>
       <li><b>Dotknij ikony broni</b> — zmiana broni</li>
       <li><b>⟳</b> — przeładowanie, <b>🔊</b> — dźwięk, <b>⏸</b> — menu</li>
       <li><b>⛶</b> — pełny ekran (Android). Na iPhonie: Udostępnij → „Do ekranu początkowego”, potem uruchamiaj grę z ikony.</li>
@@ -85,6 +86,7 @@ export function rulesHtml(c: ContentRegistry): string {
     <li>Po sprincie broń jest gotowa dopiero po <b>${sec(SP.weaponReadyDelayS)}</b> (złoty pasek „READY…” na ikonie broni). Broń półautomatyczną trzeba wtedy nacisnąć ponownie.</li>
     <li>W sprincie marine patrzy tam, dokąd biegnie — <b>uciekając, nadstawiasz plecy</b> (tylny pancerz ${mul(A.rear)}).</li>
     <li>Nie da się sprintować, podnosząc brata (w promieniu ${PLAYER.reviveRadius} px od powalonego).</li>
+    <li>W sprincie marine zarzuca broń na plecy i biegnie z pustymi rękami; po sprincie widać, jak ją podnosi.</li>
     <li>Sprint innych graczy widać po kurzu i smugach za marine.</li>
   </ul>
 </section>

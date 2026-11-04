@@ -5,7 +5,10 @@ import {
   mergeActions,
   NO_ACTIONS,
   resolveSlot,
+  stickSprint,
   stickVector,
+  TOUCH_TUNING,
+  TouchSprint,
   touchIntent,
   VirtualStick,
   zoneFor,
@@ -183,5 +186,66 @@ describe('intent merging', () => {
     expect(initialInputKind(true, true)).toBe('touch');
     expect(initialInputKind(false, true)).toBe('kbm'); // touch laptop with a mouse
     expect(initialInputKind(false, false)).toBe('kbm');
+  });
+});
+
+describe('touch sprint (stick edge + button toggle)', () => {
+  const Z = TOUCH_TUNING.sprintZone;
+  const R = TOUCH_TUNING.move.radius;
+  const stick = () => new VirtualStick({ ...TOUCH_TUNING.move, follow: true, outer: Z.outer });
+
+  it('full deflection inside the ring walks; past the ring into the sprint zone sprints', () => {
+    const s = stick();
+    s.begin(1, 100, 200);
+    s.move(100 + R, 200); // at the ring: full speed, no sprint
+    expect(s.vector.mag).toBe(1);
+    expect(stickSprint(s.reach, false)).toBe(false);
+    s.move(100 + R * (Z.enter + 0.05), 200); // past the ring
+    expect(s.vector.mag).toBe(1);
+    expect(s.originX).toBe(100); // no follow inside the outer band
+    expect(stickSprint(s.reach, false)).toBe(true);
+  });
+
+  it('has hysteresis and the origin only follows past the outer band', () => {
+    expect(stickSprint(Z.enter - 0.01, false)).toBe(false);
+    expect(stickSprint(Z.exit + 0.01, true)).toBe(true); // stays on until back inside exit
+    expect(stickSprint(Z.exit - 0.01, true)).toBe(false);
+    const s = stick();
+    s.begin(1, 100, 200);
+    s.move(100 + R * 3, 200); // dragged way past: origin follows to keep the thumb at outer
+    expect(s.reach).toBeCloseTo(Z.outer, 9);
+    expect(stickSprint(s.reach, false)).toBe(true);
+    expect(Math.hypot(s.knob.x - s.originX, s.knob.y - s.originY)).toBeCloseTo(R * Z.outer, 6);
+  });
+
+  it('TouchSprint: edge sprint while held in the zone, back inside stops it', () => {
+    const t = new TouchSprint();
+    t.stickMoved(0.8);
+    expect(t.on).toBe(false);
+    t.stickMoved(Z.enter + 0.1);
+    expect(t.on).toBe(true);
+    t.stickMoved(Z.exit + 0.05);
+    expect(t.on).toBe(true);
+    t.stickMoved(0.9);
+    expect(t.on).toBe(false);
+    t.stickMoved(Z.outer);
+    t.stickReleased();
+    expect(t.on).toBe(false);
+  });
+
+  it('TouchSprint: the button toggles; a 2nd tap or releasing the move stick turns it off', () => {
+    const t = new TouchSprint();
+    t.tap();
+    expect(t.on).toBe(true);
+    t.stickMoved(0.5); // walking inside the ring keeps the toggle
+    expect(t.on).toBe(true);
+    t.tap();
+    expect(t.on).toBe(false);
+    t.tap();
+    t.stickReleased();
+    expect(t.on).toBe(false);
+    t.tap();
+    t.reset();
+    expect(t.on).toBe(false);
   });
 });

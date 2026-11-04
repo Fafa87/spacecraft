@@ -584,15 +584,14 @@ body.touch-mode canvas#game.playing ~ .touch-layer {
 .tb.pressed {
   background: rgba(255, 192, 74, 0.45);
 }
-/* SPRINT: tap-toggle on the left edge, just inboard of where the move stick usually floats
-   (below the armour bar, clear of the bottom-centre buttons). */
+/* SPRINT tap-toggle in the right-thumb cluster: bottom-right corner, under the weapon column
+   and above the status footer (the left thumb sprints by pushing the stick into its outer ring). */
 .tb.sprint {
   position: absolute;
-  left: max(12px, env(safe-area-inset-left));
-  top: 50%;
-  transform: translateY(-50%);
-  width: 58px;
-  height: 58px;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
+  width: 60px;
+  height: 60px;
   font-size: 20px;
   display: flex;
   flex-direction: column;

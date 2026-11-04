@@ -42,6 +42,8 @@ describe('rules page', () => {
     expect(html).toContain('id="sprint"');
     expect(html).toContain('Shift');
     expect(html).toContain('SPRINT');
+    expect(html).toContain('poza jego okrąg');
+    expect(html).toContain('prawy dolny róg');
     const t = sprintTable();
     for (const v of [S.speedMul, S.staminaMaxS, S.minToStartS, S.weaponReadyDelayS, 7])
       expect(t).toContain(c(v));
