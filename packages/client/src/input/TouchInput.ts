@@ -10,6 +10,12 @@ import { VirtualStick, type StickVector } from './joystick.js';
 /** Tuning for the twin-stick layout (CSS px). */
 export const TOUCH_TUNING = {
   move: { radius: 60, deadzone: 0.12 },
+  /**
+   * Stick-edge sprint: push the move thumb past the stick's ring into the outer "sprint zone"
+   * (≥ enter × radius) to sprint while held there; back inside exit × radius stops it
+   * (hysteresis). The origin only starts following past outer × radius.
+   */
+  sprintZone: { enter: 1.2, exit: 1.08, outer: 1.5 },
   aim: { radius: 60, deadzone: 0.2 },
   /** Fire once the aim stick magnitude (after deadzone) reaches this. 0 = as soon as it's past the deadzone. */
   fireThreshold: 0,
@@ -28,9 +34,49 @@ export function touchIntent(
 ): ContinuousIntent {
   const m = move.active ? { x: move.x, y: move.y } : { x: 0, y: 0 };
   if (aim.active)
-    return { move: m, aim: { kind: 'angle', angle: aim.angle }, fire: aim.mag >= fireThreshold };
-  if (move.active) return { move: m, aim: { kind: 'angle', angle: move.angle }, fire: false };
-  return { move: m, aim: null, fire: false };
+    return {
+      move: m,
+      aim: { kind: 'angle', angle: aim.angle },
+      fire: aim.mag >= fireThreshold,
+      sprint: false,
+    };
+  if (move.active)
+    return { move: m, aim: { kind: 'angle', angle: move.angle }, fire: false, sprint: false };
+  return { move: m, aim: null, fire: false, sprint: false };
+}
+
+/** Stick-edge sprint with hysteresis (pure, unit tested). `reach` = thumb distance in radii. */
+export function stickSprint(
+  reach: number,
+  wasOn: boolean,
+  zone = TOUCH_TUNING.sprintZone,
+): boolean {
+  return reach >= (wasOn ? zone.exit : zone.enter);
+}
+
+/**
+ * Touch sprint state (pure, unit tested): stick-edge sprint while the move thumb is in the
+ * sprint zone, OR the » SPRINT button's tap-toggle (cleared when the move stick is released).
+ */
+export class TouchSprint {
+  toggled = false;
+  edge = false;
+  get on(): boolean {
+    return this.toggled || this.edge;
+  }
+  tap(): void {
+    this.toggled = !this.toggled;
+  }
+  stickMoved(reach: number): void {
+    this.edge = stickSprint(reach, this.edge);
+  }
+  stickReleased(): void {
+    this.edge = false;
+    this.toggled = false;
+  }
+  reset(): void {
+    this.stickReleased();
+  }
 }
 
 /** Which stick a new touch starts: left half moves, right half aims. */
@@ -45,6 +91,9 @@ export interface StickView {
   knob: { x: number; y: number };
   radius: number;
   active: boolean;
+  /** Move stick only: sprint-zone ring radius (CSS px) and whether the thumb is in it. */
+  sprintRing?: number;
+  sprintLit?: boolean;
 }
 
 export interface TouchInputOptions {
@@ -62,9 +111,20 @@ export interface TouchInputOptions {
 export class TouchInput implements InputSource {
   readonly kind = 'touch' as const;
   readonly layer: HTMLElement;
-  readonly moveStick = new VirtualStick({ ...TOUCH_TUNING.move, follow: true });
+  readonly moveStick = new VirtualStick({
+    ...TOUCH_TUNING.move,
+    follow: true,
+    outer: TOUCH_TUNING.sprintZone.outer,
+  });
   readonly aimStick = new VirtualStick({ ...TOUCH_TUNING.aim, follow: true });
   private latched: ActionIntent = { ...NO_ACTIONS };
+  /**
+   * Two ways to sprint without a free left thumb:
+   *  - stick edge (primary): thumb pushed past the move ring into the sprint zone, while held;
+   *  - » SPRINT button in the right-thumb cluster: tap-toggle (off on a 2nd tap or when the
+   *    move stick is released).
+   */
+  readonly sprint = new TouchSprint();
   private listeners: Array<() => void> = [];
   onActivity: (() => void) | null = null;
 
@@ -76,6 +136,7 @@ export class TouchInput implements InputSource {
     this.layer = document.createElement('div');
     this.layer.className = 'touch-layer';
     this.layer.innerHTML = `
+      <button class="tb sprint" data-act="sprint" aria-label="Sprint" aria-pressed="false">»<span>SPRINT</span></button>
       <div class="touch-buttons">
         <button class="tb" data-act="menu" aria-label="Menu / leave game">⏸</button>
         <button class="tb" data-act="mute" aria-label="Mute">🔊</button>
@@ -119,12 +180,24 @@ export class TouchInput implements InputSource {
   }
 
   private button(act: string, b: HTMLButtonElement): void {
+    if (act === 'sprint') {
+      this.sprint.tap();
+      this.syncSprintButton();
+      return;
+    }
     if (act === 'reload') this.latched.reload = true;
     else if (act === 'mute') this.opts.onButton?.('mute');
     else if (act === 'menu') this.opts.onButton?.('menu');
     else if (act === 'fullscreen') void toggleFullscreen();
     b.classList.add('pressed');
     setTimeout(() => b.classList.remove('pressed'), 120);
+  }
+
+  private syncSprintButton(): void {
+    const on = this.sprint.toggled;
+    const b = this.layer.querySelector('[data-act="sprint"]');
+    b?.classList.toggle('on', on);
+    b?.setAttribute('aria-pressed', String(on));
   }
 
   setMuted(muted: boolean): void {
@@ -153,17 +226,27 @@ export class TouchInput implements InputSource {
       for (const s of [this.moveStick, this.aimStick])
         if (s.touchId === t.identifier) s.move(t.clientX, t.clientY);
     }
+    if (this.moveStick.engaged) this.sprint.stickMoved(this.moveStick.reach);
   }
 
   private onEnd(e: TouchEvent): void {
     e.preventDefault();
     for (const t of Array.from(e.changedTouches)) {
-      for (const s of [this.moveStick, this.aimStick]) if (s.touchId === t.identifier) s.end();
+      for (const s of [this.moveStick, this.aimStick])
+        if (s.touchId === t.identifier) {
+          s.end();
+          if (s === this.moveStick) {
+            this.sprint.stickReleased(); // stopped running
+            this.syncSprintButton();
+          }
+        }
     }
   }
 
   read(): ContinuousIntent {
-    return touchIntent(this.moveStick.vector, this.aimStick.vector);
+    const intent = touchIntent(this.moveStick.vector, this.aimStick.vector);
+    intent.sprint = this.sprint.on;
+    return intent;
   }
 
   takeActions(): ActionIntent {
@@ -185,6 +268,12 @@ export class TouchInput implements InputSource {
       knob: s.knob,
       radius: s.opts.radius,
       active: s.vector.active,
+      ...(kind === 'move'
+        ? {
+            sprintRing: s.opts.radius * TOUCH_TUNING.sprintZone.enter,
+            sprintLit: this.sprint.on,
+          }
+        : {}),
     }));
   }
 
@@ -192,6 +281,8 @@ export class TouchInput implements InputSource {
   reset(): void {
     this.moveStick.end();
     this.aimStick.end();
+    this.sprint.reset();
+    this.syncSprintButton();
   }
 
   dispose(): void {

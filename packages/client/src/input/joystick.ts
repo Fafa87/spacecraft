@@ -40,6 +40,11 @@ export interface StickOptions {
   deadzone: number;
   /** Drag the origin along when the thumb goes past the radius. */
   follow?: boolean;
+  /**
+   * Follow only past `outer` × radius (default 1): the band between the radius (full
+   * deflection) and `outer` is an extra "overdrive" zone, read via `reach` (e.g. sprint).
+   */
+  outer?: number;
 }
 
 /** One floating stick bound to a single touch identifier. */
@@ -69,8 +74,9 @@ export class VirtualStick {
     const dx = x - this.originX;
     const dy = y - this.originY;
     const d = Math.hypot(dx, dy);
-    if (d > this.opts.radius) {
-      const k = (d - this.opts.radius) / d;
+    const lim = this.opts.radius * (this.opts.outer ?? 1);
+    if (d > lim) {
+      const k = (d - lim) / d;
       this.originX += dx * k;
       this.originY += dy * k;
     }
@@ -90,12 +96,19 @@ export class VirtualStick {
     );
   }
 
-  /** Knob position for rendering (thumb clamped to the radius). */
+  /** Thumb distance from the origin in radii (0 when idle; up to `outer`). */
+  get reach(): number {
+    if (!this.engaged || this.opts.radius <= 0) return 0;
+    return Math.hypot(this.thumbX - this.originX, this.thumbY - this.originY) / this.opts.radius;
+  }
+
+  /** Knob position for rendering (thumb clamped to the outer limit). */
   get knob(): { x: number; y: number } {
     const dx = this.thumbX - this.originX;
     const dy = this.thumbY - this.originY;
     const d = Math.hypot(dx, dy);
-    const k = d > this.opts.radius ? this.opts.radius / d : 1;
+    const lim = this.opts.radius * (this.opts.outer ?? 1);
+    const k = d > lim ? lim / d : 1;
     return { x: this.originX + dx * k, y: this.originY + dy * k };
   }
 }

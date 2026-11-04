@@ -35,6 +35,12 @@ export interface HostSessionOptions {
   mode: RunMode;
   maxPlayers?: number;
   content?: ContentRegistry;
+  /**
+   * Registered map id (maps/index.ts); omitted = the map of `content` (the wave map). Host-only
+   * for now: clients are not told the map yet (wire `start` carries no map id), so only the
+   * default map works in multiplayer until a picker + optional wire field are added.
+   */
+  mapId?: string;
   scheduler?: Scheduler;
   /** Called once per finished run; returns where it was stored. */
   submitResult?: (result: RunResult) => Promise<{ status: SubmitStatus; rank?: number }>;
@@ -44,6 +50,8 @@ export interface HostSessionOptions {
   /** Ticks per snapshot for network sessions (default NET.snapshotEvery; tools/tests). */
   snapshotEvery?: number;
   log?: (...args: unknown[]) => void;
+  /** Voice chat enabled for the room (host choice, sent to everyone in 'lobby'). Default off. */
+  voice?: boolean;
 }
 
 interface Member {
@@ -65,6 +73,7 @@ export class HostSession {
   world: World | null = null;
   readonly roomCode: string;
   private readonly opts: HostSessionOptions;
+  private voiceOn: boolean;
   private readonly content: ContentRegistry;
   private readonly scheduler: Scheduler;
   private members = new Map<string, Member>();
@@ -79,8 +88,10 @@ export class HostSession {
 
   constructor(opts: HostSessionOptions) {
     this.opts = opts;
+    this.voiceOn = opts.voice === true;
     this.roomCode = opts.roomCode;
-    this.content = opts.content ?? defaultContent;
+    const content = opts.content ?? defaultContent;
+    this.content = opts.mapId === undefined ? content : content.withMap(opts.mapId);
     this.scheduler = opts.scheduler ?? realScheduler;
   }
 
@@ -248,7 +259,19 @@ export class HostSession {
       phase: this.phase,
       maxPlayers: this.maxPlayers,
       players: this.lobbyPlayers(),
+      ...(this.voice ? { voice: true } : {}),
     });
+  }
+
+  /** Host's voice-chat opt-in for the room (rebroadcasts the lobby). */
+  get voice(): boolean {
+    return this.voiceOn;
+  }
+
+  setVoice(on: boolean): void {
+    if (this.voiceOn === on || this.closed) return;
+    this.voiceOn = on;
+    this.broadcastLobby();
   }
 
   start(): boolean {
@@ -317,6 +340,7 @@ export class HostSession {
             extra.my,
             marineMoveSpeed(this.content.weapon(p.current), p.fireSlow),
             TICK_DT,
+            world.map.arena,
           );
           p.lastInputSeq = Math.max(p.lastInputSeq, extra.seq);
         }

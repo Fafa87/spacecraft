@@ -584,6 +584,31 @@ body.touch-mode canvas#game.playing ~ .touch-layer {
 .tb.pressed {
   background: rgba(255, 192, 74, 0.45);
 }
+/* SPRINT tap-toggle in the right-thumb cluster: bottom-right corner, under the weapon column
+   and above the status footer (the left thumb sprints by pushing the stick into its outer ring). */
+.tb.sprint {
+  position: absolute;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
+  width: 60px;
+  height: 60px;
+  font-size: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.tb.sprint span {
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  margin-top: 3px;
+}
+.tb.sprint.on {
+  background: rgba(255, 192, 74, 0.5);
+  border-color: rgba(255, 210, 120, 0.9);
+  color: #fff6dc;
+}
 /* touch phone held in portrait: full-screen "rotate your device" (input paused meanwhile) */
 .rotate-overlay {
   display: none;
@@ -1114,4 +1139,49 @@ body.rotate-blocked .ios-hint {
   .ios-hint button {
     min-height: 32px;
   }
+}
+
+/* main menu: gothic cathedral backdrop (original generated art), slow drift + vignette for readability */
+body:has(#ui .screen.menu)::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(10, 8, 6, 0.35), rgba(10, 8, 6, 0.85) 75%),
+    linear-gradient(rgba(10, 8, 6, 0.25), rgba(10, 8, 6, 0.55)),
+    url('./assets/menu-bg.webp') center 40% / cover no-repeat,
+    var(--bg);
+  animation: menu-bg-drift 40s ease-in-out infinite alternate;
+}
+@keyframes menu-bg-drift {
+  from {
+    transform: scale(1.02);
+  }
+  to {
+    transform: scale(1.08) translateY(-1%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body:has(#ui .screen.menu)::before {
+    animation: none;
+  }
+}
+
+/* Squad room: voice-chat opt-in (host toggle) / indicator (everyone). */
+.voice-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 8px 0 4px;
+}
+.voice-toggle {
+  min-height: 40px;
+}
+.voice-toggle.on {
+  background: #7a1d12;
+  border-color: #e0a050;
+  color: #ffe2a8;
 }

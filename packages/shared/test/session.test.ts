@@ -90,3 +90,55 @@ describe('HostSession over local links', () => {
     host.close();
   });
 });
+
+describe('voice chat opt-in (lobby field)', () => {
+  it('is off by default; the host toggle reaches every client in the lobby message', async () => {
+    const host = new HostSession({
+      roomCode: 'VOICE',
+      mode: 'p2p',
+      scheduler: new ManualScheduler(),
+    });
+    const [h1, c1] = createLocalLinkPair('a');
+    const [h2, c2] = createLocalLinkPair('b');
+    host.addLink(h1);
+    host.addLink(h2);
+    const a = new ClientSession(c1, 'Alpha');
+    const b = new ClientSession(c2, 'Bravo');
+    const raw: unknown[] = [];
+    c2.onMessage((m) => raw.push(m));
+    a.join();
+    await flush();
+    b.join();
+    await flush();
+    expect(host.voice).toBe(false);
+    expect(b.lobby?.voice).toBe(false);
+    // off = field absent on the wire (older clients see the exact v5 message)
+    expect(raw.some((m) => (m as { t: string }).t === 'lobby' && 'voice' in (m as object))).toBe(
+      false,
+    );
+    host.setVoice(true);
+    await flush();
+    expect(a.lobby?.voice).toBe(true);
+    expect(b.lobby?.voice).toBe(true);
+    host.setVoice(false);
+    await flush();
+    expect(b.lobby?.voice).toBe(false);
+    host.close();
+  });
+
+  it('can start enabled via options', async () => {
+    const host = new HostSession({
+      roomCode: 'VOIC2',
+      mode: 'p2p',
+      voice: true,
+      scheduler: new ManualScheduler(),
+    });
+    const [h1, c1] = createLocalLinkPair('a');
+    host.addLink(h1);
+    const a = new ClientSession(c1, 'Alpha');
+    a.join();
+    await flush();
+    expect(a.lobby?.voice).toBe(true);
+    host.close();
+  });
+});

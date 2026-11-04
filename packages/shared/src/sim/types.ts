@@ -1,5 +1,6 @@
 import type { Rng } from '../math/rng.js';
-import type { ContentRegistry, ExplosionSpec } from '../data/index.js';
+import type { ContentRegistry, ExplosionSpec, SprintState } from '../data/index.js';
+import type { MapDef } from '../maps/types.js';
 
 export type PlayerState = 'alive' | 'downed' | 'dead';
 
@@ -16,6 +17,11 @@ export interface PlayerInput {
   /** Weapon slot to switch to (1..9) or 0 for none. */
   slot: number;
   reload: boolean;
+  /**
+   * Sprint held (v0.5.3-dev). Optional so protocol v5 inputs without it stay valid
+   * (missing = not sprinting).
+   */
+  sprint?: boolean;
 }
 
 export const emptyInput = (): PlayerInput => ({
@@ -68,6 +74,8 @@ export interface Player {
   stillTime: number;
   /** Firing slow-down 0..1: 1 while the trigger is held, eases to 0 after release. */
   fireSlow: number;
+  /** Sprint stamina / state / post-sprint weapon delay (see data/sprint.ts). */
+  sprint: SprintState;
   damageDealt: number;
   /** Survival second this marine died (or null). */
   diedAt: number | null;
@@ -143,6 +151,8 @@ export interface Projectile {
   sy?: number;
   /** Enemy ids already hit (so piercing shots hit each target once). */
   hit: number[];
+  /** Ricocheted off a marine's front plate: harmless to everyone, fading out. */
+  deflected?: boolean;
   dead: boolean;
 }
 
@@ -193,6 +203,11 @@ export type GameEvent =
   | { e: 'swarm'; i: number; n: number }
   /** A player shot hit a Tyranid but its armour save stopped it (spark + ricochet, no marker). */
   | { e: 'bnc'; x: number; y: number; k: string }
+  /**
+   * An enemy shot glanced off marine `p`'s front plate at (x, y); `a` = ricochet direction
+   * (radians), `k` = projectile kind. JSON on the wire; clients that predate it ignore it.
+   */
+  | { e: 'defl'; p: number; x: number; y: number; a: number; k: string }
   /** Marine braced a bracing weapon (heavy bolter). */
   | { e: 'brace'; p: number; w: string }
   | { e: 'reload'; p: number; w: string }
@@ -250,7 +265,10 @@ export interface DirectorState {
 }
 
 export interface World {
+  /** Content for this run; `content.map === map` and `content.director === map.director`. */
   content: ContentRegistry;
+  /** The map being played (arena, player spawn, director). Static data, like `content`. */
+  map: MapDef;
   seed: number;
   rng: Rng;
   tick: number;

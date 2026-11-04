@@ -1,6 +1,6 @@
 {
   "name": "space-marine-survival",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "description": "Top-down co-op (1-4 players) swarm survival game for the web.",
@@ -28,6 +28,7 @@
     "smoke": "tsx scripts/smoke.ts",
     "smoke:browser": "tsx scripts/browser-smoke.ts",
     "check:mobile": "tsx scripts/mobile-check.ts",
+    "check:hud": "tsx scripts/hud-mobile-check.ts",
     "predev": "npm run assets --silent",
     "prebuild": "npm run assets --silent",
     "sim": "tsx scripts/balance-sim.ts",

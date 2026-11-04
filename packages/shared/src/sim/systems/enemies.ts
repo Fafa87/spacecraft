@@ -1,4 +1,4 @@
-import { ARENA, PLAYER } from '../../constants.js';
+import { PLAYER } from '../../constants.js';
 import type { EnemyDef } from '../../data/index.js';
 import { clamp, dist2 } from '../../math/vec.js';
 import type { SpatialHash } from '../spatialHash.js';
@@ -113,8 +113,8 @@ export function updateEnemies(world: World, hash: SpatialHash<Enemy>, dt: number
         const v = speed * def.burrow!.speedMul;
         e.vx = nx * v;
         e.vy = ny * v;
-        e.x = clamp(e.x + e.vx * dt, def.radius, ARENA.width - def.radius);
-        e.y = clamp(e.y + e.vy * dt, def.radius, ARENA.height - def.radius);
+        e.x = clamp(e.x + e.vx * dt, def.radius, world.map.arena.width - def.radius);
+        e.y = clamp(e.y + e.vy * dt, def.radius, world.map.arena.height - def.radius);
         if (d <= def.burrow!.emergeDistance) {
           e.burrowed = false;
           e.attackCooldown = 0.35;
@@ -160,7 +160,7 @@ export function updateEnemies(world: World, hash: SpatialHash<Enemy>, dt: number
       if (contact > 0 && d <= reach && e.attackCooldown <= 0) {
         e.attackCooldown = def.contactCooldown;
         e.attackAnim = 0.3;
-        damagePlayer(world, target, contact * e.synDamage);
+        damagePlayer(world, target, contact * e.synDamage, { fromX: e.x, fromY: e.y });
         world.events.push({ e: 'bite', p: target.id, t: e.type });
         // A Hormagaunt leap ends on impact; a Carnifex ploughs on.
         if (e.chargePhase === 2 && def.charge!.duration < 0.5) e.chargeTimer = 0;
@@ -212,8 +212,8 @@ export function updateEnemies(world: World, hash: SpatialHash<Enemy>, dt: number
       e.vx += (desiredX - e.vx) * k;
       e.vy += (desiredY - e.vy) * k;
     }
-    e.x = clamp(e.x + e.vx * dt, def.radius, ARENA.width - def.radius);
-    e.y = clamp(e.y + e.vy * dt, def.radius, ARENA.height - def.radius);
+    e.x = clamp(e.x + e.vx * dt, def.radius, world.map.arena.width - def.radius);
+    e.y = clamp(e.y + e.vy * dt, def.radius, world.map.arena.height - def.radius);
 
     // Enemies never push marines (keeps client prediction exact); push the enemy out instead.
     for (const p of world.players) {

@@ -59,7 +59,7 @@ export function createMenuScreen(actions: MenuActions, opts: MenuOptions): HTMLE
           Stand next to a downed battle-brother to revive them. Wargear unlocks over time; supply crates drop on the map. Plasma runs hot: past the line shots are supercharged, at the top it vents and burns you.
         </div>
         <div id="mixer"></div>
-        <div class="muted small" id="meta">v${GAME_VERSION} · <span id="status">checking highscore server…</span>${opts.dedicated ? ' · dedicated host mode' : ' · P2P (browser-hosted)'}</div>
+        <div class="muted small" id="meta"><a class="rules-link" href="rules.html">ZASADY / RULES</a> · v${GAME_VERSION} · <span id="status">checking highscore server…</span>${opts.dedicated ? ' · dedicated host mode' : ' · P2P (browser-hosted)'}</div>
       </div>
       <div class="card scores"><h2>HONOURED DEAD · v${leaderboardBoard(GAME_VERSION)} BOARD</h2></div>
     </div>

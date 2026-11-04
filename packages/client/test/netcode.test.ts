@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  applyInput,
+  createWorld,
+  defaultContent,
   emptyInput,
+  MARINE_SPRINT,
+  PLAYER,
+  stepWorld,
   stepPlayerMovement,
   TICK_DT,
   type PlayerInput,
@@ -41,6 +47,34 @@ describe('Predictor', () => {
     p.reconcile(480, 500, 1, true); // host says we got pushed back
     expect(p.pos.x).toBe(480);
     expect(p.lastCorrection).toBeGreaterThan(0);
+  });
+
+  it('predicts sprint speed, drain and auto-stop exactly like the host', () => {
+    const w = createWorld([{ id: 1, name: 'M1' }], 5);
+    w.director.idle = true;
+    const me = w.players[0];
+    me.x = 600;
+    me.y = 400;
+    const walk = PLAYER.speed * defaultContent.weapon(me.current).moveSpeedMul;
+    const p = new Predictor();
+    p.reconcile(me.x, me.y, 0, true, { ...me.sprint });
+    const n = Math.round((MARINE_SPRINT.staminaMaxS + 0.5) / TICK_DT); // runs out mid-way
+    const acks: { seq: number; x: number; y: number; s: typeof me.sprint }[] = [];
+    for (let seq = 1; seq <= n; seq++) {
+      const i = { ...input(seq, 1, 0.3), sprint: true };
+      p.applyLocal(i, walk, true);
+      applyInput(w, 1, i);
+      stepWorld(w, TICK_DT);
+      acks.push({ seq, x: me.x, y: me.y, s: { ...me.sprint } });
+    }
+    expect(p.pos.x).toBeCloseTo(me.x, 6);
+    expect(p.pos.y).toBeCloseTo(me.y, 6);
+    expect(p.sprint.sprinting).toBe(false);
+    // reconcile against a host state mid-sprint: replay lands exactly on the host again
+    const mid = acks[40];
+    p.reconcile(mid.x, mid.y, mid.seq, true, mid.s);
+    expect(p.lastCorrection).toBeCloseTo(0, 6);
+    expect(p.sprint).toEqual(me.sprint);
   });
 });
 

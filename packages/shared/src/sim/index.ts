@@ -7,6 +7,10 @@ export {
   stepPlayerMovement,
   playerMoveSpeed,
   marineMoveSpeed,
+  marineSprintSpeed,
+  effectiveFire,
+  sprintFacing,
+  isMoving,
   stepFireSlow,
 } from './systems/movement.js';
 export {
@@ -27,7 +31,7 @@ export {
   queueGroup,
   BREACH_ACTIVE_SECONDS,
 } from './systems/director.js';
-export { STILL_INPUT, trackStillness } from './systems/players.js';
+export { STILL_INPUT, trackStillness, isReviving } from './systems/players.js';
 export { damageEnemy, damagePlayer, explode } from './systems/combat.js';
 export { grantWeapon, isBraced } from './systems/weapons.js';
 export { spawnEnemy } from './systems/director.js';

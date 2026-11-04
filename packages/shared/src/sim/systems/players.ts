@@ -1,28 +1,48 @@
 import { PLAYER } from '../../constants.js';
+import { stepSprint } from '../../data/sprint.js';
 import { dist2 } from '../../math/vec.js';
 import type { Player, World } from '../types.js';
-import { marineMoveSpeed, stepFireSlow, stepPlayerMovement } from './movement.js';
+import {
+  effectiveFire,
+  isMoving,
+  marineMoveSpeed,
+  marineSprintSpeed,
+  stepFireSlow,
+  stepPlayerMovement,
+} from './movement.js';
+
+export { STILL_INPUT } from './movement.js';
 
 export function updatePlayerMovement(world: World, dt: number): void {
   for (const p of world.players) {
     if (p.state !== 'alive') {
       p.fireSlow = 0;
+      p.sprint.sprinting = false;
+      p.sprint.weaponDelay = 0;
       continue;
     }
     p.invuln = Math.max(0, p.invuln - dt);
     const def = world.content.weapon(p.current);
-    trackStillness(p, p.input.mx, p.input.my, dt);
-    p.fireSlow = stepFireSlow(p.fireSlow, p.input.fire, dt);
-    stepPlayerMovement(p, p.input.mx, p.input.my, marineMoveSpeed(def, p.fireSlow), dt);
+    const { mx, my } = p.input;
+    trackStillness(p, mx, my, dt);
+    stepSprint(p.sprint, p.input.sprint === true, isMoving(mx, my), !isReviving(world, p), dt);
+    p.fireSlow = stepFireSlow(p.fireSlow, effectiveFire(p.input.fire, p.sprint), dt);
+    const speed = p.sprint.sprinting ? marineSprintSpeed() : marineMoveSpeed(def, p.fireSlow);
+    stepPlayerMovement(p, mx, my, speed, dt, world.map.arena);
   }
 }
 
-/** Movement input below this magnitude counts as standing still (sticks drift a little). */
-export const STILL_INPUT = 0.15;
+/** True while this (alive) marine is in revive range of a downed squadmate. */
+export function isReviving(world: World, p: Player): boolean {
+  const rr = PLAYER.reviveRadius * PLAYER.reviveRadius;
+  return world.players.some(
+    (o) => o !== p && o.state === 'downed' && dist2(o.x, o.y, p.x, p.y) <= rr,
+  );
+}
 
 /** Accumulates time spent not moving (bracing); any real movement input resets it. */
 export function trackStillness(p: Player, mx: number, my: number, dt: number): void {
-  if (Math.hypot(mx, my) > STILL_INPUT) p.stillTime = 0;
+  if (isMoving(mx, my)) p.stillTime = 0;
   else p.stillTime += dt;
 }
 

@@ -1,10 +1,10 @@
 import {
-  ARENA,
   PLAYER,
   ROLE_COLOR,
   ROLE_SHORT,
   weaponProfileLabel,
   weaponRolesLabel,
+  MARINE_SPRINT,
   type ContentRegistry,
   type EnemyDef,
   type WeaponDef,
@@ -78,6 +78,107 @@ export function hudScale(w: number, h: number, touch: boolean): number {
   return Math.max(0.6, Math.min(1, w / 900, h / 520));
 }
 
+export interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Where the DOM voice overlay may sit (CSS px); `align` = how its chips line up in it. */
+export interface VoiceSlot {
+  x: number;
+  y: number;
+  w: number;
+  align: 'left' | 'center';
+  compact: boolean;
+}
+
+/** Idle move-stick hint (centre, CSS px) — also where a thumb usually lands. */
+export const MOVE_HINT = { x: 110, fromBottom: 100 };
+
+/**
+ * Compact phone layout: touch + short landscape viewport. The top-centre clock/score plates
+ * move into a stacked block in the top-left corner (with the armour bar), which leaves the
+ * top centre free for the voice overlay.
+ */
+export function compactTouch(cw: number, ch: number, touch: boolean): boolean {
+  return touch && ch <= 500 && cw > ch;
+}
+
+export interface HudLayout {
+  ui: number;
+  compact: boolean;
+  /** Compact only: the stacked top-left block (HUD units) and its rows. */
+  block: (Rect & { armourY: number; heatY: number }) | null;
+  team: { top: number; cols: 1 | 2; rowH: number; h: number } | null;
+  /** Bottom of the left column in HUD units (last element drawn there). */
+  leftBottom: number;
+  voice: VoiceSlot;
+}
+
+const TEAM_W = 200;
+const BLOCK_W = 252;
+
+/**
+ * Pure HUD layout of the left column + the voice-overlay slot (testable without a canvas).
+ * HUD units = CSS px / ui, inside the safe area.
+ */
+export function hudLayout(
+  cw: number,
+  ch: number,
+  touch: boolean,
+  ins: Insets,
+  o: { players: number; me: boolean; heat: boolean },
+): HudLayout {
+  const ui = hudScale(cw, ch, touch);
+  const compact = compactTouch(cw, ch, touch);
+  const w = (cw - ins.left - ins.right) / ui;
+  const showTeam = o.players >= 2;
+  let block: HudLayout['block'] = null;
+  let teamTop: number;
+  let cols: 1 | 2 = 1;
+  let rowH = o.players > 4 ? 19 : 26;
+  if (compact) {
+    // clock row 10..50, wave row ..62, armour bar 66..80, optional heat row 84..96
+    const armourY = 66;
+    const heatY = 86;
+    const bottom = !o.me ? 66 : o.heat ? 104 : 88;
+    block = { x: 10, y: 10, w: BLOCK_W, h: bottom - 10, armourY, heatY };
+    teamTop = bottom + 6;
+    // a big squad goes to two columns so the column never reaches the move stick
+    cols = o.players > 4 ? 2 : 1;
+    rowH = 22;
+  } else teamTop = touch ? (o.me ? 76 : 10) : 10;
+  const rows = cols === 2 ? Math.ceil(o.players / 2) : o.players;
+  const team = showTeam ? { top: teamTop, cols, rowH, h: 14 + rows * rowH } : null;
+  const leftBottom = team ? team.top + team.h : block ? block.y + block.h : touch && o.me ? 68 : 0;
+  let voice: VoiceSlot;
+  if (compact) {
+    // top centre, between the left block and the minimap (minimap panel: w-206 .. w-8)
+    const x0 = 10 + BLOCK_W + 8;
+    const x1 = w - 190 - 12 - 4 - 8;
+    voice = {
+      x: ins.left + x0 * ui,
+      y: ins.top + 6,
+      w: Math.max(0, (x1 - x0) * ui),
+      align: 'center',
+      compact: true,
+    };
+  } else {
+    // under the team list / armour in the left column (desktop: armour is bottom-left)
+    const y = (team ? leftBottom : touch && o.me ? 68 : 10) + 8;
+    voice = {
+      x: ins.left + 10 * ui,
+      y: ins.top + y * ui,
+      w: Math.min(420, Math.max(TEAM_W, w / 2 - 140)) * ui,
+      align: 'left',
+      compact: touch,
+    };
+  }
+  return { ui, compact, block, team, leftBottom, voice };
+}
+
 interface SlotRect {
   slot: number;
   owned: boolean;
@@ -101,11 +202,45 @@ export class Hud {
     private readonly content: ContentRegistry,
   ) {}
 
-  /** Weapon slot rects in CSS px from the last frame (touch hit-testing). */
+  /** Weapon slot rects in HUD units from the last frame (touch hit-testing). */
   private slotRects: SlotRect[] = [];
+  /** Last frame's HUD scale + safe-area inset, to map CSS px into HUD units. */
+  private lastUi = 1;
+  private lastIns: Insets = NO_INSETS;
+  /** Last frame's layout (debug / layout checks). */
+  layout: HudLayout | null = null;
+  private voiceKey = '';
+
+  /**
+   * Tell the DOM voice overlay (voice/VoiceOverlay.ts) where it may sit without covering the
+   * HUD: CSS variables on <html>, written only when they change.
+   */
+  private publishVoiceSlot(v: VoiceSlot): void {
+    const key = `${v.x.toFixed(1)}|${v.y.toFixed(1)}|${v.w.toFixed(1)}|${v.align}|${v.compact}`;
+    if (key === this.voiceKey || typeof document === 'undefined') return;
+    this.voiceKey = key;
+    const st = document.documentElement.style;
+    st.setProperty('--vx-x', `${v.x}px`);
+    st.setProperty('--vx-y', `${v.y}px`);
+    st.setProperty('--vx-w', `${v.w}px`);
+    st.setProperty('--vx-tf', 'none');
+    st.setProperty('--vx-jc', v.align === 'center' ? 'center' : 'flex-start');
+    document.documentElement.toggleAttribute('data-vx-compact', v.compact);
+  }
+
+  /** Game over / left: the overlay goes back to its default spot (top centre). */
+  dispose(): void {
+    this.voiceKey = '';
+    if (typeof document === 'undefined') return;
+    const st = document.documentElement.style;
+    for (const k of ['--vx-x', '--vx-y', '--vx-w', '--vx-tf', '--vx-jc']) st.removeProperty(k);
+    document.documentElement.removeAttribute('data-vx-compact');
+  }
 
   /** Returns the owned weapon slot under a CSS-px point, or 0. */
-  slotAt(x: number, y: number): number {
+  slotAt(cx: number, cy: number): number {
+    const x = (cx - this.lastIns.left) / this.lastUi;
+    const y = (cy - this.lastIns.top) / this.lastUi;
     const pad = 6;
     const hit = this.slotRects.find(
       (r) => x >= r.x - pad && x <= r.x + r.w + pad && y >= r.y - pad && y <= r.y + r.h + pad,
@@ -117,6 +252,8 @@ export class Hud {
     const touch = !!s.touch;
     const ui = hudScale(cw, ch, touch);
     const ins = s.inset ?? NO_INSETS;
+    this.lastUi = ui;
+    this.lastIns = ins;
     // Everything below works in "HUD units" = CSS px / ui, inside the safe area.
     const w = (cw - ins.left - ins.right) / ui;
     const h = (ch - ins.top - ins.bottom) / ui;
@@ -124,25 +261,36 @@ export class Hud {
     ctx.setTransform(dpr * ui, 0, 0, dpr * ui, dpr * ins.left, dpr * ins.top);
     ctx.textBaseline = 'alphabetic';
     this.slotRects = [];
-    this.timer(ctx, w, s);
-    if (s.me) this.score(ctx, w, s.me);
-    this.minimap(ctx, w, s);
-    if (touch) {
-      if (s.me) this.health(ctx, 96, s.me);
-      this.team(ctx, s, s.me ? 76 : 10);
-    } else {
-      this.team(ctx, s, 10);
-      if (s.me) this.health(ctx, h, s.me);
+    const heat = !!s.me && s.me.st === 'alive' && !!this.content.weapons.get(s.me.w)?.heat;
+    const L = hudLayout(cw, ch, touch, ins, {
+      players: s.snap.players.length,
+      me: !!s.me,
+      heat,
+    });
+    this.layout = L;
+    this.publishVoiceSlot(L.voice);
+    if (L.block) this.compactBlock(ctx, L.block, s);
+    else {
+      this.timer(ctx, w, s);
+      if (s.me) this.score(ctx, w, s.me);
     }
+    this.minimap(ctx, w, s);
+    if (L.block) {
+      // armour bar lives inside the compact block
+    } else if (touch) {
+      if (s.me) this.health(ctx, 96, s.me);
+    } else if (s.me) this.health(ctx, h, s.me);
+    if (L.team) this.team(ctx, s, L.team.top, L.team.cols, L.team.rowH);
     if (s.me) {
       if (touch) this.weaponColumn(ctx, w, s.me);
       else this.weapons(ctx, w, h, s.me);
       this.stateBanner(ctx, w, h, s.me);
       if (s.me.br && s.me.st === 'alive') this.braced(ctx, w, touch ? h - 24 : h - 122, s.now ?? 0);
     }
-    const boss = this.bossBar(ctx, w, s);
+    // compact: the clock left the top centre, the voice overlay (one row) sits there instead
+    const boss = this.bossBar(ctx, w, s, L.compact ? 64 : 80);
     this.waveBanner(ctx, w, h, s);
-    this.notices(ctx, w, s.notices, boss ? 136 : 110);
+    this.notices(ctx, w, s.notices, (boss ? 136 : 110) - (L.compact ? 6 : 0));
     this.footer(ctx, w, h, s);
     // convert slot rects to CSS px
     for (const r of this.slotRects) {
@@ -206,7 +354,7 @@ export class Hud {
   }
 
   /** Boss health bar under the timer; returns true when drawn. */
-  private bossBar(ctx: CanvasRenderingContext2D, w: number, s: HudState): boolean {
+  private bossBar(ctx: CanvasRenderingContext2D, w: number, s: HudState, y: number): boolean {
     let def: EnemyDef | undefined;
     let hp = 0;
     let count = 0;
@@ -222,7 +370,6 @@ export class Hud {
     if (!def) return false;
     const bw = 360;
     const x = w / 2 - bw / 2;
-    const y = 80;
     this.panel(ctx, x - 8, y - 4, bw + 16, 34);
     ctx.textAlign = 'center';
     ctx.font = F(700, 12);
@@ -274,41 +421,141 @@ export class Hud {
     );
   }
 
-  private team(ctx: CanvasRenderingContext2D, s: HudState, top: number): void {
+  private team(
+    ctx: CanvasRenderingContext2D,
+    s: HudState,
+    top: number,
+    cols: 1 | 2,
+    rowH: number,
+  ): void {
     const players = s.snap.players;
     if (players.length < 2) return;
-    // Up to 4 marines get roomy rows; a 5..8 squad packs into compact rows.
-    const compact = players.length > 4;
-    const rowH = compact ? 19 : 26;
-    const badge = compact ? 0.42 : 0.55;
-    this.panel(ctx, 10, top, 200, 14 + players.length * rowH);
+    // Up to 4 marines get roomy rows; a 5..8 squad packs into compact rows (or 2 columns).
+    const tight = rowH < 22 || cols === 2;
+    const colW = cols === 2 ? BLOCK_W / 2 : TEAM_W;
+    const badge = tight ? 0.42 : 0.55;
+    const rows = cols === 2 ? Math.ceil(players.length / 2) : players.length;
+    this.panel(ctx, 10, top, cols === 2 ? BLOCK_W : TEAM_W, 14 + rows * rowH);
     ctx.textAlign = 'left';
     players.forEach((p, i) => {
-      const y = top + (compact ? 9 : 12) + i * rowH;
+      const col = cols === 2 ? i % 2 : 0;
+      const row = cols === 2 ? Math.floor(i / 2) : i;
+      const x = col * colW;
+      const y = top + (rowH < 22 ? 9 : rowH < 26 ? 10 : 12) + row * rowH;
+      const right = x + colW - (cols === 2 ? 6 : 0);
+      const barW = right - 6 - (x + 34);
       const ch = this.content.chapter(p.c);
-      if (!this.assets.draw(ctx, `badge_${ch.id}`, 0, 23, y + (compact ? 7 : 9), 0, badge)) {
+      if (!this.assets.draw(ctx, `badge_${ch.id}`, 0, x + 23, y + (tight ? 7 : 9), 0, badge)) {
         ctx.fillStyle = this.chapterColor(p.c);
-        ctx.fillRect(20, y, 6, compact ? 14 : 18);
+        ctx.fillRect(x + 20, y, 6, tight ? 14 : 18);
       }
-      ctx.font = F(600, compact ? 11 : 12);
+      ctx.font = F(600, tight ? 11 : 12);
       ctx.fillStyle = p.st === 'dead' ? '#6a6050' : HUD.parchment;
-      ctx.fillText(`${p.name}${p.id === s.me?.id ? ' (you)' : ''}`, 34, y + (compact ? 9 : 10));
+      const you = p.id === s.me?.id ? (cols === 2 ? '*' : ' (you)') : '';
       const label = p.st === 'alive' ? '' : p.st === 'downed' ? `DOWN ${Math.ceil(p.bo)}s` : 'KIA';
+      const name = `${p.name}${you}`;
+      if (cols === 2) {
+        // two narrow columns: name clipped, then the score / state underneath the bar
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x + 30, y - 10, colW - 34, 14);
+        ctx.clip();
+        ctx.fillText(name, x + 34, y + 9);
+        ctx.restore();
+      } else ctx.fillText(name, x + 34, y + (tight ? 9 : 10));
       ctx.fillStyle = p.st === 'downed' ? '#ff6a50' : HUD.dim;
       ctx.textAlign = 'right';
       if (!label) ctx.font = F(600, 10, true);
-      ctx.fillText(label || `${p.sc ?? 0} pts`, 200, y + (compact ? 9 : 10));
+      if (cols === 2) {
+        ctx.font = F(600, 9, true);
+        ctx.fillText(label || `${p.sc ?? 0}`, right, y + 9);
+      } else ctx.fillText(label || `${p.sc ?? 0} pts`, right, y + (tight ? 9 : 10));
       ctx.textAlign = 'left';
       this.bar(
         ctx,
-        34,
-        y + (compact ? 12 : 14),
-        160,
-        compact ? 2 : 3,
+        x + 34,
+        y + (tight ? 12 : 14),
+        cols === 2 ? barW : 160,
+        tight ? 2 : 3,
         p.st === 'alive' ? p.hp / p.mhp : p.bo / PLAYER.bleedOutTime,
         p.st === 'alive' ? HUD.gold : HUD.red,
       );
     });
+  }
+
+  /**
+   * Compact phone layout: clock + wave status + own score + armour (+ plasma heat) stacked in
+   * the top-left corner (the emblem watermark behind the clock), instead of the top-centre
+   * plates and the separate armour panel.
+   */
+  private compactBlock(
+    ctx: CanvasRenderingContext2D,
+    b: NonNullable<HudLayout['block']>,
+    s: HudState,
+  ): void {
+    const { x, y, w } = b;
+    const me = s.me;
+    this.panel(ctx, x, y, w, b.h);
+    ctx.globalAlpha = 0.22;
+    this.assets.draw(ctx, 'ui_emblem', 0, x + w / 2, y + 26, 0, 0.75);
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
+    ctx.font = F(700, 24, true);
+    ctx.fillStyle = HUD.parchment;
+    ctx.fillText(formatTime(s.snap.time * 1000), x + 10, y + 32);
+    if (me) {
+      ctx.textAlign = 'right';
+      ctx.font = F(700, 8);
+      ctx.fillStyle = HUD.gold;
+      ctx.fillText('SCORE', x + w - 10, y + 16);
+      ctx.font = F(800, 18, true);
+      ctx.fillStyle = '#fff2c8';
+      ctx.fillText(String(me.sc ?? 0), x + w - 10, y + 34);
+    }
+    ctx.textAlign = 'left';
+    ctx.font = F(600, 10);
+    const kills = s.snap.players.reduce((a, p) => a + p.k, 0);
+    const wv = s.snap.wv;
+    const status = !wv
+      ? `${s.snap.enemies.length} XENOS`
+      : wv.a
+        ? `${wv.r} LEFT`
+        : `NEXT IN ${Math.ceil(wv.nx ?? 0)}s`;
+    ctx.fillStyle = wv?.h ? '#ff8a60' : HUD.gold;
+    ctx.fillText(`WAVE ${s.snap.wave}  ✠  ${status}  ✠  ${kills} PURGED`, x + 10, y + 49);
+    if (!me) return;
+    const ay = b.armourY;
+    const frac = me.st === 'alive' ? Math.max(0, me.hp / me.mhp) : 0;
+    this.bar(
+      ctx,
+      x + 6,
+      ay,
+      w - 12,
+      14,
+      frac,
+      frac > 0.5 ? '#c9a040' : frac > 0.25 ? '#d07a28' : HUD.red,
+    );
+    ctx.font = F(700, 11, true);
+    ctx.fillStyle = '#fff6e0';
+    ctx.fillText(`${Math.max(0, me.hp)} / ${me.mhp}`, x + 12, ay + 11);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = HUD.parchment;
+    ctx.fillText(`☠ ${me.k}`, x + w - 12, ay + 11);
+    const def = this.content.weapons.get(me.w);
+    if (me.st === 'alive' && def?.heat) {
+      const ht = me.ht ?? 0;
+      const venting = !!me.vt;
+      const hot = ht >= def.heat.superchargeAt;
+      ctx.textAlign = 'left';
+      ctx.font = F(700, 9);
+      ctx.fillStyle = venting ? '#ff6a50' : hot ? '#bff0ff' : HUD.dim;
+      ctx.fillText(venting ? 'VENTING' : hot ? 'SUPERCHARGED' : 'PLASMA HEAT', x + 8, b.heatY + 8);
+      const bx = x + 110;
+      const bw = w - 116;
+      this.bar(ctx, bx, b.heatY + 1, bw, 8, ht, venting ? HUD.red : hot ? '#bff0ff' : HUD.heat);
+      ctx.fillStyle = HUD.parchment;
+      ctx.fillRect(bx + bw * def.heat.superchargeAt, b.heatY - 1, 1, 12);
+    }
   }
 
   /** Own score: big, right of the clock (teammates' scores are small, in the team panel). */
@@ -340,10 +587,10 @@ export class Hud {
 
   private minimap(ctx: CanvasRenderingContext2D, w: number, s: HudState): void {
     const mw = 190;
-    const mh = (mw * ARENA.height) / ARENA.width;
+    const mh = (mw * this.content.map.arena.height) / this.content.map.arena.width;
     const x0 = w - mw - 12;
     const y0 = 12;
-    const k = mw / ARENA.width;
+    const k = mw / this.content.map.arena.width;
     this.panel(ctx, x0 - 4, y0 - 4, mw + 8, mh + 8);
     ctx.fillStyle = 'rgba(40,30,20,0.6)';
     ctx.fillRect(x0, y0, mw, mh);
@@ -502,10 +749,36 @@ export class Hud {
           ctx.fillText(`${me.ammo}/${def.magazine}`, x + cell / 2, by - 4);
         }
       }
+      if (active) this.weaponLock(ctx, me, x, y, cell, 64);
       ctx.globalAlpha = 1;
       this.slotRects.push({ slot: def.slot, owned, x, y, w: cell, h: 64 });
       x += cell + 6;
     }
+  }
+
+  /**
+   * Sprint weapon lock on the active slot: greyed out while sprinting ("SPRINT"), then a gold
+   * fill rises over the MARINE_SPRINT.weaponReadyDelayS until the weapon is ready again.
+   */
+  private weaponLock(
+    ctx: CanvasRenderingContext2D,
+    me: PlayerSnap,
+    x: number,
+    y: number,
+    cw: number,
+    ch: number,
+  ): void {
+    const wd = me.wd ?? 0;
+    if (!me.sp && wd <= 0) return;
+    const ready = me.sp ? 0 : 1 - Math.min(1, wd / MARINE_SPRINT.weaponReadyDelayS);
+    ctx.fillStyle = 'rgba(12,12,14,0.68)';
+    ctx.fillRect(x + 2, y + 2, cw - 4, (ch - 4) * (1 - ready));
+    ctx.fillStyle = 'rgba(232,196,106,0.85)';
+    ctx.fillRect(x + 2, y + ch - 5, (cw - 4) * ready, 3);
+    ctx.textAlign = 'center';
+    ctx.font = F(700, 10);
+    ctx.fillStyle = me.sp ? '#f2e3b0' : HUD.gold;
+    ctx.fillText(me.sp ? 'SPRINT' : 'READY…', x + cw / 2, y + ch / 2 + 4);
   }
 
   /** Touch layout: big tappable weapon slots stacked under the minimap on the right. */
@@ -585,6 +858,7 @@ export class Hud {
           y + chh - 6,
         );
       }
+      if (active) this.weaponLock(ctx, me, x, y, cw, chh);
       ctx.globalAlpha = 1;
       this.slotRects.push({ slot: def.slot, owned, x, y, w: cw, h: chh });
     });
@@ -613,8 +887,11 @@ export class Hud {
         ctx.font = F(600, 11);
         ctx.fillStyle = `rgba(${color},0.5)`;
         ctx.fillText(st.kind === 'move' ? 'MOVE' : 'AIM · FIRE', hx, hy + 4);
+        if (st.sprintRing) this.sprintRing(ctx, hx, hy, st.sprintRing, false, true);
         continue;
       }
+      if (st.sprintRing)
+        this.sprintRing(ctx, st.origin.x, st.origin.y, st.sprintRing, !!st.sprintLit, false);
       ctx.fillStyle = `rgba(${color},0.12)`;
       ctx.strokeStyle = `rgba(${color},0.5)`;
       ctx.lineWidth = 2;
@@ -627,6 +904,39 @@ export class Hud {
       ctx.arc(st.knob.x, st.knob.y, st.radius * 0.45, 0, Math.PI * 2);
       ctx.fill();
     }
+  }
+
+  /** Move stick's outer "sprint zone": push the thumb out here to sprint (lit while sprinting). */
+  private sprintRing(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    r: number,
+    lit: boolean,
+    hint: boolean,
+  ): void {
+    ctx.save();
+    ctx.setLineDash(lit ? [] : [6, 6]);
+    ctx.lineWidth = lit ? 5 : 2;
+    ctx.strokeStyle = lit
+      ? 'rgba(255,192,74,0.9)'
+      : hint
+        ? 'rgba(232,217,176,0.14)'
+        : 'rgba(255,192,74,0.38)';
+    if (lit) {
+      ctx.shadowColor = 'rgba(255,170,40,0.8)';
+      ctx.shadowBlur = 12;
+    }
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.setLineDash([]);
+    ctx.textAlign = 'center';
+    ctx.font = F(700, 9);
+    ctx.fillStyle = lit ? 'rgba(255,214,130,0.95)' : `rgba(232,217,176,${hint ? 0.3 : 0.55})`;
+    ctx.fillText(lit ? '» SPRINT «' : '» SPRINT', x, y - r - 5);
+    ctx.restore();
   }
 
   private stateBanner(ctx: CanvasRenderingContext2D, w: number, h: number, me: PlayerSnap): void {

@@ -8,14 +8,18 @@ class Emitter {
     return this;
   }
   once(ev: string, cb: Handler) {
-    const w: Handler = (d) => {
-      this.off(ev, w);
-      cb(d);
-    };
+    const w = Object.assign(
+      (d?: unknown) => {
+        this.off(ev, w);
+        cb(d);
+      },
+      { fn: cb },
+    );
     return this.on(ev, w);
   }
   off(ev: string, cb: Handler) {
-    this.h[ev] = (this.h[ev] ?? []).filter((x) => x !== cb);
+    // like eventemitter3: off(fn) also removes a once(fn) listener
+    this.h[ev] = (this.h[ev] ?? []).filter((x) => x !== cb && (x as { fn?: Handler }).fn !== cb);
     return this;
   }
   emit(ev: string, d?: unknown) {
@@ -55,7 +59,17 @@ class FakePeer extends Emitter {
     peers.push(this);
     setTimeout(() => this.emit('open', 'me'), 0);
   }
+  reconnects = 0;
+  reconnect() {
+    this.disconnected = false;
+    this.reconnects++;
+  }
   connect() {
+    // like PeerJS: connecting on a disconnected peer errors and returns undefined
+    if (this.disconnected) {
+      setTimeout(() => this.emit('error', Object.assign(new Error('x'), { type: 'disconnected' })));
+      return undefined;
+    }
     const c = new FakeConn();
     this.conns.push(c);
     const step = script.shift();
@@ -64,6 +78,7 @@ class FakePeer extends Emitter {
   }
   destroy() {
     this.destroyed = true;
+    this.disconnected = true; // like PeerJS
   }
 }
 vi.mock('peerjs', () => ({ default: FakePeer }));
@@ -120,6 +135,47 @@ describe('joinPeerGame', () => {
     expect(peers[0]!.conns).toHaveLength(3);
     expect(peers[0]!.conns[0]!.closed).toBe(true);
     expect(progress.at(-1)).toMatch(/Połączono/);
+  });
+
+  it('keeps the peer alive across "peer-unavailable" retries', async () => {
+    script = [(p) => notFound(p), (_, c) => c.emit('open')];
+    const p = joinPeerGame('ABCD', 'Marine');
+    await vi.advanceTimersByTimeAsync(5000);
+    await p;
+    expect(peers[0]!.destroyed).toBe(false);
+    expect(peers[0]!.conns).toHaveLength(2);
+  });
+
+  it('reconnects when the signaling socket drops while retrying "not found"', async () => {
+    script = [
+      (p) => (notFound(p), (p.disconnected = true), p.emit('disconnected')),
+      (_, c) => c.emit('open'),
+    ];
+    const p = joinPeerGame('ABCD', 'Marine');
+    await vi.advanceTimersByTimeAsync(5000);
+    const conn = await p;
+    expect(conn.roomCode).toBe('ABCD');
+    expect(peers[0]!.reconnects).toBe(1);
+  });
+
+  it('reports "room not found" (not signaling) when signaling keeps dropping after it', async () => {
+    script = Array.from(
+      { length: 20 },
+      () => (p: FakePeer) => (notFound(p), (p.disconnected = true), p.emit('disconnected')),
+    );
+    const p = joinPeerGame('ABCD', 'Marine');
+    const err = expect(p).rejects.toMatchObject({ kind: 'not-found' });
+    await vi.advanceTimersByTimeAsync(20000);
+    await err;
+  });
+
+  it('reports "room not found" when signaling goes silent after the first one', async () => {
+    // the public cloud answers an unknown id once; retried offers get no reply at all
+    script = [(p) => notFound(p)];
+    const p = joinPeerGame('ABCD', 'Marine');
+    const err = expect(p).rejects.toMatchObject({ kind: 'not-found' });
+    await vi.advanceTimersByTimeAsync(16000);
+    await err;
   });
 
   it('gives up with a clear "room not found" after the retry window', async () => {

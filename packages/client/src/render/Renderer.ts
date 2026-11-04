@@ -1,7 +1,7 @@
 import {
-  ARENA,
   BREACH_STATE,
   defaultContent,
+  MARINE_SPRINT,
   PLAYER,
   ENEMY_FLAG,
   type ChapterDef,
@@ -9,6 +9,7 @@ import {
   type EnemyDef,
   type PlayerSnap,
   type Snapshot,
+  type SprintState,
 } from '@sms/shared';
 import { lerp, lerpAngle } from '../game/interpolation.js';
 import { drawBreach } from './breaches.js';
@@ -31,7 +32,7 @@ export interface RenderFrame {
   t: number;
   myId: number;
   /** Predicted local position + aim (overrides interpolated state for our marine). */
-  me: { x: number; y: number; aim: number } | null;
+  me: { x: number; y: number; aim: number; sprint?: SprintState | null } | null;
   nowMs: number;
   dt: number;
 }
@@ -123,8 +124,8 @@ export class Renderer {
   ) {
     this.ctx = canvas.getContext('2d', { alpha: false })!;
     this.decals = document.createElement('canvas');
-    this.decals.width = ARENA.width * DECAL_SCALE;
-    this.decals.height = ARENA.height * DECAL_SCALE;
+    this.decals.width = this.content.map.arena.width * DECAL_SCALE;
+    this.decals.height = this.content.map.arena.height * DECAL_SCALE;
     this.decalCtx = this.decals.getContext('2d')!;
     this.buildScenery();
     this.resize();
@@ -132,8 +133,8 @@ export class Renderer {
 
   /** Ruined hive-city dressing around the arena + creep patches (deterministic). */
   private buildScenery(): void {
-    const W = ARENA.width;
-    const H = ARENA.height;
+    const W = this.content.map.arena.width;
+    const H = this.content.map.arena.height;
     const props: Prop[] = [];
     // gothic pillars along the arena wall
     for (let x = 0; x <= W; x += 200) {
@@ -243,7 +244,7 @@ export class Renderer {
 
     this.drawFloor();
     this.drawCreep(f.b.time);
-    ctx.drawImage(this.decals, 0, 0, ARENA.width, ARENA.height);
+    ctx.drawImage(this.decals, 0, 0, this.content.map.arena.width, this.content.map.arena.height);
     this.drawArenaEdge();
     // Terrain layer: pillars, rubble and edge boulders always sit UNDER every unit.
     this.drawProps();
@@ -265,8 +266,8 @@ export class Renderer {
     const v = this.camera.view(TILE);
     const tx0 = Math.max(0, Math.floor(v.x0 / TILE));
     const ty0 = Math.max(0, Math.floor(v.y0 / TILE));
-    const tx1 = Math.min(ARENA.width / TILE, Math.ceil(v.x1 / TILE));
-    const ty1 = Math.min(ARENA.height / TILE, Math.ceil(v.y1 / TILE));
+    const tx1 = Math.min(this.content.map.arena.width / TILE, Math.ceil(v.x1 / TILE));
+    const ty1 = Math.min(this.content.map.arena.height / TILE, Math.ceil(v.y1 / TILE));
     const hasTiles = this.assets.has('tile_floor_0');
     for (let ty = ty0; ty < ty1; ty++) {
       for (let tx = tx0; tx < tx1; tx++) {
@@ -277,7 +278,8 @@ export class Renderer {
         // Imperial deck: plain plates, worn plates, drain grates, hazard strips,
         // and a seal plate in the very centre.
         const centre =
-          Math.abs(cx - ARENA.width / 2) < TILE && Math.abs(cy - ARENA.height / 2) < TILE;
+          Math.abs(cx - this.content.map.arena.width / 2) < TILE &&
+          Math.abs(cy - this.content.map.arena.height / 2) < TILE;
         const key = centre
           ? 'tile_seal'
           : roll < 25
@@ -296,8 +298,8 @@ export class Renderer {
 
   private drawArenaEdge(): void {
     const { ctx } = this;
-    const W = ARENA.width;
-    const H = ARENA.height;
+    const W = this.content.map.arena.width;
+    const H = this.content.map.arena.height;
     ctx.save();
     // broken hab-block wall: dark masonry band + brass-capped parapet
     ctx.fillStyle = '#17130f';
@@ -850,12 +852,17 @@ export class Renderer {
       const ch: ChapterDef = this.content.chapter(p.c);
       const color = chapterUiColor(ch);
       const w = this.walk.get(p.id) ?? { x, y, dist: 0 };
-      w.dist += Math.hypot(x - w.x, y - w.y);
+      const stepX = x - w.x;
+      const stepY = y - w.y;
+      w.dist += Math.hypot(stepX, stepY);
       w.x = x;
       w.y = y;
       this.walk.set(p.id, w);
+      const mine = p.id === f.myId && f.me?.sprint;
+      const sprinting = p.st === 'alive' && (mine ? f.me!.sprint!.sprinting : p.sp === 1);
 
       if (p.br && p.st === 'alive') this.drawBraceStance(x, y, a, time);
+      if (sprinting) this.drawSprintTrail(p, x, y, a, f.dt);
       this.drawShadow(x, y, PLAYER.radius + 6);
       ctx.strokeStyle = color;
       ctx.globalAlpha = 0.55;
@@ -905,20 +912,41 @@ export class Renderer {
           else this.recoil.set(p.id, next);
         }
         const held = this.content.weapons.get(p.w)?.sprites.held ?? '';
+        const pose =
+          p.st === 'alive'
+            ? weaponPose(sprinting, mine ? f.me!.sprint!.weaponDelay : (p.wd ?? 0))
+            : 1;
         if (this.assets.draw(ctx, body, frame, x, y, a)) {
-          this.assets.draw(ctx, held, 0, x - Math.cos(a) * rec, y - Math.sin(a) * rec, a);
+          // Weapon: held in the aim direction; while sprinting it is slung diagonally across
+          // the backpack (barrel pointing back), and over the ready delay it swings forward.
+          const e = pose * pose * (3 - 2 * pose);
+          const back = rec * e + 8 * (1 - e);
+          this.assets.draw(
+            ctx,
+            held,
+            0,
+            x - Math.cos(a) * back,
+            y - Math.sin(a) * back,
+            a + (1 - e) * 2.35,
+            0.82 + 0.18 * e,
+          );
+          if (pose < 1) this.drawRunningArms(ch, x, y, a, w.dist, 1 - pose);
           this.assets.draw(ctx, `${body}_top`, 0, x, y, a);
         } else {
           ctx.fillStyle = ch.primary;
           ctx.beginPath();
           ctx.arc(x, y, PLAYER.radius, 0, Math.PI * 2);
           ctx.fill();
-          ctx.strokeStyle = ch.trim;
-          ctx.lineWidth = 5;
-          ctx.beginPath();
-          ctx.moveTo(x, y);
-          ctx.lineTo(x + Math.cos(a) * 26, y + Math.sin(a) * 26);
-          ctx.stroke();
+          if (pose > 0) {
+            ctx.strokeStyle = ch.trim;
+            ctx.lineWidth = 5;
+            ctx.globalAlpha = pose;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + Math.cos(a) * 26 * pose, y + Math.sin(a) * 26 * pose);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
         }
       }
       if (p.id !== f.myId) {
@@ -939,8 +967,99 @@ export class Renderer {
           ctx.fillStyle = p.vt ? '#ff5030' : '#6fd8ff';
           ctx.fillRect(x - 18, y - 28, 36 * Math.min(1, p.ht), 2);
         }
+        if (p.id === f.myId && f.me?.sprint) this.drawStaminaBar(f.me.sprint, x, y, time);
       }
     }
+  }
+
+  /** Cheap run pose: two armoured fists pumping alternately beside the torso. */
+  private drawRunningArms(
+    ch: ChapterDef,
+    x: number,
+    y: number,
+    a: number,
+    dist: number,
+    k: number,
+  ): void {
+    const { ctx } = this;
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    const swing = Math.sin(dist / 7) * 7;
+    ctx.globalAlpha = k;
+    for (const side of [-1, 1]) {
+      const fwd = 3 + swing * side;
+      const px = x + c * fwd - s * 12 * side;
+      const py = y + s * fwd + c * 12 * side;
+      ctx.fillStyle = ch.primary;
+      ctx.strokeStyle = ch.trim;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(px, py, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /**
+   * Sprint feedback seen by everyone: kicked-up dust behind the boots and a faint afterimage
+   * trailing the marine (subtle; no extra network data beyond the sprint flag).
+   */
+  private drawSprintTrail(p: PlayerSnap, x: number, y: number, a: number, dt: number): void {
+    const { ctx } = this;
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    if (Math.random() < dt * 20)
+      this.particles.spawn({
+        x: x - c * 14 + (Math.random() - 0.5) * 14,
+        y: y - s * 14 + (Math.random() - 0.5) * 14 + 6,
+        vx: -c * 40 + (Math.random() - 0.5) * 24,
+        vy: -s * 40 + (Math.random() - 0.5) * 24,
+        maxLife: 0.5,
+        size: 3.5,
+        grow: 2.6,
+        color: '#6b5a44',
+        shape: 'smoke',
+        additive: false,
+      });
+    const body = `marine_${this.content.chapter(p.c).id}`;
+    for (const [k, alpha] of [
+      [1, 0.16],
+      [2, 0.07],
+    ] as const) {
+      ctx.globalAlpha = alpha;
+      const gx = x - c * 11 * k;
+      const gy = y - s * 11 * k;
+      if (!this.assets.draw(ctx, body, 0, gx, gy, a)) {
+        ctx.fillStyle = this.content.chapter(p.c).primary;
+        ctx.beginPath();
+        ctx.arc(gx, gy, PLAYER.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /** Local marine's sprint stamina: a thin bar under the boots, hidden while full and idle. */
+  private drawStaminaBar(sp: SprintState, x: number, y: number, time: number): void {
+    const max = MARINE_SPRINT.staminaMaxS;
+    if (!sp.sprinting && sp.stamina >= max - 1e-6) return;
+    const { ctx } = this;
+    const frac = Math.max(0, Math.min(1, sp.stamina / max));
+    const low = !sp.sprinting && sp.stamina < MARINE_SPRINT.minToStartS;
+    const bx = x - 18;
+    const by = y + 26;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(bx - 1, by - 1, 38, 5);
+    ctx.fillStyle = low
+      ? `rgba(220,90,60,${0.65 + 0.35 * Math.sin(time * 10)})`
+      : sp.sprinting
+        ? '#f2e3b0'
+        : '#9fc7e8';
+    ctx.fillRect(bx, by, 36 * frac, 3);
+    // restart threshold tick
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillRect(bx + (36 * MARINE_SPRINT.minToStartS) / max, by - 1, 1, 5);
   }
 
   private drawProjectiles(f: RenderFrame): void {
@@ -1070,4 +1189,14 @@ export class Renderer {
   get pixelRatio(): number {
     return this.dpr;
   }
+}
+
+/**
+ * How far the weapon is raised (0 = stowed on the back, 1 = held): stowed while sprinting,
+ * swinging up over the post-sprint weapon-ready delay. Pure (unit tested).
+ */
+export function weaponPose(sprinting: boolean, weaponDelay: number): number {
+  if (sprinting) return 0;
+  if (weaponDelay <= 0) return 1;
+  return Math.max(0, Math.min(1, 1 - weaponDelay / MARINE_SPRINT.weaponReadyDelayS));
 }

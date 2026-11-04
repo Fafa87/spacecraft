@@ -33,6 +33,12 @@ export interface PlayerSnap {
   sc: number;
   /** Braced (bracing weapon equipped, standing still long enough). */
   br?: 1;
+  /** Sprinting (v0.5.3-dev; optional so v5 peers without it still decode). */
+  sp?: 1;
+  /** Sprint stamina in seconds (0..MARINE_SPRINT.staminaMaxS). Absent from older hosts. */
+  stm?: number;
+  /** Seconds until the weapon is ready again after a sprint (absent/0 = ready). */
+  wd?: number;
 }
 
 /** Spawn point state in Snapshot.sp: idle, telegraphing (about to emerge), active (emerging). */
@@ -116,6 +122,13 @@ export function waveSnap(world: World): WaveSnap {
   };
 }
 
+function sprintFields(p: Player): { sp?: 1; stm: number; wd?: number } {
+  const out: { sp?: 1; stm: number; wd?: number } = { stm: round(p.sprint.stamina, 2) };
+  if (p.sprint.sprinting) out.sp = 1;
+  if (p.sprint.weaponDelay > 0) out.wd = round(p.sprint.weaponDelay, 2);
+  return out;
+}
+
 function heatFields(world: World, p: Player): { ht?: number; vt?: 1 } {
   const heat = world.content.weapon(p.current).heat;
   if (!heat) return {};
@@ -165,6 +178,7 @@ export function buildSnapshot(world: World, bleedOutTime: number): Snapshot {
       sc: p.score,
       ...(isBraced(p, c.weapon(p.current)) ? { br: 1 as const } : {}),
       ...heatFields(world, p),
+      ...sprintFields(p),
     })),
     enemies: world.enemies.map((e) => [
       e.id,

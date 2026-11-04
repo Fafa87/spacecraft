@@ -3,6 +3,7 @@ import type { WeaponDef } from '../../data/index.js';
 import { allocId } from '../world.js';
 import type { Player, World } from '../types.js';
 import { damagePlayer } from './combat.js';
+import { effectiveFire, sprintFacing } from './movement.js';
 
 /** Grants a weapon to a player (no-op if owned). Returns true if newly granted. */
 export function grantWeapon(world: World, player: Player, weaponId: string): boolean {
@@ -31,7 +32,8 @@ export function updatePlayerWeapon(world: World, p: Player, dt: number): void {
     return;
   }
   const input = p.input;
-  p.aim = input.aim;
+  // Sprinting: the marine faces where he runs (directional armour turns with him).
+  p.aim = sprintFacing(p.sprint, input.mx, input.my) ?? input.aim;
 
   // Weapon switching.
   if (input.slot > 0) {
@@ -51,7 +53,7 @@ export function updatePlayerWeapon(world: World, p: Player, dt: number): void {
     world.events.push({ e: 'brace', p: p.id, w: def.id });
   // Keep the overshoot while the trigger stays down so fire rates aren't rounded up to whole
   // ticks; reset to 0 when idle (no stored burst).
-  const held = p.triggerWasDown && p.input.fire && def.automatic;
+  const held = p.triggerWasDown && effectiveFire(p.input.fire, p.sprint) && def.automatic;
   p.fireCooldown = Math.max(held ? -dt : 0, p.fireCooldown - dt);
   coolWeapons(world, p, dt);
 
@@ -67,7 +69,9 @@ export function updatePlayerWeapon(world: World, p: Player, dt: number): void {
     startReload(world, p, def);
   }
 
-  const wantsFire = input.fire && (def.automatic || !p.triggerWasDown);
+  // Trigger ignored while sprinting / until the weapon is ready again after a sprint.
+  const fire = effectiveFire(input.fire, p.sprint);
+  const wantsFire = fire && (def.automatic || !p.triggerWasDown);
   p.triggerWasDown = input.fire;
   if (!wantsFire || p.reloadTimer > 0) return;
 

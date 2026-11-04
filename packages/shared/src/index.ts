@@ -2,6 +2,7 @@ export * from './constants.js';
 export * from './math/vec.js';
 export * from './math/rng.js';
 export * from './data/index.js';
+export * from './maps/index.js';
 export * from './sim/index.js';
 export * from './net/index.js';
 export * from './session/index.js';

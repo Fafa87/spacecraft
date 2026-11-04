@@ -1,5 +1,5 @@
-import { ARENA, PLAYER } from '../constants.js';
-import { defaultContent, type ContentRegistry } from '../data/index.js';
+import { PLAYER } from '../constants.js';
+import { defaultContent, newSprintState, type ContentRegistry } from '../data/index.js';
 import { Rng } from '../math/rng.js';
 import { emptyInput, type Player, type World } from './types.js';
 
@@ -14,10 +14,15 @@ export function createWorld(
   players: PlayerSetup[],
   seed: number,
   content: ContentRegistry = defaultContent,
+  /** Registered map id; omitted = the map of `content` (the wave map by default). */
+  mapId?: string,
 ): World {
+  if (mapId !== undefined) content = content.withMap(mapId);
+  const map = content.map;
   const d = content.director;
   const world: World = {
     content,
+    map,
     seed,
     rng: new Rng(seed),
     tick: 0,
@@ -51,12 +56,14 @@ export function createWorld(
     over: false,
     stats: { kills: 0, shots: 0, killsByType: {} },
   };
-  const cx = ARENA.width / 2;
-  const cy = ARENA.height / 2;
+  const spawn = map.playerSpawn;
+  const cx = spawn.x;
+  const cy = spawn.y;
   players.forEach((setup, i) => {
     const a = (i / Math.max(1, players.length)) * Math.PI * 2;
     // ring grows with the squad so up to MAX_PLAYERS (8) marines start apart, not overlapping
-    const offset = players.length > 1 ? Math.max(50, players.length * 16) : 0;
+    const offset =
+      players.length > 1 ? Math.max(spawn.ringMin, players.length * spawn.ringPerMarine) : 0;
     world.players.push(
       createPlayer(
         content,
@@ -109,6 +116,7 @@ export function createPlayer(
     killsByType: {},
     stillTime: 0,
     fireSlow: 0,
+    sprint: newSprintState(),
     damageDealt: 0,
     diedAt: null,
   };

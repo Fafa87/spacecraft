@@ -88,11 +88,10 @@ function openPeer(id: string | undefined, opts: PeerOptions): Promise<Peer> {
       peer.destroy();
       reject(new JoinError('signaling', joinErrorMessage('signaling', '', false)));
     }, 10000);
-    peer.once('open', () => {
-      clearTimeout(timer);
-      resolve(peer);
-    });
-    peer.once('error', (err) => {
+    // Only errors before 'open' fail the open; afterwards callers handle them (a leftover
+    // listener here used to destroy the peer on the first later error, e.g. a join retry's
+    // 'peer-unavailable', or a host's transient signaling error).
+    const onOpenError = (err: unknown) => {
       clearTimeout(timer);
       peer.destroy();
       const type = (err as { type?: string }).type;
@@ -103,7 +102,13 @@ function openPeer(id: string | undefined, opts: PeerOptions): Promise<Peer> {
           ? Object.assign(new JoinError(kind, joinErrorMessage(kind, '', false)), { type })
           : err,
       );
+    };
+    peer.once('open', () => {
+      clearTimeout(timer);
+      peer.off('error', onOpenError);
+      resolve(peer);
     });
+    peer.once('error', onOpenError);
   });
 }
 
@@ -172,6 +177,8 @@ export async function hostPeerGame(name: string, submit: SubmitFn): Promise<Game
 /** How long a join may take in total, and how long "room not found" is retried. */
 export const JOIN_TIMEOUT_MS = 30000;
 export const NOT_FOUND_RETRY_MS = 12000;
+/** Extra wait after the retry window for a retried offer that is still being answered. */
+export const NOT_FOUND_GRACE_MS = 3000;
 
 /**
  * Join someone else's P2P room by code.
@@ -207,15 +214,28 @@ export async function joinPeerGame(
         done = true;
         clearTimeout(timer);
         clearTimeout(retryTimer);
+        clearTimeout(notFoundDeadline);
         peer.off('error', onPeerError);
         if (ok) resolve(ok);
         else reject(new JoinError(kind!, joinErrorMessage(kind!, code, relay)));
       };
       const timer = setTimeout(() => finish(iceSeen ? 'ice-failed' : 'timeout'), JOIN_TIMEOUT_MS);
+      let notFoundSeen = false;
+      let notFoundDeadline: ReturnType<typeof setTimeout> | undefined;
+      const inRetryWindow = () => Date.now() - started < NOT_FOUND_RETRY_MS;
       const attempt = () => {
         if (done) return;
+        // If the signaling socket dropped meanwhile, connect() would return undefined:
+        // reconnect first (PeerJS queues signaling messages until the socket is open).
+        if (peer.disconnected && !peer.destroyed) peer.reconnect();
         onProgress?.(`Szukanie pokoju ${code}…`);
-        const c = peer.connect(peerIdFor(code), { reliable: true, serialization: 'raw' });
+        const c = peer.connect(peerIdFor(code), { reliable: true, serialization: 'raw' }) as
+          DataConnection | undefined;
+        if (!c) {
+          if (inRetryWindow()) retryTimer = setTimeout(attempt, 500);
+          else finish(notFoundSeen ? 'not-found' : 'signaling');
+          return;
+        }
         current = c;
         c.on('open', () => finish(null, c));
         c.on('error', (err) => {
@@ -238,10 +258,26 @@ export async function joinPeerGame(
         const type = (err as { type?: string }).type;
         console.warn('[join] peer error', type, err);
         const kind = classifyPeerError(type) ?? 'timeout';
-        if (kind === 'not-found' && Date.now() - started < NOT_FOUND_RETRY_MS) {
+        if (kind === 'not-found' && !notFoundSeen) {
+          notFoundSeen = true;
+          // 0.peerjs.com reports an unknown id only once; later offers to it get no reply,
+          // so give up as "not found" (not a 30 s timeout) unless a host answered meanwhile.
+          notFoundDeadline = setTimeout(
+            () => !iceSeen && finish('not-found'),
+            started + NOT_FOUND_RETRY_MS + NOT_FOUND_GRACE_MS - Date.now(),
+          );
+        }
+        if (kind === 'not-found' && inRetryWindow()) {
           current?.close();
           current = null;
+          clearTimeout(retryTimer);
           retryTimer = setTimeout(attempt, 1500);
+          return;
+        }
+        // A signaling drop while retrying "not found" is handled by the pending retry
+        // (reconnect, or report not-found when the window ends) rather than as a network error.
+        if (kind === 'signaling' && notFoundSeen) {
+          if (!inRetryWindow()) finish('not-found');
           return;
         }
         finish(kind);

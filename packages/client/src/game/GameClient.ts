@@ -10,6 +10,9 @@ import {
   type SquadSummary,
   type RunResult,
   type Snapshot,
+  effectiveFire,
+  PLAYER,
+  type SprintState,
 } from '@sms/shared';
 import type { AudioEngine } from '../audio/AudioEngine.js';
 import { config } from '../config.js';
@@ -123,6 +126,7 @@ export class GameClient extends Emitter<GameClientEvents> {
     this.disposed = true;
     cancelAnimationFrame(this.raf);
     this.input.dispose();
+    this.hud.dispose();
     for (const u of this.unsubs) u();
     this.enemyAudio.stop();
     this.canvas.classList.remove('playing');
@@ -185,6 +189,28 @@ export class GameClient extends Emitter<GameClientEvents> {
     return snap?.players.find((p) => p.id === this.myId);
   }
 
+  /** In revive range of a downed squadmate (no sprinting then; mirrors the host's isReviving). */
+  private reviving(snap: Snapshot): boolean {
+    const p = this.predictor.pos;
+    const rr = PLAYER.reviveRadius * PLAYER.reviveRadius;
+    return snap.players.some(
+      (o) => o.id !== this.myId && o.st === 'downed' && (o.x - p.x) ** 2 + (o.y - p.y) ** 2 <= rr,
+    );
+  }
+
+  /** Render facing: the run direction while sprinting (the host does the same), else the aim. */
+  private facing(me: PlayerSnap | undefined): number {
+    const sp = this.mySprint(me);
+    if (!sp?.sprinting) return this.aim;
+    const m = this.input.read().move;
+    return m.x !== 0 || m.y !== 0 ? Math.atan2(m.y, m.x) : this.aim;
+  }
+
+  /** Our predicted sprint state (null when the host doesn't send sprint data). */
+  private mySprint(me: PlayerSnap | undefined): SprintState | null {
+    return me && me.stm !== undefined && this.predictor.ready ? this.predictor.sprint : null;
+  }
+
   private notify(text: string, kind: NoticeKind): void {
     this.notices.push({ text, kind, ttl: kind === 'warn' ? 4 : 3 });
     if (this.notices.length > 8) this.notices.shift();
@@ -205,7 +231,7 @@ export class GameClient extends Emitter<GameClientEvents> {
   private onSnapshot(snap: Snapshot): void {
     this.buffer.push(snap, performance.now());
     const me = this.me(snap);
-    if (me) this.predictor.reconcile(me.x, me.y, me.seq, me.st === 'alive');
+    if (me) this.predictor.reconcile(me.x, me.y, me.seq, me.st === 'alive', hostSprint(me));
     const ctx = this.fxContext(snap);
     for (const ev of snap.events) if (isImmediate(ev, this.myId)) playEvent(ev, ctx);
   }
@@ -233,11 +259,22 @@ export class GameClient extends Emitter<GameClientEvents> {
         fire: alive && intent.fire,
         slot,
         reload: actions.reload,
+        ...(alive && intent.sprint ? { sprint: true } : {}),
       });
-      // Same firing slow-down as the host sim (shared pure helpers), driven by our own inputs.
-      this.fireSlow = alive ? stepFireSlow(this.fireSlow, sent.fire, TICK_DT) : 0;
-      const speed = cur ? marineMoveSpeed(cur, this.fireSlow) : playerMoveSpeed(1);
-      this.predictor.applyLocal(sent, speed, alive);
+      // Sprint + firing slow-down exactly like the host sim (shared pure helpers), driven by our
+      // own inputs: the sprint state steps first, then the (effective) trigger slows us down.
+      const sprintOk = me.stm !== undefined && !this.reviving(latest!);
+      this.predictor.applyLocal(
+        sent,
+        (sp) => {
+          this.fireSlow = alive
+            ? stepFireSlow(this.fireSlow, effectiveFire(sent.fire, sp), TICK_DT)
+            : 0;
+          return cur ? marineMoveSpeed(cur, this.fireSlow) : playerMoveSpeed(1);
+        },
+        alive,
+        sprintOk,
+      );
     }
   }
 
@@ -307,7 +344,7 @@ export class GameClient extends Emitter<GameClientEvents> {
       b: sample.b,
       t: sample.t,
       myId: this.myId,
-      me: myPos ? { ...myPos, aim: this.aim } : null,
+      me: myPos ? { ...myPos, aim: this.facing(meLatest), sprint: this.mySprint(meLatest) } : null,
       nowMs: now,
       dt,
     });
@@ -332,7 +369,7 @@ export class GameClient extends Emitter<GameClientEvents> {
     };
     this.hud.draw(r.ctx, r.pixelRatio, r.camera.width, r.camera.height, {
       snap: hudSnap,
-      me: meLatest,
+      me: meLatest && withSprint(meLatest, this.mySprint(meLatest)),
       myPos,
       notices: this.notices,
       ping: this.conn.session.rtt,
@@ -414,4 +451,20 @@ function safeAreaInsets(): Insets {
   };
   insetCache = { key, v };
   return v;
+}
+
+/** The host's sprint state for our marine (undefined from hosts without sprint support). */
+function hostSprint(me: PlayerSnap): SprintState | undefined {
+  return me.stm === undefined
+    ? undefined
+    : { stamina: me.stm, sprinting: me.sp === 1, weaponDelay: me.wd ?? 0 };
+}
+
+/** Our snapshot row with the predicted sprint fields (instant HUD feedback). */
+function withSprint(me: PlayerSnap, sp: SprintState | null): PlayerSnap {
+  if (!sp) return me;
+  const out: PlayerSnap = { ...me, stm: sp.stamina, wd: sp.weaponDelay };
+  if (sp.sprinting) out.sp = 1;
+  else delete out.sp;
+  return out;
 }

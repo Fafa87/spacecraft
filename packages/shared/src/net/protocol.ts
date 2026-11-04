@@ -56,6 +56,11 @@ export type HostMessage =
       phase: SessionPhase;
       maxPlayers: number;
       players: LobbyPlayer[];
+      /**
+       * Host enabled voice chat for this room (optional, v0.6+; absent = off). Voice runs on its
+       * own PeerJS mesh, so older clients just ignore the field (protocol stays v5).
+       */
+      voice?: boolean;
     }
   | { t: 'start'; seed: number; players: LobbyPlayer[] }
   | { t: 'snap'; s: Snapshot }
@@ -83,7 +88,9 @@ export function isClientMessage(m: unknown): m is ClientMessage {
       typeof i.mx === 'number' &&
       typeof i.my === 'number' &&
       typeof i.aim === 'number' &&
-      Number.isFinite(i.aim as number)
+      Number.isFinite(i.aim as number) &&
+      // optional sprint bit (v5-compatible: older clients just never send it)
+      (i.sprint === undefined || typeof i.sprint === 'boolean')
     );
   }
   if (t === 'join') {

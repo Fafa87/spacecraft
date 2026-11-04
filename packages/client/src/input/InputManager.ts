@@ -42,7 +42,7 @@ export class InputManager {
   }
 
   read(): ContinuousIntent {
-    if (isRotateBlocked()) return { move: { x: 0, y: 0 }, aim: null, fire: false };
+    if (isRotateBlocked()) return { move: { x: 0, y: 0 }, aim: null, fire: false, sprint: false };
     return combineIntents(this.active, this.kbm.read(), this.touch.read());
   }
 
@@ -69,5 +69,6 @@ export function combineIntents(
     move: touchMoving ? touch.move : kbm.move,
     aim: active === 'touch' ? touch.aim : kbm.aim,
     fire: kbm.fire || touch.fire,
+    sprint: kbm.sprint || touch.sprint,
   };
 }
