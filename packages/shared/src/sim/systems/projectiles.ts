@@ -22,14 +22,10 @@ export function updateProjectiles(world: World, enemyHash: SpatialHash<Enemy>, d
     pr.x += pr.vx * dt;
     pr.y += pr.vy * dt;
     pr.life -= dt;
-    if (
-      pr.life <= 0 ||
-      pr.x < 0 ||
-      pr.y < 0 ||
-      pr.x > world.map.arena.width ||
-      pr.y > world.map.arena.height
-    ) {
-      detonate(world, pr);
+    const outside =
+      pr.x < 0 || pr.y < 0 || pr.x > world.map.arena.width || pr.y > world.map.arena.height;
+    if (pr.life <= 0 || outside) {
+      detonate(world, pr, !outside);
       continue;
     }
     if (pr.deflected) continue; // a ricochet hits nothing
@@ -199,7 +195,8 @@ function tryDeflect(world: World, pr: Projectile, p: Player): boolean {
   return true;
 }
 
-function detonate(world: World, pr: Projectile): void {
+/** `atRange` = the projectile ran out of lifetime inside the arena (not a hit, not off-map). */
+function detonate(world: World, pr: Projectile, atRange = false): void {
   if (pr.dead) return;
   pr.dead = true;
   if (pr.explosion) {
@@ -207,6 +204,15 @@ function detonate(world: World, pr: Projectile): void {
       hurtsEnemies: pr.owner === 'player',
       hurtsPlayers: pr.owner === 'enemy' || !!pr.explosion.friendlyFire,
       sourcePlayerId: pr.owner === 'player' ? pr.ownerId : undefined,
+    });
+  } else if (atRange && pr.endBurst && pr.hit.length === 0 && !pr.deflected) {
+    // End-of-range burst (meltagun): only for a shot that hit nothing. Same friendly-fire rule
+    // as other blasts: a marine's burst hurts enemies only unless the spec says friendlyFire.
+    explode(world, pr.x, pr.y, pr.endBurst, {
+      hurtsEnemies: pr.owner === 'player',
+      hurtsPlayers: pr.owner === 'enemy' || !!pr.endBurst.friendlyFire,
+      sourcePlayerId: pr.owner === 'player' ? pr.ownerId : undefined,
+      kind: pr.kind,
     });
   }
 }

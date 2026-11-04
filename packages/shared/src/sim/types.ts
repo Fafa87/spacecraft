@@ -147,6 +147,8 @@ export interface Projectile {
   drag: number;
   knockback: number;
   explosion?: ExplosionSpec;
+  /** Burst where the shot runs out of range, if it hit nothing (data ProjectileSpec.endBurst). */
+  endBurst?: ExplosionSpec;
   /**
    * Start of the swept-collision segment for the next tick. Set on spawn to the
    * shooter's position so point-blank targets inside the muzzle offset are hit.
@@ -178,7 +180,8 @@ export type GameEvent =
   | { e: 'shot'; p: number; w: string; x: number; y: number; a: number; s?: 1 }
   | { e: 'hit'; x: number; y: number; k: string }
   | { e: 'die'; t: string; x: number; y: number }
-  | { e: 'boom'; x: number; y: number; r: number }
+  /** `k` = projectile kind for a end-of-range burst (e.g. 'melta'); absent = a normal blast. */
+  | { e: 'boom'; x: number; y: number; r: number; k?: string }
   | { e: 'spit'; x: number; y: number; t?: string }
   | { e: 'bite'; p: number; t?: string }
   | { e: 'overheat'; p: number }

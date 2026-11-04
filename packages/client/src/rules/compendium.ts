@@ -62,7 +62,7 @@ export function weaponTable(c: ContentRegistry): string {
       `${w.slot}. ${esc(w.name)}`,
       esc(w.roles.join(' · ')),
       esc(weaponProfileLabel(w)),
-      `${n(p.damage, 1)}${w.pellets > 1 ? ` ×${w.pellets}` : ''}${p.explosion ? ` + wybuch ${n(p.explosion.damage)} (r ${p.explosion.radius})` : ''}`,
+      `${n(p.damage, 1)}${w.pellets > 1 ? ` ×${w.pellets}` : ''}${p.explosion ? ` + wybuch ${n(p.explosion.damage)} (r ${p.explosion.radius})` : ''}${p.endBurst ? ` (pudło: ${n(p.endBurst.damage)}, r ${p.endBurst.radius})` : ''}`,
       `${n(1 / w.fireInterval, 2)}/s`,
       `${w.magazine}`,
       `${n(w.reloadTime, 2)} s`,
@@ -103,6 +103,10 @@ export function weaponSpecials(c: ContentRegistry): string {
     if (p.explosion)
       s.push(
         `wybuch: ${n(p.explosion.damage)} obrażeń w promieniu ${p.explosion.radius} px (na krawędzi ${pct(p.explosion.edgeFactor)})${p.explosion.strength !== undefined ? `, S${p.explosion.strength} AP${ap(p.explosion.ap)}` : ''}${p.explosion.friendlyFire ? ', <b>rani też marines</b>' : ''}`,
+      );
+    if (p.endBurst)
+      s.push(
+        `wybuch na końcu zasięgu (gdy pocisk nikogo nie trafił): ${n(p.endBurst.damage)} obrażeń w promieniu ${p.endBurst.radius} px (na krawędzi ${pct(p.endBurst.edgeFactor)})${p.endBurst.strength !== undefined ? `, S${p.endBurst.strength} AP${ap(p.endBurst.ap)}` : ''}, ${p.endBurst.friendlyFire ? '<b>rani też marines</b>' : 'tylko wrogowie'}`,
       );
     if (w.braceDelay !== undefined)
       s.push(

@@ -21,6 +21,13 @@ export function rulesHtml(c: ContentRegistry): string {
     .filter((w) => w.unlockAtWave === 0)
     .map((w) => esc(w.name))
     .join(', ');
+  const bursts = ws
+    .filter((w) => w.projectile.endBurst)
+    .map((w) => {
+      const b = w.projectile.endBurst!;
+      return `<li><b>${esc(w.name)}: spudłowany strzał też grzeje</b> — gdy pocisk doleci do końca zasięgu (${Math.round(w.projectile.speed * w.projectile.lifetime)} px), nie trafiwszy nikogo, błyska małym wybuchem cieplnym: ${b.damage} obrażeń w promieniu ${b.radius} px (na krawędzi ${Math.round(b.edgeFactor * 100)}%). Rani tylko Tyranidów, nigdy marines.</li>`;
+    })
+    .join('');
   const unlocks = ws
     .filter((w) => w.unlockAtWave)
     .map((w) => `<li><b>${esc(w.name)}</b> — na starcie fali ${w.unlockAtWave}</li>`)
@@ -129,6 +136,7 @@ export function rulesHtml(c: ContentRegistry): string {
     <li><b>Zaparcie</b>: niektóre ciężkie bronie, gdy stoisz w miejscu, strzelają szybciej i celniej.</li>
     <li><b>Plazma się grzeje</b>: powyżej kreski strzały są przeładowane (mocniejsze), na szczycie broń się przegrzewa i rani strzelca.</li>
     <li><b>Siła vs Wytrzymałość i pancerz</b>: lekka broń odbija się od pancerza Carnifexa, Meltagun przebija wszystko.</li>
+    ${bursts}
   </ul>
 </section>
 <section id="odrzut"><h2>Odrzut</h2>

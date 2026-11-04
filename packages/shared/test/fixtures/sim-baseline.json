@@ -38,7 +38,7 @@
       "8500:e2068e6c",
       "9000:013c0386"
     ],
-    "events": "a751e4d",
+    "events": "f583f06f",
     "summary": "wave=6 kills=155 over=false time=300.00"
   },
   "duo-immortal": {
@@ -76,7 +76,7 @@
       "5500:f494f418",
       "6000:602b9c8c"
     ],
-    "events": "7864f96c",
+    "events": "1189cebf",
     "summary": "wave=3 kills=206 over=true time=76.57"
   },
   "squad4-immortal": {
@@ -88,15 +88,15 @@
       "2500:e63483e4",
       "3000:765a366d",
       "3500:f304f658",
-      "4000:daf27123",
-      "4500:95fccdd0",
-      "5000:f12b49b9",
-      "5500:3eca0203",
-      "6000:405e25e8",
-      "6500:a711741b",
-      "7000:11dd9b3f"
+      "4000:fda04339",
+      "4500:2bbe4f23",
+      "5000:49f46b2e",
+      "5500:55ad835a",
+      "6000:9e53214d",
+      "6500:fe0b768a",
+      "7000:f84e0e19"
     ],
-    "events": "9ec09f2c",
-    "summary": "wave=6 kills=592 over=false time=233.33"
+    "events": "7c462b66",
+    "summary": "wave=5 kills=617 over=false time=233.33"
   }
 }

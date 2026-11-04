@@ -189,6 +189,8 @@ export const WEAPONS: WeaponDef[] = [
       ap: 4,
       pierce: 3,
       knockback: 220,
+      // A miss still flashes the floor at max range: ~23% of the frag's damage, ~55% of its radius.
+      endBurst: { radius: 66, damage: 25, edgeFactor: 0.35, strength: 4, ap: 0 },
     },
     unlockAtWave: 6,
     crateWeight: 5,

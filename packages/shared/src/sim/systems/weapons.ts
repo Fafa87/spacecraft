@@ -201,6 +201,7 @@ export function fireWeapon(world: World, p: Player, def: WeaponDef, braced = fal
       drag: spec.drag ?? 0,
       knockback: spec.knockback,
       explosion: spec.explosion,
+      ...(spec.endBurst ? { endBurst: spec.endBurst } : {}),
       hit: [],
       dead: false,
     });

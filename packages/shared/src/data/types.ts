@@ -37,6 +37,11 @@ export interface ProjectileSpec {
   drag?: number;
   knockback: number;
   explosion?: ExplosionSpec;
+  /**
+   * Burst at the end of the projectile's range (lifetime runs out) when it hit nothing on the
+   * way, e.g. the meltagun's heat flash. Not on hits, not when it leaves the arena.
+   */
+  endBurst?: ExplosionSpec;
 }
 
 /**

@@ -318,6 +318,61 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
       break;
     }
     case 'boom': {
+      if (ev.k === 'melta') {
+        // Meltagun miss: a small heat flash where the beam runs out — white-hot core, a thin
+        // orange heat ring, a red heat bloom, a few embers and a light scorch. No fireball, smoke or shake.
+        const scale = ev.r / 64;
+        audio.play('melta_impact', { x: ev.x, y: ev.y, volume: 0.45 });
+        P.spawn({
+          x: ev.x,
+          y: ev.y,
+          shape: 'sprite',
+          sprite: 'fx_ring',
+          maxLife: 0.28,
+          size: scale * 0.35,
+          grow: 3.2,
+          additive: true,
+          drag: 0,
+          color: '#ff7040',
+        });
+        // heat bloom: stacked additive discs read as a soft red→orange gradient
+        for (const [f, color, life] of [
+          [0.6, '#4a1006', 0.34],
+          [0.46, '#6a1c08', 0.3],
+          [0.34, '#8a3010', 0.26],
+        ] as const) {
+          P.spawn({
+            x: ev.x,
+            y: ev.y,
+            maxLife: life,
+            size: ev.r * f,
+            grow: 1.3,
+            additive: true,
+            drag: 0,
+            color,
+          });
+        }
+        P.spawn({
+          x: ev.x,
+          y: ev.y,
+          maxLife: 0.2,
+          size: ev.r * 0.18,
+          additive: true,
+          drag: 0,
+          color: '#fff0c8',
+        });
+        P.burst(ev.x, ev.y, 9, {
+          speed: 160,
+          color: '#ffb070',
+          maxLife: 0.45,
+          size: 2,
+          shape: 'spark',
+          additive: true,
+          drag: 4,
+        });
+        r.addDecal('decal_scorch_1', ev.x, ev.y, scale * 0.8, 0.6);
+        break;
+      }
       // bolt shells (r≈30) already have their impact crack; spore bursts squelch; frags boom
       if (ev.r >= 110) audio.play('explosion', { x: ev.x, y: ev.y });
       else if (ev.r >= 60) audio.play('nid_spore_burst', { x: ev.x, y: ev.y });
