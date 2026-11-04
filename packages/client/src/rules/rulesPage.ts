@@ -1,8 +1,11 @@
 /** Rules & instructions (Polish), plus the generated compendium. */
 import {
   GAME_VERSION,
+  MARINE_DEFLECTION,
+  MARINE_DIRECTIONAL_ARMOUR,
   MAX_PLAYERS,
   PLAYER,
+  enemyProjectileDeflectChances,
   leaderboardBoard,
   type ContentRegistry,
 } from '@sms/shared';
@@ -21,6 +24,20 @@ export function rulesHtml(c: ContentRegistry): string {
     .join('');
   const boss = c.enemy(c.director.bosses.enemy).name;
   const d = c.director;
+  const A = MARINE_DIRECTIONAL_ARMOUR;
+  const pc = (v: number) => `${Math.round(v * 100)}%`;
+  const mul = (v: number) => `×${String(v).replace('.', ',')}`;
+  const defl = enemyProjectileDeflectChances(c.enemies.values());
+  const shooters = [...c.enemies.values()].filter(
+    (e) => e.ranged && defl[e.ranged.projectile.kind],
+  );
+  const deflList = shooters
+    .map((e) => `<b>${esc(e.name)}</b> ${pc(defl[e.ranged!.projectile.kind]!)}`)
+    .join(', ');
+  const noDefl = [...c.enemies.values()]
+    .filter((e) => e.ranged && !defl[e.ranged.projectile.kind])
+    .map((e) => esc(e.name))
+    .join(', ');
   return `
 <header class="top">
   <a class="back" href="./">← WRÓĆ DO GRY</a>
@@ -28,7 +45,7 @@ export function rulesHtml(c: ContentRegistry): string {
   <p class="muted">Wersja v${GAME_VERSION}</p>
 </header>
 <nav class="toc">
-  <a href="#cel">Cel</a><a href="#sterowanie">Sterowanie</a><a href="#tryby">Tryby</a><a href="#multi">Multiplayer</a><a href="#bron">Broń</a><a href="#wrogowie">Tyranidzi</a><a href="#punkty">Punkty</a><a href="#rady">Rady</a><a href="#kompendium">Kompendium</a>
+  <a href="#cel">Cel</a><a href="#sterowanie">Sterowanie</a><a href="#tryby">Tryby</a><a href="#multi">Multiplayer</a><a href="#bron">Broń</a><a href="#pancerz">Pancerz</a><a href="#wrogowie">Tyranidzi</a><a href="#punkty">Punkty</a><a href="#rady">Rady</a><a href="#kompendium">Kompendium</a>
 </nav>
 <section id="cel"><h2>Cel gry</h2>
   <p>Jesteś Space Marine broniącym zrujnowanej iglicy ula. Tyranidzi atakują <b>falami</b> z wyłomów w ścianach i szybów w podłodze. Następna fala rusza dopiero, gdy zginie cała poprzednia (po ${d.waves.breather} s przerwy). Każda fala jest większa, a potwory mają więcej życia. Co ${d.bosses.everyWave}. fala od ${d.bosses.firstWave}. prowadzi boss — <b>${esc(boss)}</b>.</p>
@@ -81,6 +98,16 @@ export function rulesHtml(c: ContentRegistry): string {
     <li><b>Siła vs Wytrzymałość i pancerz</b>: lekka broń odbija się od pancerza Carnifexa, Meltagun przebija wszystko.</li>
   </ul>
 </section>
+<section id="pancerz"><h2>Pancerz kierunkowy</h2>
+  <p>Pancerz wspomagany najlepiej chroni z przodu. <b>Przód to kierunek, w którym celujesz</b> (mysz albo prawy kciuk; gdy na telefonie tylko idziesz — kierunek marszu). Liczy się, skąd przychodzi atak: przy ciosie wręcz i szarży — gdzie stoi potwór, przy pocisku — skąd nadleciał, przy wybuchu — gdzie jest jego środek.</p>
+  <ul>
+    <li><b>Przód</b> (±${A.frontArcDeg}° od kierunku celowania) — obrażenia <b>${mul(A.front)}</b></li>
+    <li><b>Boki</b> — obrażenia <b>${mul(A.side)}</b></li>
+    <li><b>Tył</b> (±${A.rearArcDeg}° od pleców) — obrażenia <b>${mul(A.rear)}</b></li>
+  </ul>
+  <p><b>Rykoszet</b>: pocisk Tyranida, który trafi w przedni pancerz, może się od niego odbić — nie zadaje wtedy obrażeń, a od marine sypią się iskry. Najsłabsze pociski odbijają się w ${pc(MARINE_DEFLECTION.maxChance)} przypadków, mocniejsze rzadziej (najmniej ${pc(MARINE_DEFLECTION.minChance)}): ${deflList}.${noDefl ? ` Pocisk wybuchowy (${noDefl}) nigdy się nie odbija.` : ''} Ciosy wręcz i wybuchy nie odbijają się nigdy.</p>
+  <p>Przegrzanie plazmy rani zawsze tak samo, niezależnie od kierunku. Twój wybuch, który zahaczy brata, liczy się od środka wybuchu.</p>
+</section>
 <section id="wrogowie"><h2>Tyranidzi</h2><ul>
   ${[...c.enemies.values()]
     .sort((a, b) => a.threat - b.threat)
@@ -101,6 +128,7 @@ export function rulesHtml(c: ContentRegistry): string {
   <li>Spore Mine wybucha przy marines — zestrzel ją z daleka (zabójstwa od jej wybuchu idą na Twoje konto).</li>
   <li>Tyranid Warrior to stwór synapsy — przyspiesza i wzmacnia rój wokół siebie. Biovore wypuszcza Spore Mine. Zabijaj je w pierwszej kolejności.</li>
   <li>Puść spust, żeby uciec — strzelanie spowalnia.</li>
+  <li>Nie odwracaj się plecami do roju — z tyłu dostajesz najmocniej, a z przodu pancerz odbija część pocisków.</li>
 </ul></section>
 <section id="kompendium"><h2>Kompendium</h2>
   <details><summary>Wszystkie wartości potworów i broni (matematyka)</summary>

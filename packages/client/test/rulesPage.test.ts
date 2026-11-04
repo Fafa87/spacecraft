@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { defaultContent, expectedDps } from '@sms/shared';
+import {
+  defaultContent,
+  enemyProjectileDeflectChances,
+  expectedDps,
+  MARINE_DIRECTIONAL_ARMOUR,
+} from '@sms/shared';
 import { rulesHtml } from '../src/rules/rulesPage.js';
-import { dpsMatrix } from '../src/rules/compendium.js';
+import { armourTables, dpsMatrix } from '../src/rules/compendium.js';
 
 describe('rules page', () => {
   const html = rulesHtml(defaultContent);
@@ -17,5 +22,16 @@ describe('rules page', () => {
   });
   it('has no unfilled placeholders', () => {
     expect(html).not.toMatch(/undefined|NaN|\$\{/);
+  });
+  it('directional armour + ricochet values come from the shared constants', () => {
+    const A = MARINE_DIRECTIONAL_ARMOUR;
+    const t = armourTables(defaultContent);
+    for (const v of [A.front, A.side, A.rear])
+      expect(t).toContain(`×${String(v).replace('.', ',')}`);
+    const ch = enemyProjectileDeflectChances(defaultContent.enemies.values());
+    for (const v of Object.values(ch).filter((x) => x > 0))
+      expect(t).toContain(`${Math.round(v * 100)}%`);
+    expect(html).toContain('id="pancerz"');
+    expect(html).toContain('Pancerz kierunkowy i rykoszety');
   });
 });

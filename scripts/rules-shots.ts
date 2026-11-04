@@ -37,6 +37,33 @@ for (const [name, width, height, mobile] of views) {
   ]);
   console.log(name, 'scrollWidth/innerWidth/scrollHeight', dims);
 }
+// Directional armour section + its compendium tables.
+{
+  const p = await browser.newPage();
+  await p.setViewport({ width: 1280, height: 800 });
+  await p.goto(`${base}rules.html#pancerz`, { waitUntil: 'networkidle0' });
+  await p.evaluate(() => document.querySelector('#pancerz')!.scrollIntoView());
+  await p.screenshot({ path: `${out}/rules-armour.png` });
+  await p.evaluate(() => {
+    document.querySelector('details')!.open = true;
+    const h = [...document.querySelectorAll('h3')].find((e) =>
+      e.textContent!.startsWith('Pancerz kierunkowy'),
+    )!;
+    h.scrollIntoView();
+  });
+  await p.screenshot({ path: `${out}/rules-armour-compendium.png` });
+  const mp = await browser.newPage();
+  await mp.setViewport({
+    width: 390,
+    height: 844,
+    isMobile: true,
+    hasTouch: true,
+    deviceScaleFactor: 2,
+  });
+  await mp.goto(`${base}rules.html`, { waitUntil: 'networkidle0' });
+  await mp.evaluate(() => document.querySelector('#pancerz')!.scrollIntoView());
+  await mp.screenshot({ path: `${out}/rules-armour-portrait.png` });
+}
 const m = await browser.newPage();
 const errors: string[] = [];
 m.on('pageerror', (e) => errors.push(String(e)));

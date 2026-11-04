@@ -5,10 +5,13 @@
 import {
   ARENA,
   GAME_VERSION,
+  MARINE_DEFLECTION,
+  MARINE_DIRECTIONAL_ARMOUR,
   MAX_PLAYERS,
   PICKUP,
   PLAYER,
   TICK_RATE,
+  enemyProjectileDeflectChances,
   expectedDps,
   expectedShotDamage,
   sustainedDps,
@@ -323,6 +326,10 @@ export function marineTable(): string {
         'Nietykalność po trafieniu / podniesieniu',
         `${PLAYER.hurtInvuln} s / ${PLAYER.reviveInvuln} s`,
       ],
+      [
+        'Pancerz (przód / boki / tył)',
+        `×${n(MARINE_DIRECTIONAL_ARMOUR.front, 2)} / ×${n(MARINE_DIRECTIONAL_ARMOUR.side, 2)} / ×${n(MARINE_DIRECTIONAL_ARMOUR.rear, 2)} obrażeń`,
+      ],
       ['Apteczka', `+${PICKUP.medkitHeal} życia, leży ${PICKUP.lifetime} s`],
       ['Arena', `${ARENA.width} × ${ARENA.height} px`],
       ['Symulacja', `${TICK_RATE} ticków/s`],
@@ -330,11 +337,57 @@ export function marineTable(): string {
   );
 }
 
+/** Directional armour arcs + front-plate ricochet chances (data/armour.ts). */
+export function armourTables(c: ContentRegistry): string {
+  const A = MARINE_DIRECTIONAL_ARMOUR;
+  const D = MARINE_DEFLECTION;
+  const arcs = table(
+    ['Strona', 'Kąt od kierunku celowania', 'Mnożnik obrażeń', 'Rykoszet pocisków'],
+    [
+      ['Przód', `0–${A.frontArcDeg}°`, `×${n(A.front, 2)}`, 'tak'],
+      ['Boki', `${A.frontArcDeg}–${180 - A.rearArcDeg}°`, `×${n(A.side, 2)}`, 'nie'],
+      ['Tył', `${180 - A.rearArcDeg}–180°`, `×${n(A.rear, 2)}`, 'nie'],
+    ],
+  );
+  const chances = enemyProjectileDeflectChances(c.enemies.values());
+  const rows = [...c.enemies.values()]
+    .filter((e) => e.ranged)
+    .map((e) => {
+      const p = e.ranged!.projectile;
+      const ch = chances[p.kind] ?? 0;
+      const hit = p.damage * A.front;
+      return [
+        esc(e.name),
+        esc(p.kind),
+        p.explosion ? `wybuch ${n(p.explosion.damage)}` : `${n(p.damage)}`,
+        p.explosion ? '—' : `${n(hit, 1)}`,
+        ch > 0 ? pct(ch) : '0% (wybuchowy)',
+        p.explosion ? '—' : n(hit * (1 - ch), 2),
+      ];
+    });
+  const defl = table(
+    [
+      'Strzelec',
+      'Pocisk',
+      'Obrażenia',
+      'Trafienie w przód',
+      'Szansa na rykoszet (przód)',
+      'Średnio na strzał w przód',
+    ],
+    rows,
+  );
+  return `${arcs}
+  <p class="muted">Kąt liczony między kierunkiem celowania marine a kierunkiem do źródła: atakujący (wręcz, szarża), kierunek, z którego nadleciał pocisk, albo środek wybuchu. Obrażenia bez kierunku (przegrzanie plazmy) — ×${n(A.side, 2)}. Wybuchy i ciosy wręcz też dostają mnożnik strony, ale nie mają rykoszetu. Mnożnik działa razem z synapsą (obrażenia × synapsa × strona).</p>
+  <h4>Rykoszet z przedniego pancerza</h4>${defl}
+  <p class="muted">Szansa = ${pct(D.maxChance)} × (obrażenia najsłabszego pocisku Tyranidów / obrażenia tego pocisku), w granicach ${pct(D.minChance)}–${pct(D.maxChance)}. Liczą się bazowe obrażenia pocisku (synapsa ich nie zmienia). Odbity pocisk nie rani nikogo, odlatuje lustrzanie od pancerza (±${n((D.jitter * 180) / Math.PI, 0)}°, ${pct(D.speedMul)} prędkości) i znika po ${n(D.fadeTime, 2)} s.</p>`;
+}
+
 /** Full compendium body (inside the <details>). */
 export function compendiumHtml(c: ContentRegistry): string {
   return `
   <p class="muted">Wszystkie liczby są generowane z kodu gry v${GAME_VERSION}. Odległości w pikselach areny, czasy w sekundach. DPS = średnie obrażenia na sekundę przy trafieniu każdym pociskiem, z uwzględnieniem S vs T i pancerza (bez zasięgu, ciepła i zaparcia). Po kropce: czas zabicia jednego wroga z bazowym życiem (fala 1, solo).</p>
   <h3>Space Marine</h3>${marineTable()}
+  <h3>Pancerz kierunkowy i rykoszety</h3>${armourTables(c)}
   <h3>Bronie</h3>${weaponTable(c)}
   <h4>Cechy specjalne</h4>${weaponSpecials(c)}
   <h3>Tyranidzi</h3>${enemyTable(c)}
