@@ -59,16 +59,35 @@ export function maxAlive(cfg: DirectorConfig, wave: number, teamSize: number): n
 export const enemyHpScale = (cfg: DirectorConfig, wave: number, teamSize = 1): number =>
   (1 + cfg.waves.hpScalePerWave * Math.max(0, wave - 1)) * perTeam(cfg.teamScaling.hp, teamSize);
 
-/** Per-wave drop caps for a squad. */
-export function dropCaps(
+/** Average drops per wave for a squad (fractional: base + perMarine * (teamSize - 1)). */
+export function dropRates(
   cfg: DirectorConfig,
   teamSize: number,
 ): { medkits: number; crates: number } {
   const n = clamp(teamSize, 1, MAX_PLAYERS) - 1;
   const d = cfg.drops;
   return {
-    medkits: Math.round(d.medkits.base + d.medkits.perMarine * n),
-    crates: Math.round(d.crates.base + d.crates.perMarine * n),
+    medkits: d.medkits.base + d.medkits.perMarine * n,
+    crates: d.crates.base + d.crates.perMarine * n,
+  };
+}
+
+/**
+ * Per-wave drop caps for a squad in wave `wave`. Fractional rates carry over between waves
+ * (cumulative rounding), so e.g. 1.5 crates/wave gives 2, 1, 2, 1... and the average is exact
+ * instead of being rounded away. Deterministic: depends only on config, squad size and wave.
+ */
+export function dropCaps(
+  cfg: DirectorConfig,
+  teamSize: number,
+  wave = 1,
+): { medkits: number; crates: number } {
+  const r = dropRates(cfg, teamSize);
+  const w = Math.max(1, Math.floor(wave));
+  const cum = (rate: number, k: number) => Math.round(rate * k + 1e-9);
+  return {
+    medkits: cum(r.medkits, w) - cum(r.medkits, w - 1),
+    crates: cum(r.crates, w) - cum(r.crates, w - 1),
   };
 }
 
@@ -202,7 +221,7 @@ export function updateDirector(world: World, dt: number): void {
   // Weapon crates: on a timer, within the wave's crate budget.
   if (t >= st.nextCrateAt) {
     st.nextCrateAt = t + world.rng.range(cfg.crates.intervalMin, cfg.crates.intervalMax);
-    if (st.drops.crates < dropCaps(cfg, world.teamSize).crates) {
+    if (st.drops.crates < dropCaps(cfg, world.teamSize, st.wave).crates) {
       st.drops.crates++;
       spawnCrate(world);
     }

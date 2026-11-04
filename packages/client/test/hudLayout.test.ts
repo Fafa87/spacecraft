@@ -48,6 +48,11 @@ describe('compact phone HUD layout', () => {
             expect(L.voice.x + L.voice.w).toBeLessThan(minimapLeft);
             expect(L.voice.w).toBeGreaterThan(180);
             expect(L.voice.align).toBe('center');
+            // v0.6.0 hotfix: the top-centre message band shares the voice slot's free columns
+            const band = L.topBand!;
+            expect(ins.left + band.x0 * L.ui).toBeGreaterThan(blockRight);
+            expect(ins.left + band.x1 * L.ui).toBeLessThan(minimapLeft);
+            expect(band.x1 - band.x0).toBeGreaterThanOrEqual(300); // boss bar + panel fit
           }
       });
 
@@ -55,6 +60,7 @@ describe('compact phone HUD layout', () => {
     const L = hudLayout(1280, 800, false, NOTCH[0], { players: 4, me: true, heat: false });
     expect(L.compact).toBe(false);
     expect(L.block).toBeNull();
+    expect(L.topBand).toBeNull(); // desktop banners keep their classic offsets
     expect(L.team).toEqual({ top: 10, cols: 1, rowH: 26, h: 14 + 4 * 26 });
     expect(L.voice).toMatchObject({ x: 10, y: 10 + 14 + 4 * 26 + 8, align: 'left' });
     const big = hudLayout(1280, 800, false, NOTCH[0], { players: 8, me: true, heat: false });

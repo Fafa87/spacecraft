@@ -1,6 +1,6 @@
 import { MAX_PLAYERS } from '../constants.js';
 import { CHAPTERS } from './chapters.js';
-import { DIRECTOR } from './director.js';
+import { CRATE_DROP_FACTOR, DIRECTOR, MEDKIT_DROP_FACTOR } from './director.js';
 import { ENEMIES } from './enemies.js';
 import { applyNamePreset, DEFAULT_SUBTITLE, DEFAULT_TITLE, NAME_PRESETS } from './naming.js';
 import type { ChapterDef, DirectorConfig, EnemyDef, WeaponDef } from './types.js';
@@ -12,7 +12,7 @@ export * from './naming.js';
 export * from './profile.js';
 export * from './armour.js';
 export * from './sprint.js';
-export { WEAPONS, ENEMIES, DIRECTOR, CHAPTERS };
+export { WEAPONS, ENEMIES, DIRECTOR, CHAPTERS, CRATE_DROP_FACTOR, MEDKIT_DROP_FACTOR };
 
 /**
  * Content registry: indexed lookups + validation. Gameplay code should go
@@ -121,7 +121,7 @@ export class ContentRegistry {
   }
 
   startingWeapons(): string[] {
-    return this.weaponOrder.filter((w) => w.unlockAtSec === 0).map((w) => w.id);
+    return this.weaponOrder.filter((w) => w.unlockAtWave === 0).map((w) => w.id);
   }
 
   /** Returns a list of human-readable problems; empty = valid. */
@@ -138,8 +138,10 @@ export class ContentRegistry {
       if (w.fireInterval <= 0) errors.push(`weapon ${w.id} fireInterval must be > 0`);
       if (w.magazine <= 0) errors.push(`weapon ${w.id} magazine must be > 0`);
       if (w.pellets < 1) errors.push(`weapon ${w.id} pellets must be >= 1`);
+      if (w.unlockAtWave !== null && !(Number.isInteger(w.unlockAtWave) && w.unlockAtWave >= 0))
+        errors.push(`weapon ${w.id} unlockAtWave must be an integer >= 0 or null`);
     }
-    if (this.startingWeapons().length === 0) errors.push('no starting weapon (unlockAtSec: 0)');
+    if (this.startingWeapons().length === 0) errors.push('no starting weapon (unlockAtWave: 0)');
     const eids = new Set<string>();
     for (const e of this.enemies.values()) {
       if (eids.has(e.id)) errors.push(`duplicate enemy id ${e.id}`);

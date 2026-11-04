@@ -206,6 +206,22 @@ export class GameClient extends Emitter<GameClientEvents> {
     return m.x !== 0 || m.y !== 0 ? Math.atan2(m.y, m.x) : this.aim;
   }
 
+  /** Last fire input we sent (stick feedback: a held trigger blocks the start of a sprint). */
+  private lastFire = false;
+  private wasSprinting = false;
+
+  /** Subtle haptic tick when a sprint really starts (touch on Android only; harmless no-op elsewhere). */
+  private sprintHaptic(sprinting: boolean): void {
+    if (sprinting && !this.wasSprinting && this.input.active === 'touch') {
+      try {
+        if (/Android/i.test(navigator.userAgent)) navigator.vibrate?.(10);
+      } catch {
+        // vibrate can throw before user activation / in iframes; feedback only
+      }
+    }
+    this.wasSprinting = sprinting;
+  }
+
   /** Our predicted sprint state (null when the host doesn't send sprint data). */
   private mySprint(me: PlayerSnap | undefined): SprintState | null {
     return me && me.stm !== undefined && this.predictor.ready ? this.predictor.sprint : null;
@@ -261,6 +277,7 @@ export class GameClient extends Emitter<GameClientEvents> {
         reload: actions.reload,
         ...(alive && intent.sprint ? { sprint: true } : {}),
       });
+      this.lastFire = sent.fire;
       // Sprint + firing slow-down exactly like the host sim (shared pure helpers), driven by our
       // own inputs: the sprint state steps first, then the (effective) trigger slows us down.
       const sprintOk = me.stm !== undefined && !this.reviving(latest!);
@@ -359,6 +376,11 @@ export class GameClient extends Emitter<GameClientEvents> {
 
     for (const n of this.notices) n.ttl -= dt;
     this.notices = this.notices.filter((n) => n.ttl > 0);
+    const mySp = meLatest ? this.mySprint(meLatest) : null;
+    this.sprintHaptic(mySp?.sprinting === true);
+    const stickSim = mySp
+      ? { sprinting: mySp.sprinting, stamina: mySp.stamina, fire: this.lastFire }
+      : null;
     const hudSnap = {
       ...sample.b,
       players: latest.players,
@@ -375,7 +397,7 @@ export class GameClient extends Emitter<GameClientEvents> {
       ping: this.conn.session.rtt,
       fps: this.fps,
       crosshair: this.crosshair(),
-      touch: this.input.active === 'touch' ? this.input.touch.sticks() : null,
+      touch: this.input.active === 'touch' ? this.input.touch.sticks(stickSim) : null,
       inset: safeAreaInsets(),
       roomCode: this.conn.roomCode,
       mode: this.conn.mode,

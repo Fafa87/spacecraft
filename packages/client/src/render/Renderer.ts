@@ -917,19 +917,24 @@ export class Renderer {
             ? weaponPose(sprinting, mine ? f.me!.sprint!.weaponDelay : (p.wd ?? 0))
             : 1;
         if (this.assets.draw(ctx, body, frame, x, y, a)) {
-          // Weapon: held in the aim direction; while sprinting it is slung diagonally across
-          // the backpack (barrel pointing back), and over the ready delay it swings forward.
-          const e = pose * pose * (3 - 2 * pose);
-          const back = rec * e + 8 * (1 - e);
-          this.assets.draw(
-            ctx,
-            held,
-            0,
-            x - Math.cos(a) * back,
-            y - Math.sin(a) * back,
-            a + (1 - e) * 2.35,
-            0.82 + 0.18 * e,
-          );
+          // Weapon: held in the aim direction. v0.6.0 hotfix: while sprinting it is NOT drawn
+          // at all (the back-slung pose looked odd); over the ready delay it fades in and
+          // raises from a lowered, pulled-in pose to the aim. Same for local and remote marines.
+          if (weaponDrawn(pose)) {
+            const e = pose * pose * (3 - 2 * pose);
+            const back = rec * e + 6 * (1 - e);
+            ctx.globalAlpha = e;
+            this.assets.draw(
+              ctx,
+              held,
+              0,
+              x - Math.cos(a) * back,
+              y - Math.sin(a) * back,
+              a + (1 - e) * 0.7,
+              0.9 + 0.1 * e,
+            );
+            ctx.globalAlpha = 1;
+          }
           if (pose < 1) this.drawRunningArms(ch, x, y, a, w.dist, 1 - pose);
           this.assets.draw(ctx, `${body}_top`, 0, x, y, a);
         } else {
@@ -1192,11 +1197,14 @@ export class Renderer {
 }
 
 /**
- * How far the weapon is raised (0 = stowed on the back, 1 = held): stowed while sprinting,
- * swinging up over the post-sprint weapon-ready delay. Pure (unit tested).
+ * How far the weapon is raised (0 = hidden, 1 = held): hidden while sprinting, fading in and
+ * raising over the post-sprint weapon-ready delay. Pure (unit tested).
  */
 export function weaponPose(sprinting: boolean, weaponDelay: number): number {
   if (sprinting) return 0;
   if (weaponDelay <= 0) return 1;
   return Math.max(0, Math.min(1, 1 - weaponDelay / MARINE_SPRINT.weaponReadyDelayS));
 }
+
+/** v0.6.0 hotfix: the weapon sprite is drawn only when raised at all (never while sprinting). */
+export const weaponDrawn = (pose: number): boolean => pose > 0;

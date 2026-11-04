@@ -46,10 +46,10 @@ const ticks = (s: number) => Math.round(s / TICK_DT);
 const sprintRight = { mx: 1, my: 0, sprint: true } as const;
 
 describe('sprint constants', () => {
-  it('1.7× speed, 3 s of stamina, full regen in 7 s standing, 0.8 s weapon delay', () => {
+  it('1.56× speed (hotfix: +56%), 2.4 s of stamina (v0.6.0 hotfix −20%), full regen in 7 s standing, 0.8 s weapon delay', () => {
     expect(S).toMatchObject({
-      speedMul: 1.7,
-      staminaMaxS: 3,
+      speedMul: 1.56,
+      staminaMaxS: 2.4,
       drainPerS: 1,
       minToStartS: 0.5,
       weaponReadyDelayS: 0.8,
@@ -123,6 +123,7 @@ describe('sprint (shared sim)', () => {
     const w = quietWorld();
     const p = w.players[0];
     const ammo0 = p.ammo[p.current];
+    run(w, 1, sprintRight); // sprint first (fire held blocks only the START)
     run(w, ticks(1), { ...sprintRight, fire: true });
     expect(p.sprint.sprinting).toBe(true);
     expect(p.ammo[p.current]).toBe(ammo0);
@@ -131,11 +132,46 @@ describe('sprint (shared sim)', () => {
     expect(p.fireSlow).toBe(0);
   });
 
+  it('does not START a sprint while the trigger is held; starts once it is released', () => {
+    const w = quietWorld();
+    const p = w.players[0];
+    const ammo0 = p.ammo[p.current];
+    run(w, ticks(0.5), { ...sprintRight, fire: true });
+    expect(p.sprint.sprinting).toBe(false);
+    expect(p.sprint.stamina).toBe(S.staminaMaxS); // request ignored: no drain
+    expect(p.ammo[p.current]).toBeLessThan(ammo0); // ...and he kept shooting
+    run(w, 1, sprintRight); // trigger released, sprint still requested
+    expect(p.sprint.sprinting).toBe(true);
+    // pressing the trigger again mid-sprint changes nothing (ignored, sprint keeps going)
+    run(w, ticks(0.3), { ...sprintRight, fire: true });
+    expect(p.sprint.sprinting).toBe(true);
+  });
+
+  it('client prediction applies the same fire-blocks-sprint-start rule', () => {
+    const a = newSprintState();
+    const b = newSprintState();
+    const seq = [true, true, false, true, true, false, false, true];
+    for (const fire of seq) {
+      stepSprint(a, true, true, true, TICK_DT, fire);
+      stepSprint(b, true, true, true, TICK_DT, fire);
+      expect(a).toEqual(b);
+    }
+    const s = newSprintState();
+    stepSprint(s, true, true, true, TICK_DT, true);
+    expect(s.sprinting).toBe(false);
+    stepSprint(s, true, true, true, TICK_DT, false);
+    expect(s.sprinting).toBe(true);
+    stepSprint(s, true, true, true, TICK_DT, true);
+    expect(s.sprinting).toBe(true);
+  });
+
   it('weapon is ready weaponReadyDelayS after the sprint ends (trigger held through)', () => {
     const w = quietWorld();
     const p = w.players[0];
     expect(defaultContent.weapon(p.current).automatic).toBe(true);
+    run(w, 1, sprintRight);
     run(w, ticks(0.5), { ...sprintRight, fire: true });
+    expect(p.sprint.sprinting).toBe(true);
     const ammo0 = p.ammo[p.current];
     let t = 0;
     while (p.ammo[p.current] === ammo0 && t < ticks(3)) {

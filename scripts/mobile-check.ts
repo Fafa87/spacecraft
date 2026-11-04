@@ -10,11 +10,14 @@
  *     the share link (`<origin><base>?join=CODE`)       -> docs/mobile-lobby-qr.png
  *  3. Opening the decoded link goes straight to the join flow (callsign only, prefilled)
  *  4. Solo run driven by synthetic multi-touch (CDP): left stick moves, right stick aims and
- *     auto-fires, reload button, weapon slot tap        -> docs/mobile-gameplay.png
+ *     auto-fires, reload button                        -> docs/mobile-gameplay.png
  *  5. Portrait phone: full-screen "Obróć telefon / Rotate your device" overlay blocks the menu
  *     and pauses a running game (no input, solo sim frozen); rotating to landscape resumes
  *     play                          -> docs/review/rotate-overlay.png, landscape-gameplay.png
  *  6. Desktop (mouse + keyboard, no touch): WASD moves, mouse aims/fires, touch UI hidden
+ *  7. Weapon switch by touch (v0.6.0 hotfix regression) on 844x390 iPhone, 667x375 iPhone 8,
+ *     915x412 Android, iPhone 14 / Pixel 5: slot taps with the move stick (and the fire stick)
+ *     held, locked slot ignored, slot geometry in CSS px under the minimap
  *
  * Env: CHROME_PATH (default /usr/bin/google-chrome), NO_SHOTS=1 to skip screenshots.
  */
@@ -327,45 +330,195 @@ async function mobile(browser: Browser, deviceName: keyof typeof KnownDevices, e
   await sleep(120);
   check((await player(page)).reload > 0, `${tag}: ⟳ button reloads`);
 
-  // weapon slot tap (grant a second weapon, tap its HUD slot)
-  const target = await page.evaluate(() => {
-    const app = (window as any).__sms;
-    const p = app.conn.host.world.players[0];
-    const order = app.game.content.weaponOrder as { id: string; slot: number }[];
-    const w = order.find((d) => d.id !== p.current)!;
-    if (!p.weapons.includes(w.id)) p.weapons.push(w.id);
-    p.ammo[w.id] ??= 10;
-    return w;
-  });
-  await sleep(200);
-  const rect = await page.evaluate((slot) => {
-    // slotRects are in HUD units; the tap needs CSS px (safe-area inset + HUD scale)
-    const hud = (window as any).__sms.game.hud;
-    const r = (hud.slotRects as any[]).find((q) => q.slot === slot);
-    if (!r) return null;
-    const ui = hud.lastUi as number;
-    return {
-      x: hud.lastIns.left + r.x * ui,
-      y: hud.lastIns.top + r.y * ui,
-      w: r.w * ui,
-      h: r.h * ui,
-    };
-  }, target.slot);
-  if (rect) {
-    await t.start(2, { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 });
-    await t.endAll();
-    await sleep(200);
-    const p6 = await player(page);
-    check(
-      p6.current === target.id && p6.mx === 0 && !p6.fire,
-      `${tag}: tapping weapon slot ${target.slot} switches to ${target.id} (no stray stick)`,
-    );
-  } else check(false, `${tag}: weapon slot ${target.slot} rect found`);
+  // weapon slot taps: see weaponSwitch() (v0.6.0 hotfix regression, more phones)
   const hidden = await page.evaluate(() => {
     const l = document.querySelector('.touch-layer');
     return l ? getComputedStyle(l).display : 'missing';
   });
   check(hidden === 'block', `${tag}: touch layer visible in-game`);
+  await cdp.detach();
+  await ctx.close();
+}
+
+/** Custom phones not in puppeteer's KnownDevices (real CSS viewports, landscape). */
+const IPHONE_UA =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+const ANDROID_UA =
+  'Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36';
+type Dev = {
+  userAgent: string;
+  viewport: {
+    width: number;
+    height: number;
+    deviceScaleFactor: number;
+    isMobile: boolean;
+    hasTouch: boolean;
+    isLandscape: boolean;
+  };
+};
+const phone = (userAgent: string, width: number, height: number, dpr: number): Dev => ({
+  userAgent,
+  viewport: {
+    width,
+    height,
+    deviceScaleFactor: dpr,
+    isMobile: true,
+    hasTouch: true,
+    isLandscape: true,
+  },
+});
+const SWITCH_DEVICES: [string, Dev][] = [
+  ['iPhone 844x390', phone(IPHONE_UA, 844, 390, 3)],
+  ['iPhone 8 landscape 667x375', KnownDevices['iPhone 8 landscape'] as Dev],
+  ['Android 915x412', phone(ANDROID_UA, 915, 412, 2.625)],
+  ['iPhone 14 landscape', KnownDevices['iPhone 14 landscape'] as Dev],
+  ['Pixel 5 landscape', KnownDevices['Pixel 5 landscape'] as Dev],
+];
+
+type SlotRect = { slot: number; owned: boolean; x: number; y: number; w: number; h: number };
+const slotRects = (page: Page) =>
+  page.evaluate(() => {
+    const hud = (window as any).__sms.game.hud;
+    const ui = hud.lastUi as number;
+    const ins = hud.lastIns as { top: number; left: number };
+    const a = hud.content.map.arena as { width: number; height: number };
+    return {
+      // CSS px, exactly what the touch handler compares against (hud.slotAt)
+      rects: (hud.slotRects as SlotRect[]).map((q) => ({ ...q })),
+      // minimap panel bottom in CSS px (minimap(): y0 12, height 190*h/w, panel +4)
+      minimapBottom: ins.top + (12 + (190 * a.height) / a.width + 4) * ui,
+      ui,
+    };
+  });
+const centre = (r: SlotRect): P => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
+
+/**
+ * v0.6.0 hotfix regression: on phones the weapon could not be switched (slot taps were mapped
+ * to the wrong place). Real touch input (CDP, mobile UA, isMobile + hasTouch) on several real
+ * phone viewports: tap a slot with a second finger while the move stick (and the aim/fire
+ * stick) is held, tap a locked slot (no switch), switch back.
+ */
+async function weaponSwitch(browser: Browser, tag: string, dev: Dev, errors: string[]) {
+  const ctx = await browser.createBrowserContext();
+  const page = await ctx.newPage();
+  watchErrors(page, tag, errors);
+  await page.evaluateOnNewDocument('globalThis.__name = (f) => f');
+  await page.emulate(dev);
+  await page.goto(CLIENT, { waitUntil: 'networkidle0' });
+  await page.waitForSelector('.menu #solo', { timeout: 15000 });
+  const W = dev.viewport.width;
+  const H = dev.viewport.height;
+  await page.touchscreen.tap(W / 2, 12); // first real touch -> touch mode
+  await page.tap('#solo');
+  await page.waitForFunction(() => (window as any).__sms?.screen === 'game', { timeout: 15000 });
+  await sleep(600);
+  await keepAlive(page);
+  // own the first two weapons only (slot 1 + 2); the rest stays locked
+  const order = await page.evaluate(() => {
+    const app = (window as any).__sms;
+    const p = app.conn.host.world.players[0];
+    const ids = (app.game.content.weaponOrder as { id: string; slot: number }[]).map((d) => ({
+      id: d.id,
+      slot: d.slot,
+    }));
+    for (const w of ids.slice(0, 2)) {
+      if (!p.weapons.includes(w.id)) p.weapons.push(w.id);
+      p.ammo[w.id] ??= 30;
+    }
+    p.weapons = p.weapons.filter((id: string) => ids.slice(0, 2).some((w) => w.id === id));
+    return ids;
+  });
+  await sleep(300);
+  const [w1, w2] = order;
+  const g = await slotRects(page);
+  const r1 = g.rects.find((r) => r.slot === w1.slot);
+  const r2 = g.rects.find((r) => r.slot === w2.slot);
+  const locked = g.rects.find((r) => !r.owned);
+  check(!!r1 && !!r2 && !!locked, `${tag}: weapon slot rects (owned + locked) are laid out`);
+  if (!r1 || !r2 || !locked) {
+    await ctx.close();
+    return;
+  }
+  // geometry: CSS px, on screen, right column under the minimap (a HUD-unit/CSS-px mix-up fails this)
+  const onScreen = g.rects.every((r) => r.x >= 0 && r.y >= 0 && r.x + r.w <= W && r.y + r.h <= H);
+  const right = g.rects.every((r) => r.x >= W / 2);
+  const under = g.rects.every((r) => r.y >= g.minimapBottom - 1);
+  const hits = await page.evaluate(
+    (pts: P[]) =>
+      pts.map((p) => {
+        const hud = (window as any).__sms.game.hud;
+        const el = document.elementFromPoint(p.x, p.y);
+        return {
+          slot: hud.slotAt(p.x, p.y) as number,
+          button: !!el?.closest('.touch-buttons, .tb'),
+        };
+      }),
+    [centre(r1), centre(r2), centre(locked)],
+  );
+  check(
+    onScreen && right && under,
+    `${tag}: slots on screen, right column, below the minimap (ui=${g.ui.toFixed(2)}, first slot ${r1.x | 0},${r1.y | 0} ${r1.w | 0}x${r1.h | 0})`,
+  );
+  check(
+    hits[0].slot === w1.slot &&
+      hits[1].slot === w2.slot &&
+      hits[2].slot === 0 &&
+      !hits.some((h) => h.button),
+    `${tag}: slotAt(centre) hits its own slot, locked → 0, no button covers a slot`,
+  );
+
+  const cdp = await page.createCDPSession();
+  const t = new Touch(cdp);
+  const L = { x: 130, y: H - 110 };
+  await t.start(0, L);
+  await t.drag(0, { x: L.x + 55, y: L.y }); // hold the move stick
+  await sleep(300);
+  // second finger taps slot 2 while the stick is held
+  await t.start(1, centre(r2));
+  await sleep(60);
+  await t.end(1);
+  await sleep(250);
+  const a = await player(page);
+  check(
+    a.current === w2.id && a.mx > 0.8,
+    `${tag}: tap slot ${w2.slot} while moving switches to ${w2.id}, marine keeps moving (current=${a.current} mx=${a.mx.toFixed(2)})`,
+  );
+  // + hold the aim/fire stick, tap slot 1 with a third finger
+  const R = { x: Math.round(W * 0.5), y: Math.round(H * 0.62) };
+  await t.start(2, R);
+  await t.drag(2, { x: R.x, y: R.y - 55 });
+  await sleep(250);
+  await t.start(3, centre(r1));
+  await sleep(60);
+  await t.end(3);
+  await sleep(250);
+  const b = await player(page);
+  check(
+    b.current === w1.id && b.mx > 0.8 && b.fire,
+    `${tag}: tap slot ${w1.slot} while moving AND firing switches back to ${w1.id} (mx=${b.mx.toFixed(2)} fire=${b.fire})`,
+  );
+  // locked slot: no switch
+  await t.start(4, centre(locked));
+  await sleep(60);
+  await t.end(4);
+  await sleep(250);
+  const c = await player(page);
+  check(
+    c.current === w1.id,
+    `${tag}: tapping locked slot ${locked.slot} does not switch (current=${c.current})`,
+  );
+  await t.endAll();
+  await sleep(150);
+  // a plain tap (no other finger) still switches
+  await t.start(0, centre(r2));
+  await sleep(60);
+  await t.end(0);
+  await sleep(250);
+  const d = await player(page);
+  check(
+    d.current === w2.id && d.mx === 0 && !d.fire,
+    `${tag}: single tap on slot ${w2.slot} switches, no stray stick`,
+  );
   await cdp.detach();
   await ctx.close();
 }
@@ -550,6 +703,7 @@ async function main() {
     await mobile(browser, 'Pixel 5 landscape', errors);
     await portrait(browser, errors);
     await desktop(browser, errors);
+    for (const [tag, dev] of SWITCH_DEVICES) await weaponSwitch(browser, tag, dev, errors);
   } catch (e) {
     check(false, `crashed: ${(e as Error).stack}`);
   } finally {

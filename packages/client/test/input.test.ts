@@ -3,6 +3,7 @@ import {
   combineIntents,
   initialInputKind,
   mergeActions,
+  moveStickFeedback,
   NO_ACTIONS,
   resolveSlot,
   stickSprint,
@@ -233,19 +234,55 @@ describe('touch sprint (stick edge + button toggle)', () => {
     expect(t.on).toBe(false);
   });
 
-  it('TouchSprint: the button toggles; a 2nd tap or releasing the move stick turns it off', () => {
+  it('TouchSprint: no button toggle any more (v0.6.0 hotfix) — only the stick band sprints', () => {
     const t = new TouchSprint();
-    t.tap();
-    expect(t.on).toBe(true);
-    t.stickMoved(0.5); // walking inside the ring keeps the toggle
-    expect(t.on).toBe(true);
-    t.tap();
+    expect('tap' in t).toBe(false);
+    t.stickMoved(0.5);
     expect(t.on).toBe(false);
-    t.tap();
-    t.stickReleased();
-    expect(t.on).toBe(false);
-    t.tap();
+    t.stickMoved(Z.enter + 0.1);
     t.reset();
     expect(t.on).toBe(false);
+  });
+});
+
+describe('move-stick sprint feedback (v0.6.0 hotfix)', () => {
+  const on = { sprinting: true, stamina: 2, fire: false };
+  const idle = { sprinting: false, stamina: 2, fire: false };
+  it('max walk at the radius; a dead gap before the sprint trigger', () => {
+    expect(moveStickFeedback(0.99, idle).maxWalk).toBe(false);
+    expect(moveStickFeedback(1, idle).maxWalk).toBe(true);
+    expect(stickVector(60, 0, 60, TOUCH_TUNING.move.deadzone).mag).toBe(1); // speed saturates here
+    const gap = TOUCH_TUNING.sprintZone.enter - 1;
+    expect(gap).toBeGreaterThanOrEqual(0.15);
+    expect(gap).toBeLessThanOrEqual(0.2);
+    expect(stickSprint(1.1, false)).toBe(false); // inside the gap: still walking
+  });
+  it('band lit only while really sprinting; greyed on low stamina or a held trigger', () => {
+    expect(moveStickFeedback(1.3, on).sprintMode).toBe('on');
+    expect(moveStickFeedback(1.3, idle).sprintMode).toBe('off');
+    expect(moveStickFeedback(1.3, { ...idle, stamina: 0.49 }).sprintMode).toBe('noStamina');
+    expect(moveStickFeedback(1.3, { ...idle, fire: true }).sprintMode).toBe('fire');
+    expect(moveStickFeedback(1.3, { ...on, fire: true }).sprintMode).toBe('on'); // running sprint unchanged
+    expect(moveStickFeedback(1.3, null).sprintMode).toBe('off');
+  });
+  it('returns the StickView feedback fields (maxWalk, sprintMode)', () => {
+    expect(moveStickFeedback(0, { sprinting: true, stamina: 1, fire: false })).toEqual({
+      maxWalk: false,
+      sprintMode: 'on',
+    });
+  });
+  it('the knob clamps to the sprint band outer edge', () => {
+    const s = new VirtualStick({
+      radius: 60,
+      deadzone: 0.12,
+      follow: true,
+      outer: TOUCH_TUNING.sprintZone.outer,
+    });
+    s.begin(1, 100, 100);
+    s.move(400, 100);
+    expect(Math.hypot(s.knob.x - s.originX, s.knob.y - s.originY)).toBeCloseTo(
+      60 * TOUCH_TUNING.sprintZone.outer,
+      6,
+    );
   });
 });

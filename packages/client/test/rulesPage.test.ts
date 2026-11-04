@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   defaultContent,
+  dropRates,
   enemyProjectileDeflectChances,
   expectedDps,
   MARINE_DIRECTIONAL_ARMOUR,
@@ -41,16 +42,28 @@ describe('rules page', () => {
     const c = (v: number) => String(Number(v.toFixed(2))).replace('.', ',');
     expect(html).toContain('id="sprint"');
     expect(html).toContain('Shift');
-    expect(html).toContain('SPRINT');
-    expect(html).toContain('poza jego okrąg');
-    expect(html).toContain('prawy dolny róg');
+    expect(html).toContain('NO STAMINA');
+    expect(html).toContain('okrąg i gałka robią się złote');
+    expect(html).not.toContain('prawy dolny róg'); // no » SPRINT button on touch any more
+    expect(html).toContain('jedyny sposób na sprint na telefonie');
     expect(html).toContain('id="glos"');
     expect(html).toContain('CZAT GŁOSOWY');
     expect(html).toContain('iPhone');
     const t = sprintTable();
     for (const v of [S.speedMul, S.staminaMaxS, S.minToStartS, S.weaponReadyDelayS, 7])
       expect(t).toContain(c(v));
-    expect(t).toContain(c(PLAYER.speed * S.speedMul).split(',')[0]);
+    expect(t).toContain(`${Math.round(PLAYER.speed * S.speedMul)} px/s`);
     expect(html).toContain(`${c(S.weaponReadyDelayS)} s`);
+  });
+  it('v0.6.0 hotfix: wave unlocks, more supplies and sprint-vs-trigger come from code', () => {
+    for (const w of defaultContent.weaponOrder)
+      if (w.unlockAtWave) expect(html).toContain(`na starcie fali ${w.unlockAtWave}`);
+    expect(html).not.toMatch(/odblokowuje się po \d+ s|po \d+:\d\d gry/);
+    const r = dropRates(defaultContent.director, 1);
+    const c = (v: number) => String(Number(v.toFixed(2))).replace('.', ',');
+    expect(html).toContain(c(r.crates));
+    expect(html).toContain(c(r.medkits));
+    expect(html).toContain('Sprint nie ruszy, póki trzymasz spust');
+    expect(sprintTable()).toContain('wstrzymany do puszczenia spustu');
   });
 });

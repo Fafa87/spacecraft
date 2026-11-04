@@ -21,7 +21,7 @@ export interface ContinuousIntent {
   /** Null = no aim input right now (keep the previous aim). */
   aim: AimIntent | null;
   fire: boolean;
-  /** Sprint requested (Shift held / touch SPRINT toggle on). */
+  /** Sprint requested (Shift held / touch move stick in the sprint band). */
   sprint: boolean;
 }
 

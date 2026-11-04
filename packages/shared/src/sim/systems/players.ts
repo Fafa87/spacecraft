@@ -25,7 +25,14 @@ export function updatePlayerMovement(world: World, dt: number): void {
     const def = world.content.weapon(p.current);
     const { mx, my } = p.input;
     trackStillness(p, mx, my, dt);
-    stepSprint(p.sprint, p.input.sprint === true, isMoving(mx, my), !isReviving(world, p), dt);
+    stepSprint(
+      p.sprint,
+      p.input.sprint === true,
+      isMoving(mx, my),
+      !isReviving(world, p),
+      dt,
+      p.input.fire === true,
+    );
     p.fireSlow = stepFireSlow(p.fireSlow, effectiveFire(p.input.fire, p.sprint), dt);
     const speed = p.sprint.sprinting ? marineSprintSpeed() : marineMoveSpeed(def, p.fireSlow);
     stepPlayerMovement(p, mx, my, speed, dt, world.map.arena);

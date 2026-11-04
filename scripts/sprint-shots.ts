@@ -3,14 +3,17 @@
  *
  *   npx tsx scripts/sprint-shots.ts [clientUrl]     # default http://localhost:5173/
  *
- *  - desktop 1280x760: D + Shift sprints (×1.7) with the weapon stowed on the back, held mouse
- *    button does not fire or cancel it                         -> docs/review/sprint-stowed.png
+ *  - desktop 1280x760: Shift held together with the fire button does NOT start a sprint; once fire
+ *    is released D + Shift sprints (×1.56) with the weapon hidden (not drawn), and pressing fire
+ *    again neither fires nor cancels it                         -> docs/review/sprint-stowed.png
  *    release Shift: weapon raised over the 0.8 s delay          -> docs/review/sprint-ready-raise.png
  *    (+ *-zoom.png crops around the marine)
  *  - touch 844x390 + 667x375 landscape: move stick pushed past its ring into the sprint zone
- *    sprints (ring lit), back inside stops it; » SPRINT button bottom-right toggles; the right
- *    thumb aims/fires at the same time; button inside the viewport and clear of the other
- *    buttons + the weapon column  -> docs/review/sprint-touch-844x390.png, sprint-touch-667x375.png
+ *    sprints (band lit), back inside stops it; no » SPRINT button any more (hotfix); the right
+ *    thumb aims/fires at the same time  -> docs/review/sprint-touch-844x390.png, sprint-touch-667x375.png
+ *  - move-stick feedback at 844x390: walking (plain ring), max walk (gold ring + knob, in the dead
+ *    gap before the sprint band), sprint (band lit), blocked by a held trigger (band greyed)
+ *    -> docs/review/stick-walk.png, stick-maxwalk.png, stick-sprint.png, stick-blocked.png
  */
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -92,14 +95,26 @@ async function desktop(page: Page) {
   await page.goto(CLIENT, { waitUntil: 'networkidle0' });
   await startSolo(page, false);
   await page.mouse.move(1150, 380);
-  const p0 = await me(page);
+  // Fire held first: Shift does not start a sprint (v0.6.0 hotfix rule).
+  await page.mouse.down();
   await page.keyboard.down('KeyD');
   await page.keyboard.down('ShiftLeft');
+  await sleep(400);
+  const pf = await me(page);
+  check(
+    !pf.sprinting && pf.fire,
+    `desktop: Shift while the trigger is held does not start a sprint (sprinting ${pf.sprinting})`,
+  );
+  await page.mouse.up();
+  await sleep(200);
+  const p0 = await me(page);
+  check(p0.sprinting, `desktop: releasing the trigger with Shift still held starts the sprint`);
+  // Trigger pressed during the sprint: ignored, the sprint goes on.
   await page.mouse.down();
-  await sleep(900);
+  await sleep(700);
   const p1 = await me(page);
   check(
-    p1.sprinting && p1.stamina < 3 && p1.ammo === p0.ammo,
+    p1.sprinting && p1.stamina < 2.4 && p1.ammo === p0.ammo,
     `desktop: Shift+D sprints, held fire ignored (stamina ${p1.stamina.toFixed(2)}, ammo ${p0.ammo} → ${p1.ammo})`,
   );
   await page.screenshot({ path: path.join(out, 'sprint-stowed.png') });
@@ -121,10 +136,6 @@ async function desktop(page: Page) {
   await page.keyboard.up('KeyD');
 }
 
-type Box = { x: number; y: number; w: number; h: number };
-const hit = (a: Box, b: Box) =>
-  a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-
 async function touch(page: Page, W: number, H: number) {
   const tag = `touch ${W}x${H}`;
   await page.emulate({
@@ -143,15 +154,8 @@ async function touch(page: Page, W: number, H: number) {
   await startSolo(page, true);
   await sleep(300);
   const layout = await page.evaluate(() => {
-    const btn = document.querySelector('.touch-layer .tb.sprint')!;
-    const r = btn.getBoundingClientRect();
-    const others = [...document.querySelectorAll('.touch-layer .tb:not(.sprint)')]
-      .map((e) => e.getBoundingClientRect())
-      .filter((o) => o.width > 0)
-      .map((o) => ({ x: o.left, y: o.top, w: o.width, h: o.height }));
     const hud = (window as any).__sms.game.hud;
-    const ui = hud.lastUi as number;
-    const ins = hud.lastIns as { left: number; top: number };
+    // slotRects are already CSS px (Hud.draw converts them)
     const slots = (
       hud.slotRects as {
         slot: number;
@@ -161,35 +165,16 @@ async function touch(page: Page, W: number, H: number) {
         w: number;
         h: number;
       }[]
-    ).map((q) => ({
-      slot: q.slot,
-      owned: q.owned,
-      x: ins.left + q.x * ui,
-      y: ins.top + q.y * ui,
-      w: q.w * ui,
-      h: q.h * ui,
-    }));
+    ).map((q) => ({ ...q }));
     return {
-      b: { x: r.left, y: r.top, w: r.width, h: r.height },
-      others,
+      sprintButtons: document.querySelectorAll('.tb.sprint, [data-act="sprint"]').length,
       slots,
-      visible: getComputedStyle(btn).display !== 'none',
-      inside: r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight,
       scrollX: document.documentElement.scrollWidth > innerWidth,
     };
   });
-  const overBtn = layout.others.some((o) => hit(layout.b, o));
-  const overSlot = layout.slots.some((o) => hit(layout.b, o));
   check(
-    layout.visible &&
-      layout.inside &&
-      !overBtn &&
-      !overSlot &&
-      layout.slots.length > 0 &&
-      !layout.scrollX &&
-      layout.b.h >= 56 &&
-      layout.b.x > W / 2,
-    `${tag}: SPRINT button ${layout.b.w | 0}x${layout.b.h | 0} at (${layout.b.x | 0},${layout.b.y | 0}) right side, inside, clear of ${layout.others.length} buttons + ${layout.slots.length} weapon slots`,
+    layout.sprintButtons === 0 && layout.slots.length > 0 && !layout.scrollX,
+    `${tag}: no » SPRINT button on touch (v0.6.0 hotfix: sprint only via the move stick band)`,
   );
   const owned = layout.slots.find((q) => q.owned)!;
   const slotHit = await page.evaluate(
@@ -223,15 +208,7 @@ async function touch(page: Page, W: number, H: number) {
     touchPts.delete(id);
     await send('touchEnd', [{ id, ...p }]);
   };
-  const tapBtn = async () => {
-    const c = { x: layout.b.x + layout.b.w / 2, y: layout.b.y + layout.b.h / 2 };
-    await start(5, c);
-    await sleep(30);
-    await end(5);
-    await sleep(120);
-  };
   const lit = () => page.evaluate(() => !!(window as any).__sms.game.input.touch.sprint.on);
-  const btnOn = () => page.$eval('.tb.sprint', (b) => b.classList.contains('on'));
   const R = 60; // TOUCH_TUNING.move.radius
   const L = { x: 150, y: H - 110 };
   const at = (k: number) => ({ x: L.x + R * k * 0.92, y: L.y - R * k * 0.39 });
@@ -244,6 +221,34 @@ async function touch(page: Page, W: number, H: number) {
   await sleep(300);
   const w0 = await me(page);
   check(!w0.sprinting && !(await lit()), `${tag}: stick at 0.9 × ring walks, no sprint`);
+  const moveView = () =>
+    page.evaluate(() => {
+      const v = ((window as any).__sms.game.hud.lastSticks ?? []).find(
+        (q: any) => q.kind === 'move',
+      );
+      return v ? { maxWalk: !!v.maxWalk, mode: v.sprintMode as string } : null;
+    });
+  if (W === 844) {
+    await move(0, at(0.6));
+    await sleep(200);
+    const v = await moveView();
+    check(
+      v?.maxWalk === false && v.mode === 'off',
+      `${tag}: stick 0.6 → walk (${JSON.stringify(v)})`,
+    );
+    await page.screenshot({ path: path.join(out, 'stick-walk.png') });
+    await move(0, at(1.1)); // the dead gap between max walk and the sprint band
+    await sleep(200);
+    const v2 = await moveView();
+    const g = await me(page);
+    check(
+      v2?.maxWalk === true && v2.mode === 'off' && !g.sprinting,
+      `${tag}: stick 1.1 (dead gap) → max walk, gold, no sprint (${JSON.stringify(v2)})`,
+    );
+    await page.screenshot({ path: path.join(out, 'stick-maxwalk.png') });
+    await move(0, at(0.9));
+    await sleep(100);
+  }
   // Right thumb aims + fires at the same time (multi-touch), away from the weapon column.
   const A = { x: Math.round(W * 0.6), y: Math.round(H * 0.55) };
   await start(1, A);
@@ -253,20 +258,40 @@ async function touch(page: Page, W: number, H: number) {
   }
   await sleep(500);
   await me(page);
-  // Push the left thumb out into the sprint zone.
+  // Push the left thumb out into the sprint zone while firing: the sprint waits for the trigger.
   for (let i = 1; i <= 4; i++) {
     await move(0, at(0.9 + (0.45 * i) / 4));
     await sleep(16);
   }
+  await sleep(300);
+  const sf = await me(page);
+  const vf = await moveView();
+  check(
+    !sf.sprinting && sf.fire && vf?.mode === 'fire',
+    `${tag}: sprint zone while the aim stick fires → no sprint, band greyed (${JSON.stringify(vf)})`,
+  );
+  if (W === 844) await page.screenshot({ path: path.join(out, 'stick-blocked.png') });
+  // Lift the aim thumb: the sprint starts; put it back: the running sprint ignores the trigger.
+  await end(1);
   await sleep(200);
   const s0 = await me(page);
-  await sleep(600);
+  const vs = await moveView();
+  check(
+    s0.sprinting && vs?.mode === 'on',
+    `${tag}: trigger released → sprint starts, band lit (${JSON.stringify(vs)})`,
+  );
+  if (W === 844) await page.screenshot({ path: path.join(out, 'stick-sprint.png') });
+  await start(1, A);
+  for (let i = 1; i <= 4; i++) {
+    await move(1, { x: A.x + 12 * i, y: A.y - 4 * i });
+    await sleep(16);
+  }
+  await sleep(300);
   const s1 = await me(page);
   const ringLit = await lit();
-  const toggled = await btnOn();
   check(
-    s0.sprinting && s1.sprinting && ringLit && !toggled && s1.ammo === s0.ammo,
-    `${tag}: stick pushed into the sprint zone (1.35 × ring) sprints, ring lit (${ringLit}), fire held but no shot (ammo ${s0.ammo} → ${s1.ammo})`,
+    s1.sprinting && s1.fire && ringLit && s1.ammo === s0.ammo,
+    `${tag}: stick in the sprint zone (1.35 × ring) keeps sprinting, aim stick fire ignored (ammo ${s0.ammo} → ${s1.ammo})`,
   );
   if (W === 844 || W === 667)
     await page.screenshot({ path: path.join(out, `sprint-touch-${W}x${H}.png`) });
@@ -282,23 +307,10 @@ async function touch(page: Page, W: number, H: number) {
     `${tag}: aim/fire thumb fires after the ready delay (ammo ${s1.ammo} → ${s3.ammo})`,
   );
   await end(1);
-  // Button toggle with the right thumb while walking.
-  await tapBtn();
-  await sleep(300);
-  const b1 = await me(page);
-  check(
-    b1.sprinting && (await btnOn()) && (await lit()),
-    `${tag}: SPRINT button tap toggles sprint on`,
-  );
-  await tapBtn();
-  await sleep(150);
-  const b2 = await me(page);
-  check(!b2.sprinting && !(await btnOn()), `${tag}: 2nd tap toggles it off`);
-  await tapBtn();
   await end(0);
   await sleep(250);
   const b3 = await me(page);
-  check(!b3.sprinting && !(await btnOn()), `${tag}: lifting the move stick ends a toggled sprint`);
+  check(!b3.sprinting && !(await lit()), `${tag}: lifting the move stick ends the sprint`);
 }
 
 const browser = await puppeteer.launch({

@@ -17,6 +17,7 @@ import {
   type PlayerScoreEntry,
   type RunResult,
 } from '@sms/shared';
+import { isHiddenRun } from './hidden.js';
 
 export interface FirestoreConfig {
   apiKey: string;
@@ -181,7 +182,13 @@ export function parseTopPlayers(json: unknown): PlayerScoreEntry[] {
       e.teamSize === null ||
       e.survivalMs === null ||
       e.version === null ||
-      isTestVersion(e.version) ||
+      isHiddenRun({
+        runId: e.runId,
+        version: e.version,
+        names: [e.name],
+        at: docMeta(row).createdAt ?? e.at,
+        hidden: docMeta(row).hidden,
+      }) ||
       e.score < 0 ||
       e.score > maxPlausibleScore(e.survivalMs)
     )
@@ -205,6 +212,19 @@ export function topQuery(cfg: FirestoreConfig, teamSize: number, limit: number) 
       orderBy: BY_SURVIVAL,
       limit: Math.max(1, Math.min(HIGHSCORE_LIMITS.maxLimit, Math.floor(limit) || 1)),
     },
+  };
+}
+
+/** The runs in a table that survived longer than `survivalMs` (rank correction for hidden rows). */
+export function aboveQuery(
+  cfg: FirestoreConfig,
+  teamSize: number,
+  survivalMs: number,
+  limit: number,
+) {
+  const q = rankQuery(cfg, teamSize, survivalMs).structuredAggregationQuery.structuredQuery;
+  return {
+    structuredQuery: { ...q, limit: Math.max(1, Math.min(HIGHSCORE_LIMITS.maxLimit, limit)) },
   };
 }
 
@@ -279,8 +299,25 @@ function readInts(f: Record<string, unknown>, key: string): number[] | undefined
   return out;
 }
 
-/** Runs written by `npm run check:firestore` (version "x.y.z-test") never show on the board. */
-export const isTestVersion = (version: string) => /-test$/.test(version);
+export { isTestVersion } from './hidden.js';
+
+/** Extra rows fetched by top queries so hidden rows (hidden.ts) don't shorten a board. */
+export const HIDDEN_SLACK = 10;
+
+const docMeta = (row: unknown) => {
+  const doc = obj(obj(row)?.document);
+  const f = obj(doc?.fields);
+  const ct = doc?.createTime;
+  return {
+    hidden: obj(f?.hidden)?.booleanValue === true,
+    createdAt: typeof ct === 'string' ? ct : undefined,
+  };
+};
+
+/** Number of documents in a runQuery response (shown or not). */
+export function docCount(json: unknown): number {
+  return Array.isArray(json) ? json.filter((r) => obj(obj(r)?.document)).length : 0;
+}
 
 /** runQuery response → leaderboard entries (validated with the shared rules). */
 export function parseTop(json: unknown): HighscoreEntry[] {
@@ -307,7 +344,17 @@ export function parseTop(json: unknown): HighscoreEntry[] {
       playerKills: readInts(f, 'playerKills'),
       endedAt: new Date(0).toISOString(),
     });
-    if (v.ok && !isTestVersion(v.value.version))
+    const meta = docMeta(row);
+    if (
+      v.ok &&
+      !isHiddenRun({
+        runId: id,
+        version: v.value.version,
+        names: v.value.players,
+        at: meta.createdAt ?? at,
+        hidden: meta.hidden,
+      })
+    )
       out.push({ ...v.value, endedAt: at, id, submittedAt: at });
   }
   return out;

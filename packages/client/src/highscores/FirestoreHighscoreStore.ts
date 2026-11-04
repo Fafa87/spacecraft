@@ -1,12 +1,16 @@
 import { validateLeaderboardRun, type RunResult } from '@sms/shared';
+import { HIGHSCORE_LIMITS } from '@sms/shared';
 import {
   commitBody,
+  docCount,
   endpoint,
+  HIDDEN_SLACK,
   parseCount,
   hasScores,
   parseTop,
   parseTopPlayers,
   rankQuery,
+  aboveQuery,
   topPlayersQuery,
   topQuery,
   type FirestoreConfig,
@@ -75,20 +79,32 @@ export class FirestoreHighscoreStore implements HighscoreStore {
       const above = parseCount(
         await this.post('runAggregationQuery', rankQuery(this.cfg, teamSize, survivalMs)),
       );
-      return above === null ? undefined : above + 1;
+      if (above === null) return undefined;
+      if (above === 0) return 1;
+      // The count includes hidden rows (hidden.ts: test / pre-release runs); subtract those
+      // among the runs above (exact while `above` fits in one page).
+      const json = await this.post(
+        'runQuery',
+        aboveQuery(this.cfg, teamSize, survivalMs, HIGHSCORE_LIMITS.maxLimit),
+      );
+      const notShown = docCount(json) - parseTop(json).length;
+      return Math.max(1, above - notShown + 1);
     } catch {
       return undefined;
     }
   }
 
   async top(teamSize: number, limit = 10): Promise<TopResult> {
-    const json = await this.post('runQuery', topQuery(this.cfg, teamSize, limit));
-    return { entries: parseTop(json), source: 'server' };
+    const json = await this.post('runQuery', topQuery(this.cfg, teamSize, limit + HIDDEN_SLACK));
+    return { entries: parseTop(json).slice(0, limit), source: 'server' };
   }
 
   async topPlayers(teamSize: number, limit = 10): Promise<TopPlayersResult> {
     if (!hasScores(this.cfg.board)) return { entries: [], source: 'server' };
-    const json = await this.post('runQuery', topPlayersQuery(this.cfg, teamSize, limit));
-    return { entries: parseTopPlayers(json), source: 'server' };
+    const json = await this.post(
+      'runQuery',
+      topPlayersQuery(this.cfg, teamSize, limit + HIDDEN_SLACK),
+    );
+    return { entries: parseTopPlayers(json).slice(0, limit), source: 'server' };
   }
 }

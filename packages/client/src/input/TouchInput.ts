@@ -1,3 +1,4 @@
+import { MARINE_SPRINT } from '@sms/shared';
 import {
   NO_ACTIONS,
   type ActionIntent,
@@ -55,28 +56,54 @@ export function stickSprint(
 }
 
 /**
- * Touch sprint state (pure, unit tested): stick-edge sprint while the move thumb is in the
- * sprint zone, OR the » SPRINT button's tap-toggle (cleared when the move stick is released).
+ * Touch sprint state (pure, unit tested): sprint while the move thumb is in the stick's sprint
+ * band (the only touch sprint control since the v0.6.0 hotfix removed the » SPRINT button).
  */
 export class TouchSprint {
-  toggled = false;
   edge = false;
   get on(): boolean {
-    return this.toggled || this.edge;
-  }
-  tap(): void {
-    this.toggled = !this.toggled;
+    return this.edge;
   }
   stickMoved(reach: number): void {
     this.edge = stickSprint(reach, this.edge);
   }
   stickReleased(): void {
     this.edge = false;
-    this.toggled = false;
   }
   reset(): void {
     this.stickReleased();
   }
+}
+
+/** What the move stick's outer sprint band shows (v0.6.0 hotfix feedback). */
+export type StickSprintMode = 'off' | 'on' | 'noStamina' | 'fire';
+
+/** The sim's view of our sprint, for the stick feedback (predicted state). */
+export interface StickSprintSim {
+  sprinting: boolean;
+  stamina: number;
+  /** The fire input is held (blocks the start of a sprint). */
+  fire: boolean;
+}
+
+/**
+ * Move-stick feedback (pure, unit tested):
+ *  - `maxWalk`: the thumb is at/after the stick radius = full walking speed (stickVector saturates);
+ *  - `sprintMode`: 'on' only while the sim actually sprints; 'noStamina' / 'fire' while a sprint
+ *    could not start (stamina below minToStartS, trigger held); else 'off'.
+ * Between the radius (max walk) and sprintZone.enter × radius there is a dead gap, so pushing to
+ * full speed doesn't trigger a sprint by accident.
+ */
+export function moveStickFeedback(
+  reach: number,
+  sim: StickSprintSim | null,
+): { maxWalk: boolean; sprintMode: StickSprintMode } {
+  const maxWalk = reach >= 1 - 1e-6;
+  if (!sim) return { maxWalk, sprintMode: 'off' };
+  if (sim.sprinting) return { maxWalk, sprintMode: 'on' };
+  if (sim.stamina < MARINE_SPRINT.minToStartS) return { maxWalk, sprintMode: 'noStamina' };
+  if (sim.fire) return { maxWalk, sprintMode: 'fire' };
+  return { maxWalk, sprintMode: 'off' };
 }
 
 /** Which stick a new touch starts: left half moves, right half aims. */
@@ -91,9 +118,13 @@ export interface StickView {
   knob: { x: number; y: number };
   radius: number;
   active: boolean;
-  /** Move stick only: sprint-zone ring radius (CSS px) and whether the thumb is in it. */
+  /** Move stick only: sprint band inner radius (CSS px, sprint trigger) and outer edge. */
   sprintRing?: number;
-  sprintLit?: boolean;
+  sprintOuter?: number;
+  /** Move stick only: thumb at full walking speed (at/after the radius). */
+  maxWalk?: boolean;
+  /** Move stick only: what the sprint band shows (lit only while really sprinting). */
+  sprintMode?: StickSprintMode;
 }
 
 export interface TouchInputOptions {
@@ -118,12 +149,7 @@ export class TouchInput implements InputSource {
   });
   readonly aimStick = new VirtualStick({ ...TOUCH_TUNING.aim, follow: true });
   private latched: ActionIntent = { ...NO_ACTIONS };
-  /**
-   * Two ways to sprint without a free left thumb:
-   *  - stick edge (primary): thumb pushed past the move ring into the sprint zone, while held;
-   *  - » SPRINT button in the right-thumb cluster: tap-toggle (off on a 2nd tap or when the
-   *    move stick is released).
-   */
+  /** Sprint: the move thumb pushed past the ring (and the dead gap) into the sprint band. */
   readonly sprint = new TouchSprint();
   private listeners: Array<() => void> = [];
   onActivity: (() => void) | null = null;
@@ -136,7 +162,6 @@ export class TouchInput implements InputSource {
     this.layer = document.createElement('div');
     this.layer.className = 'touch-layer';
     this.layer.innerHTML = `
-      <button class="tb sprint" data-act="sprint" aria-label="Sprint" aria-pressed="false">»<span>SPRINT</span></button>
       <div class="touch-buttons">
         <button class="tb" data-act="menu" aria-label="Menu / leave game">⏸</button>
         <button class="tb" data-act="mute" aria-label="Mute">🔊</button>
@@ -180,24 +205,12 @@ export class TouchInput implements InputSource {
   }
 
   private button(act: string, b: HTMLButtonElement): void {
-    if (act === 'sprint') {
-      this.sprint.tap();
-      this.syncSprintButton();
-      return;
-    }
     if (act === 'reload') this.latched.reload = true;
     else if (act === 'mute') this.opts.onButton?.('mute');
     else if (act === 'menu') this.opts.onButton?.('menu');
     else if (act === 'fullscreen') void toggleFullscreen();
     b.classList.add('pressed');
     setTimeout(() => b.classList.remove('pressed'), 120);
-  }
-
-  private syncSprintButton(): void {
-    const on = this.sprint.toggled;
-    const b = this.layer.querySelector('[data-act="sprint"]');
-    b?.classList.toggle('on', on);
-    b?.setAttribute('aria-pressed', String(on));
   }
 
   setMuted(muted: boolean): void {
@@ -235,10 +248,7 @@ export class TouchInput implements InputSource {
       for (const s of [this.moveStick, this.aimStick])
         if (s.touchId === t.identifier) {
           s.end();
-          if (s === this.moveStick) {
-            this.sprint.stickReleased(); // stopped running
-            this.syncSprintButton();
-          }
+          if (s === this.moveStick) this.sprint.stickReleased(); // stopped running
         }
     }
   }
@@ -255,7 +265,7 @@ export class TouchInput implements InputSource {
     return a;
   }
 
-  sticks(): StickView[] {
+  sticks(sim: StickSprintSim | null = null): StickView[] {
     return (
       [
         ['move', this.moveStick],
@@ -271,7 +281,8 @@ export class TouchInput implements InputSource {
       ...(kind === 'move'
         ? {
             sprintRing: s.opts.radius * TOUCH_TUNING.sprintZone.enter,
-            sprintLit: this.sprint.on,
+            sprintOuter: s.opts.radius * TOUCH_TUNING.sprintZone.outer,
+            ...moveStickFeedback(s.reach, sim),
           }
         : {}),
     }));
@@ -282,7 +293,6 @@ export class TouchInput implements InputSource {
     this.moveStick.end();
     this.aimStick.end();
     this.sprint.reset();
-    this.syncSprintButton();
   }
 
   dispose(): void {

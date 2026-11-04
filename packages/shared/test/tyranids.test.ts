@@ -48,7 +48,7 @@ describe('40k content data', () => {
       'meltagun',
       'frag_grenade',
     ]);
-    const unlocks = content.weaponOrder.map((w) => w.unlockAtSec ?? Infinity);
+    const unlocks = content.weaponOrder.map((w) => w.unlockAtWave ?? Infinity);
     expect(unlocks[0]).toBe(0);
     expect([...unlocks].sort((a, b) => a - b)).toEqual(unlocks);
     expect(content.weapon('plasma_gun').heat).toBeDefined();

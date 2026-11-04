@@ -4,6 +4,8 @@
  *
  *   npm run sim                 # 6 seeds, team sizes 1-MAX_PLAYERS (8), "kite" bots
  *   npm run sim -- --bot=turret --seeds=10 --max=900
+ *   npm run sim -- --waves --sizes=1,2,4     # also print median wave start times
+ *   npm run sim -- --waves --immortal         # bots never die: wave pacing over a long run
  *
  * Bots: "turret" stands still and aims at the nearest enemy; "kite" also moves away
  * from nearby enemies, circles the arena centre, picks up crates and revives teammates.
@@ -116,16 +118,23 @@ for (const size of sizes) {
   // Leaderboard plausibility headroom (Firestore rules / validateLeaderboardRun): worst marine.
   let maxPtsPerSec = 0;
   let maxKillsPerSec = 0;
+  const waveStarts: number[][] = [];
   for (let s = 1; s <= seeds; s++) {
     const world = createWorld(
       Array.from({ length: size }, (_, i) => ({ id: i + 1, name: `bot${i + 1}` })),
       s * 7919,
     );
     let seq = 0;
+    let lastWave = world.director.wave;
     while (!world.over && world.time < maxSec) {
       seq++;
       for (const p of world.players) applyInput(world, p.id, think(world, p.id, seq));
       stepWorld(world, TICK_DT);
+      if (args.immortal) for (const p of world.players) p.hp = p.maxHp;
+      if (world.director.wave !== lastWave) {
+        lastWave = world.director.wave;
+        (waveStarts[lastWave] ??= []).push(world.time);
+      }
     }
     times.push(world.time);
     for (const p of world.players) {
@@ -143,4 +152,12 @@ for (const size of sizes) {
       `  | kills/run ${(kills / seeds).toFixed(0)}  waves/run ${(waves / seeds).toFixed(1)}` +
       `  | max/marine ${maxPtsPerSec.toFixed(1)} pts/s ${maxKillsPerSec.toFixed(2)} kills/s`,
   );
+  if (args.waves) {
+    // Median wave start times (runs that reached the wave) - used to pace wave unlocks.
+    const med = (a: number[]) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)]!;
+    const row = waveStarts
+      .map((a, w) => (a?.length ? `w${w} ${fmt(med(a))} (${a.length})` : ''))
+      .filter(Boolean);
+    console.log(`  wave starts: ${row.join('  ')}`);
+  }
 }

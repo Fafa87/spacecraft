@@ -103,8 +103,11 @@ export interface WeaponDef {
   braceSpreadMult?: number;
   projectile: ProjectileSpec;
   heat?: HeatSpec;
-  /** Survival second at which every marine unlocks it; 0 = starting weapon; null = crate-only. */
-  unlockAtSec: number | null;
+  /**
+   * Wave at whose start every marine unlocks it (v0.6.0 hotfix: waves, not survival time);
+   * 0 = starting weapon; null = crate-only.
+   */
+  unlockAtWave: number | null;
   /** Relative weight when a weapon crate rolls its contents. 0 = never in crates. */
   crateWeight: number;
   /** Sound keys (recipes in tools/src/audio/recipes.ts). */
@@ -330,9 +333,12 @@ export interface DirectorConfig {
   };
   /** Per-wave drop budget, so kills and crates can't be farmed. */
   drops: {
-    /** Medkits from kills per wave: base + perMarine * (teamSize - 1), rounded. Bosses always drop. */
+    /**
+     * Medkits from kills per wave: base + perMarine * (teamSize - 1); fractions carry over
+     * between waves (sim dropCaps). Bosses always drop.
+     */
     medkits: { base: number; perMarine: number };
-    /** Weapon crates per wave: base + perMarine * (teamSize - 1), rounded. */
+    /** Weapon crates per wave: base + perMarine * (teamSize - 1); fractions carry over. */
     crates: { base: number; perMarine: number };
   };
   /** Weapon crate timing inside a wave (survival seconds after the wave starts). */

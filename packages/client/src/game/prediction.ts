@@ -70,7 +70,14 @@ export class Predictor {
   }
 
   private stepSprintFor(input: PlayerInput, sprintOk: boolean): void {
-    stepSprint(this.sprint, input.sprint === true, isMoving(input.mx, input.my), sprintOk, TICK_DT);
+    stepSprint(
+      this.sprint,
+      input.sprint === true,
+      isMoving(input.mx, input.my),
+      sprintOk,
+      TICK_DT,
+      input.fire === true,
+    );
   }
 
   private speed(walk: number): number {

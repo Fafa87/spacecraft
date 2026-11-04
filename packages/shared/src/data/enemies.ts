@@ -1,4 +1,8 @@
+import { MEDKIT_DROP_FACTOR } from './director.js';
 import type { EnemyDef } from './types.js';
+
+/** Medkit drop chance scaled by the hotfix factor (a boss's 1 stays a certain drop). */
+const medkit = (p: number): number => Math.min(1, p * MEDKIT_DROP_FACTOR);
 
 /**
  * Tyranid enemy table. Index order is used on the wire, so append new enemies at the end.
@@ -31,7 +35,7 @@ export const ENEMIES: EnemyDef[] = [
     },
     threat: 1,
     points: 2,
-    medkitDropChance: 0.006,
+    medkitDropChance: medkit(0.006),
     sprite: 'enemy_hormagaunt',
     sfx: {
       death: 'nid_die_small',
@@ -71,7 +75,7 @@ export const ENEMIES: EnemyDef[] = [
     },
     threat: 1.3,
     points: 3,
-    medkitDropChance: 0.01,
+    medkitDropChance: medkit(0.01),
     sprite: 'enemy_termagant',
     sfx: { death: 'nid_die_small', attack: 'nid_spit' },
     decal: 'blood',
@@ -93,7 +97,7 @@ export const ENEMIES: EnemyDef[] = [
     group: [5, 9],
     threat: 0.4,
     points: 1,
-    medkitDropChance: 0.002,
+    medkitDropChance: medkit(0.002),
     sprite: 'enemy_ripper',
     sfx: { death: 'nid_squish', attack: 'nid_chitter' },
     decal: 'blood',
@@ -115,7 +119,7 @@ export const ENEMIES: EnemyDef[] = [
     group: [2, 4],
     threat: 3.2,
     points: 5,
-    medkitDropChance: 0.03,
+    medkitDropChance: medkit(0.03),
     sprite: 'enemy_genestealer',
     sfx: {
       death: 'nid_die_mid',
@@ -157,7 +161,7 @@ export const ENEMIES: EnemyDef[] = [
     group: [1, 2],
     threat: 9,
     points: 15,
-    medkitDropChance: 0.15,
+    medkitDropChance: medkit(0.15),
     sprite: 'enemy_warrior',
     sfx: { death: 'nid_die_big', attack: 'nid_spit', roar: 'nid_shriek', aura: 'synapse_drone' },
     decal: 'blood',
@@ -180,7 +184,7 @@ export const ENEMIES: EnemyDef[] = [
     group: [1, 2],
     threat: 7,
     points: 10,
-    medkitDropChance: 0.1,
+    medkitDropChance: medkit(0.1),
     sprite: 'enemy_ravener',
     sfx: {
       death: 'nid_die_big',
@@ -226,7 +230,7 @@ export const ENEMIES: EnemyDef[] = [
     group: [1, 2],
     threat: 5,
     points: 8,
-    medkitDropChance: 0.08,
+    medkitDropChance: medkit(0.08),
     sprite: 'enemy_biovore',
     sfx: { death: 'nid_die_mid', attack: 'biovore_thoomp' },
     decal: 'acid',
@@ -257,7 +261,7 @@ export const ENEMIES: EnemyDef[] = [
     group: [2, 4],
     threat: 1.6,
     points: 1,
-    medkitDropChance: 0,
+    medkitDropChance: medkit(0),
     sprite: 'enemy_spore_mine',
     sfx: { death: 'nid_spore_burst' },
     decal: 'acid',
@@ -290,7 +294,7 @@ export const ENEMIES: EnemyDef[] = [
     boss: true,
     threat: 30,
     points: 50,
-    medkitDropChance: 1,
+    medkitDropChance: medkit(1),
     sprite: 'enemy_carnifex',
     sfx: {
       death: 'nid_die_huge',
