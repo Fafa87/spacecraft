@@ -244,3 +244,32 @@ Display names are data. Add a preset to `NAME_PRESETS` in `packages/shared/src/d
 (`{ title?, subtitle?, weapons?: {id: name}, enemies?: {id: name}, chapters?: {id: name} }`)
 and select it with `?names=<preset>` or `VITE_NAMES=<preset>`. Ids never change, so saves,
 replays and leaderboards stay compatible.
+
+## Add a map (harder scenario)
+
+Maps live in `packages/shared/src/maps/`. A `MapDef` bundles the playfield (`arena`), where the
+squad deploys (`playerSpawn`) and the whole spawn `director` (waves, squad-size scaling,
+breaches, drops, bosses, wave table). The original game is `WAVE_MAP` (id `wave`, `maps/wave.ts`),
+which just wraps `DIRECTOR` and `ARENA`, so tune the live game in `data/director.ts` as before.
+
+1. Create `maps/<id>.ts`, usually derived from the wave map:
+   ```ts
+   export const WAVE_HARD = defineMap(WAVE_MAP, {
+     id: 'wave_hard',
+     name: 'Hive Siege II',
+     tier: 2,
+     director: { waves: { hpScalePerWave: 0.09 }, bosses: { firstWave: 2 } },
+   });
+   ```
+   Director sections merge one level deep; arrays (`spawnPoints`, `waveTable`, per-team-size
+   tables) replace. If you change `arena`, also set `playerSpawn` and `spawnPoints` inside it.
+2. Append it to `MAPS` in `maps/index.ts` (tier order). `content.test.ts`/`maps.test.ts`
+   validate every registered map.
+3. Play it: `createWorld(players, seed, content, '<id>')` or `new HostSession({ ..., mapId })`.
+
+Not wired yet (needed before a map picker ships): the map id is not sent to clients (wire
+`start` message; add it as an optional field defaulting to `wave` so protocol 5 stays
+compatible), client prediction clamps to the wave arena, and leaderboards don't key on the map
+(runs on another map should get their own board, e.g. `boards/<version>` → `<version>-<mapId>`,
+plus a `map` doc field). `sim-baseline.json` (simDeterminism.test.ts) pins the wave map's
+behaviour; regenerate it with `UPDATE_SIM_BASELINE=1` only for an intended gameplay change.

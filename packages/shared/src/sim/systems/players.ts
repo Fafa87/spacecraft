@@ -13,7 +13,14 @@ export function updatePlayerMovement(world: World, dt: number): void {
     const def = world.content.weapon(p.current);
     trackStillness(p, p.input.mx, p.input.my, dt);
     p.fireSlow = stepFireSlow(p.fireSlow, p.input.fire, dt);
-    stepPlayerMovement(p, p.input.mx, p.input.my, marineMoveSpeed(def, p.fireSlow), dt);
+    stepPlayerMovement(
+      p,
+      p.input.mx,
+      p.input.my,
+      marineMoveSpeed(def, p.fireSlow),
+      dt,
+      world.map.arena,
+    );
   }
 }
 

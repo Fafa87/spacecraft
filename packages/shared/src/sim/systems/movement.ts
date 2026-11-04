@@ -1,5 +1,6 @@
 import { ARENA, PLAYER } from '../../constants.js';
 import { clamp } from '../../math/vec.js';
+import type { ArenaSize } from '../../maps/types.js';
 
 /**
  * Player movement for one input frame. Pure & deterministic: the client calls
@@ -11,6 +12,8 @@ export function stepPlayerMovement(
   my: number,
   speed: number,
   dt: number,
+  /** Map playfield; defaults to the wave map's arena. */
+  arena: ArenaSize = ARENA,
 ): void {
   let dx = clamp(mx, -1, 1);
   let dy = clamp(my, -1, 1);
@@ -19,8 +22,8 @@ export function stepPlayerMovement(
     dx /= l;
     dy /= l;
   }
-  pos.x = clamp(pos.x + dx * speed * dt, PLAYER.radius, ARENA.width - PLAYER.radius);
-  pos.y = clamp(pos.y + dy * speed * dt, PLAYER.radius, ARENA.height - PLAYER.radius);
+  pos.x = clamp(pos.x + dx * speed * dt, PLAYER.radius, arena.width - PLAYER.radius);
+  pos.y = clamp(pos.y + dy * speed * dt, PLAYER.radius, arena.height - PLAYER.radius);
 }
 
 export const playerMoveSpeed = (moveSpeedMul: number): number => PLAYER.speed * moveSpeedMul;

@@ -1,5 +1,4 @@
 import {
-  ARENA,
   PLAYER,
   ROLE_COLOR,
   ROLE_SHORT,
@@ -340,10 +339,10 @@ export class Hud {
 
   private minimap(ctx: CanvasRenderingContext2D, w: number, s: HudState): void {
     const mw = 190;
-    const mh = (mw * ARENA.height) / ARENA.width;
+    const mh = (mw * this.content.map.arena.height) / this.content.map.arena.width;
     const x0 = w - mw - 12;
     const y0 = 12;
-    const k = mw / ARENA.width;
+    const k = mw / this.content.map.arena.width;
     this.panel(ctx, x0 - 4, y0 - 4, mw + 8, mh + 8);
     ctx.fillStyle = 'rgba(40,30,20,0.6)';
     ctx.fillRect(x0, y0, mw, mh);

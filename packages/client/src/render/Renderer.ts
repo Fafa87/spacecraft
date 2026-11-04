@@ -1,5 +1,4 @@
 import {
-  ARENA,
   BREACH_STATE,
   defaultContent,
   PLAYER,
@@ -123,8 +122,8 @@ export class Renderer {
   ) {
     this.ctx = canvas.getContext('2d', { alpha: false })!;
     this.decals = document.createElement('canvas');
-    this.decals.width = ARENA.width * DECAL_SCALE;
-    this.decals.height = ARENA.height * DECAL_SCALE;
+    this.decals.width = this.content.map.arena.width * DECAL_SCALE;
+    this.decals.height = this.content.map.arena.height * DECAL_SCALE;
     this.decalCtx = this.decals.getContext('2d')!;
     this.buildScenery();
     this.resize();
@@ -132,8 +131,8 @@ export class Renderer {
 
   /** Ruined hive-city dressing around the arena + creep patches (deterministic). */
   private buildScenery(): void {
-    const W = ARENA.width;
-    const H = ARENA.height;
+    const W = this.content.map.arena.width;
+    const H = this.content.map.arena.height;
     const props: Prop[] = [];
     // gothic pillars along the arena wall
     for (let x = 0; x <= W; x += 200) {
@@ -243,7 +242,7 @@ export class Renderer {
 
     this.drawFloor();
     this.drawCreep(f.b.time);
-    ctx.drawImage(this.decals, 0, 0, ARENA.width, ARENA.height);
+    ctx.drawImage(this.decals, 0, 0, this.content.map.arena.width, this.content.map.arena.height);
     this.drawArenaEdge();
     // Terrain layer: pillars, rubble and edge boulders always sit UNDER every unit.
     this.drawProps();
@@ -265,8 +264,8 @@ export class Renderer {
     const v = this.camera.view(TILE);
     const tx0 = Math.max(0, Math.floor(v.x0 / TILE));
     const ty0 = Math.max(0, Math.floor(v.y0 / TILE));
-    const tx1 = Math.min(ARENA.width / TILE, Math.ceil(v.x1 / TILE));
-    const ty1 = Math.min(ARENA.height / TILE, Math.ceil(v.y1 / TILE));
+    const tx1 = Math.min(this.content.map.arena.width / TILE, Math.ceil(v.x1 / TILE));
+    const ty1 = Math.min(this.content.map.arena.height / TILE, Math.ceil(v.y1 / TILE));
     const hasTiles = this.assets.has('tile_floor_0');
     for (let ty = ty0; ty < ty1; ty++) {
       for (let tx = tx0; tx < tx1; tx++) {
@@ -277,7 +276,8 @@ export class Renderer {
         // Imperial deck: plain plates, worn plates, drain grates, hazard strips,
         // and a seal plate in the very centre.
         const centre =
-          Math.abs(cx - ARENA.width / 2) < TILE && Math.abs(cy - ARENA.height / 2) < TILE;
+          Math.abs(cx - this.content.map.arena.width / 2) < TILE &&
+          Math.abs(cy - this.content.map.arena.height / 2) < TILE;
         const key = centre
           ? 'tile_seal'
           : roll < 25
@@ -296,8 +296,8 @@ export class Renderer {
 
   private drawArenaEdge(): void {
     const { ctx } = this;
-    const W = ARENA.width;
-    const H = ARENA.height;
+    const W = this.content.map.arena.width;
+    const H = this.content.map.arena.height;
     ctx.save();
     // broken hab-block wall: dark masonry band + brass-capped parapet
     ctx.fillStyle = '#17130f';

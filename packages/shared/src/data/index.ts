@@ -5,6 +5,7 @@ import { ENEMIES } from './enemies.js';
 import { applyNamePreset, DEFAULT_SUBTITLE, DEFAULT_TITLE, NAME_PRESETS } from './naming.js';
 import type { ChapterDef, DirectorConfig, EnemyDef, WeaponDef } from './types.js';
 import { WEAPONS } from './weapons.js';
+import { getMap, validateMapGeometry, WAVE_MAP, type MapDef } from '../maps/index.js';
 
 export * from './types.js';
 export * from './naming.js';
@@ -26,6 +27,11 @@ export class ContentRegistry {
   readonly projectileKinds: readonly string[];
   /** Player colour schemes in wire order. */
   readonly chapters: readonly ChapterDef[];
+  /**
+   * The active map (arena, player spawn, director). `director` is always `map.director`; a
+   * registry built from a bare director (tests, tools) gets the wave map with that director.
+   */
+  readonly map: MapDef;
 
   constructor(
     weapons: WeaponDef[],
@@ -34,7 +40,10 @@ export class ContentRegistry {
     chapters: ChapterDef[] = CHAPTERS,
     readonly title = DEFAULT_TITLE,
     readonly subtitle = DEFAULT_SUBTITLE,
+    map?: MapDef,
   ) {
+    const base = map ?? WAVE_MAP;
+    this.map = base.director === director ? base : { ...base, director };
     this.chapters = chapters;
     this.weapons = new Map(weapons.map((w) => [w.id, w]));
     this.enemies = new Map(enemies.map((e) => [e.id, e]));
@@ -91,6 +100,22 @@ export class ContentRegistry {
       t.chapters,
       preset.title ?? this.title,
       preset.subtitle ?? this.subtitle,
+      this.map,
+    );
+  }
+
+  /** Same content on another map (MapDef or registered map id). Same map = this registry. */
+  withMap(mapOrId: MapDef | string): ContentRegistry {
+    const map = typeof mapOrId === 'string' ? getMap(mapOrId) : mapOrId;
+    if (map === this.map) return this;
+    return new ContentRegistry(
+      [...this.weapons.values()],
+      [...this.enemies.values()],
+      map.director,
+      [...this.chapters],
+      this.title,
+      this.subtitle,
+      map,
     );
   }
 
@@ -189,6 +214,7 @@ export class ContentRegistry {
     }
     if (this.director.waveTable[0]?.fromWave !== 1)
       errors.push('waveTable must start at fromWave 1');
+    errors.push(...validateMapGeometry(this.map));
     return errors;
   }
 }
