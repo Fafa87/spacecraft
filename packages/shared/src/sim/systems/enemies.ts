@@ -160,7 +160,7 @@ export function updateEnemies(world: World, hash: SpatialHash<Enemy>, dt: number
       if (contact > 0 && d <= reach && e.attackCooldown <= 0) {
         e.attackCooldown = def.contactCooldown;
         e.attackAnim = 0.3;
-        damagePlayer(world, target, contact * e.synDamage);
+        damagePlayer(world, target, contact * e.synDamage, { fromX: e.x, fromY: e.y });
         world.events.push({ e: 'bite', p: target.id, t: e.type });
         // A Hormagaunt leap ends on impact; a Carnifex ploughs on.
         if (e.chargePhase === 2 && def.charge!.duration < 0.5) e.chargeTimer = 0;

@@ -211,6 +211,59 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
       });
       break;
     }
+    case 'defl': {
+      // Enemy shot glanced off a marine's front plate: bright "ping" flash, a spray of sparks
+      // and a few fast streaks along the ricochet direction (`a`).
+      if (!throttled('armour_deflect', 50))
+        audio.play('carapace_ricochet', { x: ev.x, y: ev.y, volume: 0.8, rate: 1.35 });
+      P.spawn({
+        x: ev.x,
+        y: ev.y,
+        shape: 'sprite',
+        sprite: 'fx_ring',
+        maxLife: 0.18,
+        size: 0.14,
+        grow: 2.5,
+        additive: true,
+        drag: 0,
+        color: '#cfe8ff',
+      });
+      P.spawn({
+        x: ev.x,
+        y: ev.y,
+        maxLife: 0.09,
+        size: 5,
+        grow: 0.4,
+        additive: true,
+        drag: 0,
+        color: '#ffffff',
+      });
+      P.burst(ev.x, ev.y, 7, {
+        speed: 300,
+        color: '#fff6d0',
+        maxLife: 0.2,
+        size: 1.8,
+        shape: 'spark',
+        additive: true,
+      });
+      for (let i = 0; i < 3; i++) {
+        const a = ev.a + (Math.random() - 0.5) * 0.5;
+        const sp = 520 + Math.random() * 260;
+        P.spawn({
+          x: ev.x,
+          y: ev.y,
+          vx: Math.cos(a) * sp,
+          vy: Math.sin(a) * sp,
+          maxLife: 0.16,
+          size: 2.4,
+          color: '#ffe8a0',
+          drag: 2,
+          shape: 'spark',
+          additive: true,
+        });
+      }
+      break;
+    }
     case 'die': {
       const def = content.enemies.get(ev.t);
       const vis = ENEMY_VISUALS[ev.t] ?? DEFAULT_ENEMY_VISUAL;

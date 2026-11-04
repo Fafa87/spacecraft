@@ -1,7 +1,8 @@
 import { ARENA, PLAYER } from '../../constants.js';
 import { dist2 } from '../../math/vec.js';
 import type { SpatialHash } from '../spatialHash.js';
-import type { Enemy, Projectile, World } from '../types.js';
+import { armourArc, enemyProjectileDeflectChances, MARINE_DEFLECTION } from '../../data/index.js';
+import type { Enemy, Player, Projectile, World } from '../types.js';
 import { damageEnemy, damagePlayer, explode } from './combat.js';
 
 /** Largest enemy radius; used to pad broad-phase queries. */
@@ -25,6 +26,7 @@ export function updateProjectiles(world: World, enemyHash: SpatialHash<Enemy>, d
       detonate(world, pr);
       continue;
     }
+    if (pr.deflected) continue; // a ricochet hits nothing
     if (pr.owner === 'player') hitEnemies(world, pr, x0, y0, enemyHash);
     else hitPlayers(world, pr, x0, y0);
   }
@@ -118,7 +120,16 @@ function hitPlayers(world: World, pr: Projectile, x0: number, y0: number): void 
     if (p.state !== 'alive') continue;
     const r = PLAYER.radius + pr.radius;
     if (segmentDist2(x0, y0, pr.x, pr.y, p.x, p.y) <= r * r) {
-      if (pr.damage > 0) damagePlayer(world, p, pr.damage);
+      if (tryDeflect(world, pr, p)) return;
+      if (pr.damage > 0)
+        // Armour faces the incoming shot: source direction = against its travel (or its
+        // segment start if it has somehow stopped).
+        damagePlayer(
+          world,
+          p,
+          pr.damage,
+          pr.vx || pr.vy ? { dirX: -pr.vx, dirY: -pr.vy } : { fromX: x0, fromY: y0 },
+        );
       if (pr.explosion) {
         detonate(world, pr);
         return;
@@ -128,6 +139,58 @@ function hitPlayers(world: World, pr: Projectile, x0: number, y0: number): void 
       return;
     }
   }
+}
+
+const deflectCache = new WeakMap<object, Record<string, number>>();
+
+/** Deflection chance for an enemy projectile kind under this world's content (data/armour.ts). */
+export function deflectChance(world: World, kind: string): number {
+  let t = deflectCache.get(world.content);
+  if (!t) {
+    t = enemyProjectileDeflectChances(world.content.enemies.values());
+    deflectCache.set(world.content, t);
+  }
+  return t[kind] ?? 0;
+}
+
+/**
+ * Front-plate ricochet (data/armour.ts MARINE_DEFLECTION): only enemy shots striking the front
+ * arc roll (seeded RNG); on success the shot is mirrored off the plate, harmless and fading.
+ */
+function tryDeflect(world: World, pr: Projectile, p: Player): boolean {
+  if (pr.owner !== 'enemy' || pr.explosion || !(pr.vx || pr.vy)) return false;
+  if (armourArc(p.aim, -pr.vx, -pr.vy) !== 'front') return false;
+  const chance = deflectChance(world, pr.kind);
+  if (!(chance > 0) || !world.rng.chance(chance)) return false;
+  // Mirror the velocity across the plate (normal = facing), then a little seeded jitter.
+  const nx = Math.cos(p.aim);
+  const ny = Math.sin(p.aim);
+  const dot = pr.vx * nx + pr.vy * ny;
+  const rx = pr.vx - 2 * dot * nx;
+  const ry = pr.vy - 2 * dot * ny;
+  const a =
+    Math.atan2(ry, rx) + world.rng.range(-MARINE_DEFLECTION.jitter, MARINE_DEFLECTION.jitter);
+  const sp = Math.hypot(rx, ry) * MARINE_DEFLECTION.speedMul;
+  // Put it on the plate where it struck (towards the shooter) so it visibly leaves from there.
+  const inL = Math.hypot(pr.vx, pr.vy);
+  const hx = p.x - (pr.vx / inL) * (PLAYER.radius + pr.radius);
+  const hy = p.y - (pr.vy / inL) * (PLAYER.radius + pr.radius);
+  pr.x = hx;
+  pr.y = hy;
+  pr.vx = Math.cos(a) * sp;
+  pr.vy = Math.sin(a) * sp;
+  pr.damage = 0;
+  pr.deflected = true;
+  pr.life = Math.min(pr.life, MARINE_DEFLECTION.fadeTime);
+  world.events.push({
+    e: 'defl',
+    p: p.id,
+    x: Math.round(hx),
+    y: Math.round(hy),
+    a: Math.round(a * 100) / 100,
+    k: pr.kind,
+  });
+  return true;
 }
 
 function detonate(world: World, pr: Projectile): void {
