@@ -23,6 +23,7 @@ import { createJoinScreen } from '../ui/screens/join.js';
 import { createMenuScreen } from '../ui/screens/menu.js';
 import { createRoomScreen } from '../ui/screens/room.js';
 import { stageHiveDemo } from '../game/demo.js';
+import { attachVoice } from '../voice/index.js';
 
 type Screen = 'boot' | 'menu' | 'join' | 'room' | 'game' | 'over';
 
@@ -210,6 +211,7 @@ export class App {
     this.conn = conn;
     this.leaving = false;
     const s = conn.session;
+    this.connCleanup.push(attachVoice(conn)); // voice-chat prototype: no-op unless ?voice=1
     this.connCleanup.push(
       s.on('start', () => this.startGame()),
       s.on('lobby', (l) => {
