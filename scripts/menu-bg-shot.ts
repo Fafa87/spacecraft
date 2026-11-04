@@ -30,7 +30,9 @@ for (const [w, h, mobile] of [
   await p.goto(`${CLIENT}?firestore=0`, { waitUntil: 'load' });
   await p.waitForSelector('.menu #name', { timeout: 15000 });
   await new Promise((r) => setTimeout(r, 800));
-  await p.screenshot({ path: path.join(root, `docs/review/menu-bg-${w}x${h}.png`) });
+  await p.screenshot({
+    path: path.join(root, `docs/review/${process.env.SHOT_PREFIX ?? 'menu-bg'}-${w}x${h}.png`),
+  });
   console.log(`✓ menu-bg-${w}x${h}.png`);
   await p.close();
 }
