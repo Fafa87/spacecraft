@@ -211,7 +211,7 @@ export class App {
     this.conn = conn;
     this.leaving = false;
     const s = conn.session;
-    this.connCleanup.push(attachVoice(conn)); // voice-chat prototype: no-op unless ?voice=1
+    this.connCleanup.push(attachVoice(conn)); // voice chat: only when the host opted in (P2P)
     this.connCleanup.push(
       s.on('start', () => this.startGame()),
       s.on('lobby', (l) => {
@@ -257,8 +257,11 @@ export class App {
     this.game = null;
     this.screen = 'room';
     this.audio.playMusic('menu');
+    const host = conn.mode === 'p2p' ? conn.host : undefined;
     const room = createRoomScreen(conn.session, conn.roomCode, conn.mode, this.content, {
       leave: () => this.showMenu(),
+      // Voice chat opt-in: the P2P host decides for the room (sent to all in 'lobby').
+      ...(host ? { setVoice: (on: boolean) => host.setVoice(on) } : {}),
     });
     this.setUi(room.el);
     this.cleanup.push(room.dispose);

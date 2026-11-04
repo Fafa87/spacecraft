@@ -56,6 +56,11 @@ export type HostMessage =
       phase: SessionPhase;
       maxPlayers: number;
       players: LobbyPlayer[];
+      /**
+       * Host enabled voice chat for this room (optional, v0.6+; absent = off). Voice runs on its
+       * own PeerJS mesh, so older clients just ignore the field (protocol stays v5).
+       */
+      voice?: boolean;
     }
   | { t: 'start'; seed: number; players: LobbyPlayer[] }
   | { t: 'snap'; s: Snapshot }

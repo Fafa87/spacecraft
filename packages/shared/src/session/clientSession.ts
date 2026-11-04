@@ -19,6 +19,8 @@ export interface LobbyInfo {
   phase: SessionPhase;
   maxPlayers: number;
   players: LobbyPlayer[];
+  /** Host enabled voice chat (see HostMessage 'lobby'). */
+  voice: boolean;
 }
 
 export type ClientSessionEvents = {
@@ -106,6 +108,7 @@ export class ClientSession extends Emitter<ClientSessionEvents> {
           phase: m.phase,
           maxPlayers: m.maxPlayers,
           players: m.players,
+          voice: m.voice === true,
         };
         this.emit('lobby', this.lobby);
         break;

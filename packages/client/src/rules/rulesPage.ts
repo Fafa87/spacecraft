@@ -48,7 +48,7 @@ export function rulesHtml(c: ContentRegistry): string {
   <p class="muted">Wersja v${GAME_VERSION}</p>
 </header>
 <nav class="toc">
-  <a href="#cel">Cel</a><a href="#sterowanie">Sterowanie</a><a href="#sprint">Sprint</a><a href="#tryby">Tryby</a><a href="#multi">Multiplayer</a><a href="#bron">Broń</a><a href="#pancerz">Pancerz</a><a href="#wrogowie">Tyranidzi</a><a href="#punkty">Punkty</a><a href="#rady">Rady</a><a href="#kompendium">Kompendium</a>
+  <a href="#cel">Cel</a><a href="#sterowanie">Sterowanie</a><a href="#sprint">Sprint</a><a href="#tryby">Tryby</a><a href="#multi">Multiplayer</a><a href="#glos">Czat głosowy</a><a href="#bron">Broń</a><a href="#pancerz">Pancerz</a><a href="#wrogowie">Tyranidzi</a><a href="#punkty">Punkty</a><a href="#rady">Rady</a><a href="#kompendium">Kompendium</a>
 </nav>
 <section id="cel"><h2>Cel gry</h2>
   <p>Jesteś Space Marine broniącym zrujnowanej iglicy ula. Tyranidzi atakują <b>falami</b> z wyłomów w ścianach i szybów w podłodze. Następna fala rusza dopiero, gdy zginie cała poprzednia (po ${d.waves.breather} s przerwy). Każda fala jest większa, a potwory mają więcej życia. Co ${d.bosses.everyWave}. fala od ${d.bosses.firstWave}. prowadzi boss — <b>${esc(boss)}</b>.</p>
@@ -105,6 +105,17 @@ export function rulesHtml(c: ContentRegistry): string {
 </ol>
 <p><b>Więcej graczy = trudniej</b>: więcej wrogów, szybszy napływ, więcej elit i bossów, potwory mają więcej życia. Dokładne mnożniki są w kompendium.</p>
 <p><b>Ranny brat</b>: marine z zerowym życiem pada i czeka na pomoc. Stań obok niego (do ${PLAYER.reviveRadius} px) przez ${PLAYER.reviveTime} s, a wstanie z ${Math.round(PLAYER.reviveHpFraction * 100)}% życia. Ma na to ${PLAYER.bleedOutTime} s — potem ginie.</p>
+</section>
+<section id="glos"><h2>Czat głosowy</h2>
+  <p>Głos jest <b>domyślnie wyłączony</b>. Włącza go host w pokoju oddziału przełącznikiem <b>🎙 CZAT GŁOSOWY</b> (przed startem misji); pozostali widzą w pokoju, czy głos jest włączony. W grze solo głosu nie ma.</p>
+  <ul>
+    <li>Gdy głos jest włączony, u góry ekranu pojawia się przycisk <b>🎙 GŁOS</b>. Dotknij go, żeby dołączyć — przeglądarka zapyta o mikrofon. Odmowa jest w porządku: wtedy <b>tylko słuchasz</b>.</li>
+    <li><b>Push-to-talk</b> (domyślnie): przytrzymaj klawisz <b>V</b> albo przycisk mikrofonu i mów.</li>
+    <li><b>OPEN</b> — otwarty mikrofon; ten sam przycisk wtedy <b>wycisza</b> / włącza mikrofon.</li>
+    <li>Każdy gracz ma swój chip z nazwą (świeci, gdy mówi). Dotknij go, żeby zmienić <b>głośność</b>: 100% → 50% → wyciszony.</li>
+    <li><b>✕</b> — wyjście z czatu głosowego (gra trwa dalej).</li>
+    <li><b>iPhone</b>: dźwięk może przełączyć się na słuchawkę rozmów albo ściszyć efekty gry — najlepiej w słuchawkach. Nie przełączaj aplikacji i nie blokuj ekranu: iOS zatrzymuje wtedy mikrofon; po powrocie dotknij „🎙 GŁOS” ponownie. Na głośniku może pojawić się echo — używaj push-to-talk.</li>
+  </ul>
 </section>
 <section id="bron"><h2>Broń</h2>
   <p>Na start masz: <b>${start}</b>. Kolejne bronie odblokowują się wszystkim z czasem:</p><ul>${unlocks}</ul>

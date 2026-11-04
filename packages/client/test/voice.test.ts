@@ -8,7 +8,7 @@ import {
   tuneOpus,
   unavailablePeerOf,
   updateSpeaking,
-  voiceFlag,
+  voiceWanted,
   voicePeerId,
 } from '../src/voice/core.js';
 
@@ -92,11 +92,13 @@ describe('mic gating and flag', () => {
     expect(transmitting('ptt', false, true)).toBe(true);
     expect(transmitting('ptt', true, true)).toBe(false);
   });
-  it('?voice=1 enables and remembers, ?voice=0 forgets, default off', () => {
-    expect(voiceFlag('', null)).toEqual({ on: false });
-    expect(voiceFlag('?voice=1', null)).toEqual({ on: true, store: '1' });
-    expect(voiceFlag('?join=AB', '1')).toEqual({ on: true });
-    expect(voiceFlag('?voice=0', '1')).toEqual({ on: false, store: null });
+  it('voice follows the host opt-in in P2P rooms; ?voice=1 is only a dev override', () => {
+    expect(voiceWanted('p2p', undefined, '')).toBe(false);
+    expect(voiceWanted('p2p', false, '?join=AB')).toBe(false);
+    expect(voiceWanted('p2p', true, '')).toBe(true);
+    expect(voiceWanted('p2p', false, '?voice=1')).toBe(true);
+    expect(voiceWanted('local', true, '?voice=1')).toBe(false); // solo: never
+    expect(voiceWanted('dedicated', true, '')).toBe(false);
   });
   it('clamps volume', () => {
     expect(clampVolume(-1)).toBe(0);

@@ -9,6 +9,8 @@ import { $, html } from '../dom.js';
 
 export interface RoomActions {
   leave(): void;
+  /** Present for the P2P host only: the room's voice-chat opt-in (CZAT GŁOSOWY). */
+  setVoice?(on: boolean): void;
 }
 
 /** Pre-game lobby: room code + QR + share link, player list, owner starts the run. */
@@ -39,6 +41,15 @@ export function createRoomScreen(
       </div>
       <p class="muted small">Up to ${MAX_PLAYERS} battle-brothers, one chapter each. Each squad size has its own leaderboard.</p>
       <ul class="players" id="players"></ul>
+      ${
+        mode === 'p2p'
+          ? `<div class="voice-row" id="voice-row">${
+              actions.setVoice
+                ? `<button id="voice" class="voice-toggle" role="switch" aria-checked="false">🎙 CZAT GŁOSOWY: <b>WYŁ.</b></button>`
+                : ''
+            }<span class="muted small" id="voice-state"></span></div>`
+          : ''
+      }
       <label>YOUR CHAPTER</label>
       <div id="chapters"></div>
       <div class="row">
@@ -79,11 +90,33 @@ export function createRoomScreen(
     const owner = session.isOwner;
     start.style.display = owner ? '' : 'none';
     start.disabled = l.phase === 'playing';
+    renderVoice(l);
     hint.textContent = owner
       ? `Start when your squad is ready (${l.players.length}/${l.maxPlayers}).`
       : 'Waiting for the squad leader to start…';
   };
+  function renderVoice(l: LobbyInfo): void {
+    const state = el.querySelector('#voice-state');
+    if (!state) return;
+    const btn = el.querySelector<HTMLButtonElement>('#voice');
+    if (btn) {
+      btn.classList.toggle('on', l.voice);
+      btn.setAttribute('aria-checked', String(l.voice));
+      btn.innerHTML = `🎙 CZAT GŁOSOWY: <b>${l.voice ? 'WŁ.' : 'WYŁ.'}</b>`;
+      btn.disabled = l.phase !== 'lobby';
+    }
+    state.textContent = l.voice
+      ? btn
+        ? 'Głos włączony dla całego oddziału — każdy dotyka „🎙 GŁOS” u góry, żeby mówić (albo tylko słucha).'
+        : '🎙 Czat głosowy włączony — dotknij „🎙 GŁOS” u góry, żeby mówić (albo tylko słuchaj).'
+      : btn
+        ? 'Głos wyłączony (domyślnie). Włącz, jeśli oddział chce rozmawiać.'
+        : '🔇 Czat głosowy wyłączony przez dowódcę.';
+  }
   render(session.lobby);
+  el.querySelector<HTMLButtonElement>('#voice')?.addEventListener('click', () =>
+    actions.setVoice?.(!session.lobby?.voice),
+  );
   const off = session.on('lobby', render);
   $(el, '#copy').addEventListener('click', () => {
     const input = $<HTMLInputElement>(el, '#link');

@@ -50,6 +50,8 @@ export interface HostSessionOptions {
   /** Ticks per snapshot for network sessions (default NET.snapshotEvery; tools/tests). */
   snapshotEvery?: number;
   log?: (...args: unknown[]) => void;
+  /** Voice chat enabled for the room (host choice, sent to everyone in 'lobby'). Default off. */
+  voice?: boolean;
 }
 
 interface Member {
@@ -71,6 +73,7 @@ export class HostSession {
   world: World | null = null;
   readonly roomCode: string;
   private readonly opts: HostSessionOptions;
+  private voiceOn: boolean;
   private readonly content: ContentRegistry;
   private readonly scheduler: Scheduler;
   private members = new Map<string, Member>();
@@ -85,6 +88,7 @@ export class HostSession {
 
   constructor(opts: HostSessionOptions) {
     this.opts = opts;
+    this.voiceOn = opts.voice === true;
     this.roomCode = opts.roomCode;
     const content = opts.content ?? defaultContent;
     this.content = opts.mapId === undefined ? content : content.withMap(opts.mapId);
@@ -255,7 +259,19 @@ export class HostSession {
       phase: this.phase,
       maxPlayers: this.maxPlayers,
       players: this.lobbyPlayers(),
+      ...(this.voice ? { voice: true } : {}),
     });
+  }
+
+  /** Host's voice-chat opt-in for the room (rebroadcasts the lobby). */
+  get voice(): boolean {
+    return this.voiceOn;
+  }
+
+  setVoice(on: boolean): void {
+    if (this.voiceOn === on || this.closed) return;
+    this.voiceOn = on;
+    this.broadcastLobby();
   }
 
   start(): boolean {

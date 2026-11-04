@@ -108,15 +108,18 @@ export function transmitting(mode: MicMode, muted: boolean, pttDown: boolean): b
   return mode === 'open' ? true : pttDown;
 }
 
-/** `?voice=1` turns the prototype on (and remembers it), `?voice=0` turns it off again. */
-export function voiceFlag(
+/**
+ * Voice chat is opt-in per room: the host's CZAT GŁOSOWY toggle (lobby `voice` field). Only P2P
+ * rooms have voice (solo / dedicated: never). `?voice=1` is a harmless dev override that shows
+ * the overlay for this tab only (not remembered; the others still need the host's toggle).
+ */
+export function voiceWanted(
+  mode: string,
+  lobbyVoice: boolean | undefined,
   search: string,
-  stored: string | null,
-): { on: boolean; store?: string | null } {
-  const v = new URLSearchParams(search).get('voice');
-  if (v === '1') return { on: true, store: '1' };
-  if (v === '0') return { on: false, store: null };
-  return { on: stored === '1' };
+): boolean {
+  if (mode !== 'p2p') return false;
+  return lobbyVoice === true || new URLSearchParams(search).get('voice') === '1';
 }
 
 export const clampVolume = (v: number) => (Number.isFinite(v) ? Math.min(2, Math.max(0, v)) : 1);

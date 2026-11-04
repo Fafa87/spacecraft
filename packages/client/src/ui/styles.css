@@ -1168,3 +1168,20 @@ body:has(#ui .screen.menu)::before {
     animation: none;
   }
 }
+
+/* Squad room: voice-chat opt-in (host toggle) / indicator (everyone). */
+.voice-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 8px 0 4px;
+}
+.voice-toggle {
+  min-height: 40px;
+}
+.voice-toggle.on {
+  background: #7a1d12;
+  border-color: #e0a050;
+  color: #ffe2a8;
+}

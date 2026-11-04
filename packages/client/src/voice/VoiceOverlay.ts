@@ -43,6 +43,7 @@ export function mountVoiceOverlay(o: VoiceOverlayOptions): () => void {
     root.replaceChildren();
     if (!vc || vc.state === 'idle' || vc.state === 'stopped') {
       const b = document.createElement('button');
+      b.className = 'join';
       b.textContent = vc?.error ? `🎙 GŁOS (${vc.error})` : '🎙 GŁOS';
       b.onclick = () => void join();
       root.append(b);
@@ -143,7 +144,11 @@ export function mountVoiceOverlay(o: VoiceOverlayOptions): () => void {
   addEventListener('blur', blur);
 
   render();
+  // debug / headless checks (scripts/voice-check.ts), same hook as voice-lab.html
+  const w = window as unknown as { __voice?: () => VoiceChat | null };
+  w.__voice = () => vc;
   return () => {
+    if (w.__voice) w.__voice = () => null;
     removeEventListener('keydown', kd);
     removeEventListener('keyup', ku);
     removeEventListener('blur', blur);
