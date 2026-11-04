@@ -11,6 +11,7 @@ import {
   dropRates,
   type ContentRegistry,
 } from '@sms/shared';
+import { boardFor } from '../devPreview.js';
 import { escapeHtml as esc } from '../ui/format.js';
 import { compendiumHtml } from './compendium.js';
 
@@ -160,7 +161,7 @@ export function rulesHtml(c: ContentRegistry): string {
 </ul></section>
 <section id="punkty"><h2>Punkty i ranking</h2>
   <p>Zabicie daje punkty marine, który zadał ostatni cios (wartości w kompendium). Na koniec misji widzisz podsumowanie oddziału i listę wszystkich zabitych Tyranidów.</p>
-  <p>Ranking (<b>HONOURED DEAD</b>) jest osobny dla każdej wersji gry (obecnie tablica <b>${esc(leaderboardBoard(GAME_VERSION))}</b>) i dla każdej liczby graczy. Są dwie listy: najdłuższe przetrwanie oddziału i najwyższe wyniki marines.</p>
+  <p>Ranking (<b>HONOURED DEAD</b>) jest osobny dla każdej wersji gry (obecnie tablica <b>${esc(boardFor(leaderboardBoard(GAME_VERSION)))}</b>) i dla każdej liczby graczy. Są dwie listy: najdłuższe przetrwanie oddziału i najwyższe wyniki marines.</p>
 </section>
 <section id="rady"><h2>Rady</h2><ul>
   <li>Trzymajcie się razem — podniesienie brata ratuje misję.</li>

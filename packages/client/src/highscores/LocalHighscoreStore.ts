@@ -8,6 +8,7 @@ import {
   type PlayerScoreEntry,
   type RunResult,
 } from '@sms/shared';
+import { boardFor } from '../devPreview.js';
 import { storage } from '../util/storage.js';
 import type {
   HighscoreStore,
@@ -21,7 +22,7 @@ import type {
  * github.io origin, so the frozen /v0.1.0/ build keeps its own `sms.highscores.v1` table and its
  * pending runs are never flushed into the 0.2 board. Name / mute / chapter prefs stay shared.
  */
-export const LOCAL_BOARD = leaderboardBoard(GAME_VERSION);
+export const LOCAL_BOARD = boardFor(leaderboardBoard(GAME_VERSION));
 export const LOCAL_KEY = `sms.highscores.board-${LOCAL_BOARD}`;
 export const LOCAL_SUBMITTED_KEY = `sms.highscores.submitted.board-${LOCAL_BOARD}`;
 const KEY = LOCAL_KEY;

@@ -23,6 +23,8 @@ interface ImportMetaEnv {
   readonly VITE_TURN_URLS?: string;
   readonly VITE_TURN_USERNAME?: string;
   readonly VITE_TURN_CREDENTIAL?: string;
+  /** Short sha of an unversioned /dev/ preview build (scripts/deploy-dev.ts); unset otherwise. */
+  readonly VITE_DEV_PREVIEW?: string;
 }
 
 interface ImportMeta {

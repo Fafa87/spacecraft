@@ -8,6 +8,7 @@
  *   ?demo=hive              solo showcase: staged late-game fight, nothing is submitted
  */
 import { GAME_VERSION, leaderboardBoard } from '@sms/shared';
+import { boardFor } from './devPreview.js';
 import type { FirestoreConfig } from './highscores/firestore.js';
 import { parseJoinCode } from './net/joinUrl.js';
 
@@ -47,7 +48,7 @@ function resolveFirebase(): FirestoreConfig | null {
   const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID?.trim();
   if (!apiKey || !projectId) return null;
   const baseUrl = import.meta.env.VITE_FIRESTORE_URL?.trim() || undefined;
-  return { apiKey, projectId, baseUrl, board: leaderboardBoard(GAME_VERSION) };
+  return { apiKey, projectId, baseUrl, board: boardFor(leaderboardBoard(GAME_VERSION)) };
 }
 
 const apiUrl = resolveApiUrl();
