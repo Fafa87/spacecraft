@@ -297,6 +297,7 @@ button.primary:hover:not(:disabled) {
   min-width: 0;
   padding: 6px 2px;
 }
+.tabs[hidden],
 .tabs button[hidden] {
   display: none;
 }
