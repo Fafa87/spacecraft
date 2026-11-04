@@ -1,4 +1,5 @@
 import { NET } from '../constants.js';
+import { RECOIL_WIRE } from '../data/recoil.js';
 import type {
   EnemySnap,
   PickupSnap,
@@ -301,13 +302,29 @@ const packSprint = (p: PlayerSnap): number =>
       (p.sp ? PF.sp : 0) |
       (Math.min(PF_STM_MASK, Math.max(0, Math.round(p.stm * 100))) << PF_STM_SHIFT) |
       (Math.min(PF_WD_MASK, Math.max(0, Math.round((p.wd ?? 0) * 100))) << PF_WD_SHIFT);
+/**
+ * Aim recoil (v0.6.1-dev) rides in flag bits 21..30 too (offset binary in 1/2000 rad, 0 =
+ * none); older decoders mask it away. Arithmetic, not bitwise: the flags stay below 2^31.
+ */
+const packRecoil = (p: PlayerSnap): number => {
+  if (!p.rc) return 0;
+  const R = RECOIL_WIRE;
+  const q = Math.min(R.mask, Math.max(1, Math.round(p.rc * R.scale) + R.bias));
+  return q * 2 ** R.shift;
+};
+const unpackRecoil = (flags: number): number => {
+  const R = RECOIL_WIRE;
+  const q = Math.floor(flags / 2 ** R.shift) % (R.mask + 1);
+  return q ? (q - R.bias) / R.scale : 0;
+};
 const PLAYER_STATES = ['alive', 'downed', 'dead'] as const;
 // [name, c, x, y, a, hp, mhp, st, w, ws, ammo, rl, bo, rv, seq, k, sc, flags, ht]
 const PLAYER_FIELDS = 19;
 
 function playerRow(p: PlayerSnap, sym: Symbols): number[] {
   const flags =
-    (p.br ? PF.br : 0) | (p.vt ? PF.vt : 0) | (p.ht !== undefined ? PF.ht : 0) | packSprint(p);
+    ((p.br ? PF.br : 0) | (p.vt ? PF.vt : 0) | (p.ht !== undefined ? PF.ht : 0) | packSprint(p)) +
+    packRecoil(p);
   return [
     sym.id(p.name),
     p.c,
@@ -356,6 +373,8 @@ function playerFromRow(id: number, v: number[], sym: Symbols): PlayerSnap {
   if (v[17] & PF.br) p.br = 1;
   if (v[17] & PF.ht) p.ht = v[18] / 100;
   if (v[17] & PF.vt) p.vt = 1;
+  const rc = unpackRecoil(v[17]);
+  if (rc) p.rc = rc;
   if (v[17] & PF.sd) {
     if (v[17] & PF.sp) p.sp = 1;
     p.stm = ((v[17] >> PF_STM_SHIFT) & PF_STM_MASK) / 100;
@@ -375,6 +394,9 @@ const playerFits = (p: PlayerSnap) =>
   (p.ht === undefined || exact(p.ht, 100)) &&
   (p.stm === undefined || (exact(p.stm, 100) && p.stm >= 0 && p.stm * 100 <= PF_STM_MASK)) &&
   (p.wd === undefined || (exact(p.wd, 100) && p.wd >= 0 && p.wd * 100 <= PF_WD_MASK)) &&
+  (p.rc === undefined ||
+    (exact(p.rc, RECOIL_WIRE.scale) &&
+      Math.abs(p.rc * RECOIL_WIRE.scale) < RECOIL_WIRE.bias - 1)) &&
   [p.hp, p.mhp, p.c, p.seq, p.k, p.sc ?? 0, p.ammo ?? 0].every((v) => exact(v, 1)) &&
   p.ws.every((w) => !w.includes(','));
 

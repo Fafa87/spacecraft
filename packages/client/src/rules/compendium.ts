@@ -4,6 +4,7 @@
  */
 import {
   GAME_VERSION,
+  MARINE_AIM_RECOIL,
   MARINE_DEFLECTION,
   MARINE_DIRECTIONAL_ARMOUR,
   MARINE_SPRINT,
@@ -15,6 +16,8 @@ import {
   enemyProjectileDeflectChances,
   expectedDps,
   expectedShotDamage,
+  recoilRecoveryTime,
+  weaponRecoil,
   sustainedDps,
   saveChance,
   weaponProfileLabel,
@@ -361,6 +364,37 @@ export function sprintTable(): string {
   );
 }
 
+/** Aim recoil per weapon + movement multipliers (data/recoil.ts). */
+export function recoilTable(c: ContentRegistry): string {
+  const R = MARINE_AIM_RECOIL;
+  const RAD = Math.PI / 180;
+  const rows = c.weaponOrder.map((w) => {
+    const r = weaponRecoil(w.id);
+    return [
+      `${w.slot}. ${esc(w.name)}`,
+      `${n(r.kickDeg, 2)}°`,
+      `${n(r.kickDeg * R.standingMul, 3)}°`,
+      r.kickDistPx ? `${n(r.kickDistPx, 1)} px` : '—',
+      `${n(r.maxDeg, 1)}°`,
+      `${n(recoilRecoveryTime(r), 2)} s`,
+    ];
+  });
+  const note = `Mnożnik: stojąc / w zaparciu ×${n(R.standingMul, 2)}, w pełnym marszu ×${n(R.walkingMul, 2)} (pomiędzy — proporcjonalnie do prędkości). Kierunek kopnięcia losowy, ${pct(0.5 + R.signBias)} w prawo. Limit odchylenia na broń; powrót wykładniczy (70% w podanym czasie). Odchylenie ${deg(1 * RAD)} na ${n(300, 0)} px to ~${n(300 * Math.tan(1 * RAD), 1)} px.`;
+  return (
+    table(
+      [
+        'Broń',
+        'Kopnięcie (marsz)',
+        'Kopnięcie (stojąc)',
+        'Odepchnięcie celownika',
+        'Maks. odchylenie',
+        'Powrót 70%',
+      ],
+      rows,
+    ) + `<p class="muted">${note}</p>`
+  );
+}
+
 /** Directional armour arcs + front-plate ricochet chances (data/armour.ts). */
 export function armourTables(c: ContentRegistry): string {
   const A = MARINE_DIRECTIONAL_ARMOUR;
@@ -419,6 +453,7 @@ export function compendiumHtml(c: ContentRegistry): string {
   <h3>Sprint</h3>${sprintTable()}
   <h3>Pancerz kierunkowy i rykoszety</h3>${armourTables(c)}
   <h3>Bronie</h3>${weaponTable(c)}
+  <h3>Odrzut (odchylenie celownika)</h3>${recoilTable(c)}
   <h4>Cechy specjalne</h4>${weaponSpecials(c)}
   <h3>Tyranidzi</h3>${enemyTable(c)}
   <h3>DPS broni vs każdy Tyranid (ciągły ogień, bez przeładowań)</h3>${dpsMatrix(c, 'burst')}

@@ -1,6 +1,7 @@
 /** Rules & instructions (Polish), plus the generated compendium. */
 import {
   GAME_VERSION,
+  MARINE_AIM_RECOIL,
   MARINE_DIRECTIONAL_ARMOUR,
   MARINE_SPRINT,
   MAX_PLAYERS,
@@ -50,7 +51,7 @@ export function rulesHtml(c: ContentRegistry): string {
   <p class="muted">Wersja v${GAME_VERSION}</p>
 </header>
 <nav class="toc">
-  <a href="#cel">Cel</a><a href="#sterowanie">Sterowanie</a><a href="#sprint">Sprint</a><a href="#tryby">Tryby</a><a href="#multi">Multiplayer</a><a href="#glos">Czat głosowy</a><a href="#bron">Broń</a><a href="#pancerz">Pancerz</a><a href="#wrogowie">Tyranidzi</a><a href="#punkty">Punkty</a><a href="#rady">Rady</a><a href="#kompendium">Kompendium</a>
+  <a href="#cel">Cel</a><a href="#sterowanie">Sterowanie</a><a href="#sprint">Sprint</a><a href="#tryby">Tryby</a><a href="#multi">Multiplayer</a><a href="#glos">Czat głosowy</a><a href="#bron">Broń</a><a href="#odrzut">Odrzut</a><a href="#pancerz">Pancerz</a><a href="#wrogowie">Tyranidzi</a><a href="#punkty">Punkty</a><a href="#rady">Rady</a><a href="#kompendium">Kompendium</a>
 </nav>
 <section id="cel"><h2>Cel gry</h2>
   <p>Jesteś Space Marine broniącym zrujnowanej iglicy ula. Tyranidzi atakują <b>falami</b> z wyłomów w ścianach i szybów w podłodze. Następna fala rusza dopiero, gdy zginie cała poprzednia (po ${d.waves.breather} s przerwy). Każda fala jest większa, a potwory mają więcej życia. Co ${d.bosses.everyWave}. fala od ${d.bosses.firstWave}. prowadzi boss — <b>${esc(boss)}</b>.</p>
@@ -127,6 +128,15 @@ export function rulesHtml(c: ContentRegistry): string {
     <li><b>Zaparcie</b>: niektóre ciężkie bronie, gdy stoisz w miejscu, strzelają szybciej i celniej.</li>
     <li><b>Plazma się grzeje</b>: powyżej kreski strzały są przeładowane (mocniejsze), na szczycie broń się przegrzewa i rani strzelca.</li>
     <li><b>Siła vs Wytrzymałość i pancerz</b>: lekka broń odbija się od pancerza Carnifexa, Meltagun przebija wszystko.</li>
+  </ul>
+</section>
+<section id="odrzut"><h2>Odrzut</h2>
+  <p>Każdy strzał <b>kopie celownik</b> lekko w bok (losowo, częściej w prawo). Celownik na ekranie pokazuje dokładnie, gdzie poleci następny pocisk; jasna kropka — gdzie naprawdę wskazuje mysz lub drążek. Odchylenie samo wraca w ułamku sekundy.</p>
+  <ul>
+    <li><b>Stojąc</b> (i w zaparciu) odrzut to tylko <b>${mul(MARINE_AIM_RECOIL.standingMul)}</b> — strzelaj z miejsca, gdy liczy się celność.</li>
+    <li><b>W marszu</b> odrzut jest pełny (${mul(MARINE_AIM_RECOIL.walkingMul)}), proporcjonalnie do prędkości.</li>
+    <li>Najmocniej kopie <b>Meltagun</b>, w serii najbardziej rozjeżdża się <b>Heavy Bolter</b>; Miotacz ognia prawie nie ma odrzutu. Liczby — w kompendium.</li>
+    <li>W grze przez sieć celownik gościa nadąża za odrzutem z opóźnieniem pingu.</li>
   </ul>
 </section>
 <section id="pancerz"><h2>Pancerz kierunkowy</h2>

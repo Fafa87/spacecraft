@@ -1,4 +1,11 @@
-import { SIM_MUZZLE_FORWARD, type WeaponDef } from '../../data/index.js';
+import {
+  applyRecoilKick,
+  recoilMoveMul,
+  SIM_MUZZLE_FORWARD,
+  stepRecoil,
+  weaponRecoil,
+  type WeaponDef,
+} from '../../data/index.js';
 import { allocId } from '../world.js';
 import type { Player, World } from '../types.js';
 import { damagePlayer } from './combat.js';
@@ -30,11 +37,15 @@ export function unlockWaveWeapons(world: World, wave: number): void {
 export function updatePlayerWeapon(world: World, p: Player, dt: number): void {
   if (p.state !== 'alive') {
     p.triggerWasDown = false;
+    p.recoil = 0;
     return;
   }
   const input = p.input;
+  // Aim recoil recovers with the weapon in hand (data/recoil.ts).
+  stepRecoil(p, weaponRecoil(p.current), dt);
   // Sprinting: the marine faces where he runs (directional armour turns with him).
-  p.aim = sprintFacing(p.sprint, input.mx, input.my) ?? input.aim;
+  const run = sprintFacing(p.sprint, input.mx, input.my);
+  p.aim = run ?? input.aim + p.recoil;
 
   // Weapon switching.
   if (input.slot > 0) {
@@ -85,11 +96,21 @@ export function updatePlayerWeapon(world: World, p: Player, dt: number): void {
     }
     fireWeapon(world, p, def, braced);
     p.ammo[def.id]--;
+    kickAim(world, p, def, braced, input.aim);
     p.fireCooldown += braced ? def.fireInterval / (def.braceFireRateMult ?? 1) : def.fireInterval;
     if (def.heat && addHeat(world, p, def)) return;
     if (!def.automatic) break;
   }
   if (p.ammo[def.id] <= 0) startReload(world, p, def);
+}
+
+/**
+ * Recoil kick after a shot (seeded RNG, host-authoritative): the next shot already uses the
+ * kicked aim. Clients mirror p.recoil from the snapshot (`rc`) to draw the reticle.
+ */
+function kickAim(world: World, p: Player, def: WeaponDef, braced: boolean, base: number): void {
+  applyRecoilKick(p, weaponRecoil(def.id), recoilMoveMul(p.moveFrac, braced), world.rng.next());
+  p.aim = base + p.recoil;
 }
 
 function startReload(world: World, p: Player, def: WeaponDef): void {

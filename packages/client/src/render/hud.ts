@@ -49,6 +49,8 @@ export interface HudState {
   fps: number;
   /** Crosshair in CSS px (mouse cursor, or projected aim on touch); null = hidden. */
   crosshair: { x: number; y: number } | null;
+  /** Input point before aim recoil (faint dot while the reticle is kicked off it). */
+  crosshairRaw?: { x: number; y: number } | null;
   /** Touch sticks when the touch layout is active; null = PC layout. */
   touch: StickView[] | null;
   /** Safe-area insets in CSS px (notches). */
@@ -342,7 +344,10 @@ export class Hud {
     // sticks + crosshair are positioned in raw CSS px
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (s.touch) this.sticks(ctx, cw, ch, s.touch, s.me?.st === 'alive');
-    if (s.me?.st === 'alive' && s.crosshair) this.crosshair(ctx, s.crosshair);
+    if (s.me?.st === 'alive' && s.crosshair) {
+      if (s.crosshairRaw) this.crosshairDot(ctx, s.crosshairRaw);
+      this.crosshair(ctx, s.crosshair);
+    }
     ctx.restore();
   }
 
@@ -1175,6 +1180,14 @@ export class Hud {
       ctx.textAlign = 'left';
       ctx.fillText(s.debug, 12, h - 96);
     }
+  }
+
+  /** Where the mouse / stick really points while recoil has kicked the reticle off it. */
+  private crosshairDot(ctx: CanvasRenderingContext2D, pos: { x: number; y: number }): void {
+    ctx.fillStyle = 'rgba(240,216,144,0.45)';
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 2, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   private crosshair(ctx: CanvasRenderingContext2D, pos: { x: number; y: number }): void {

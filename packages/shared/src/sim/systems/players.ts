@@ -17,6 +17,7 @@ export function updatePlayerMovement(world: World, dt: number): void {
   for (const p of world.players) {
     if (p.state !== 'alive') {
       p.fireSlow = 0;
+      p.moveFrac = 0;
       p.sprint.sprinting = false;
       p.sprint.weaponDelay = 0;
       continue;
@@ -35,7 +36,10 @@ export function updatePlayerMovement(world: World, dt: number): void {
     );
     p.fireSlow = stepFireSlow(p.fireSlow, effectiveFire(p.input.fire, p.sprint), dt);
     const speed = p.sprint.sprinting ? marineSprintSpeed() : marineMoveSpeed(def, p.fireSlow);
+    const x0 = p.x;
+    const y0 = p.y;
     stepPlayerMovement(p, mx, my, speed, dt, world.map.arena);
+    p.moveFrac = speed > 0 ? Math.min(1, Math.hypot(p.x - x0, p.y - y0) / (speed * dt)) : 0;
   }
 }
 

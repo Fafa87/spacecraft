@@ -116,6 +116,8 @@ export function createPlayer(
     killsByType: {},
     stillTime: 0,
     fireSlow: 0,
+    recoil: 0,
+    moveFrac: 0,
     sprint: newSprintState(),
     damageDealt: 0,
     diedAt: null,

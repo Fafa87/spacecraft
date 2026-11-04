@@ -74,6 +74,10 @@ export interface Player {
   stillTime: number;
   /** Firing slow-down 0..1: 1 while the trigger is held, eases to 0 after release. */
   fireSlow: number;
+  /** Aim recoil: lateral offset (rad) added to the input aim, recovers over time (data/recoil.ts). */
+  recoil: number;
+  /** Last tick's movement as a fraction 0..1 of the current walking speed (recoil scaling). */
+  moveFrac: number;
   /** Sprint stamina / state / post-sprint weapon delay (see data/sprint.ts). */
   sprint: SprintState;
   damageDealt: number;
