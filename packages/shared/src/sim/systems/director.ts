@@ -1,4 +1,4 @@
-import { ARENA, MAX_PLAYERS, PICKUP } from '../../constants.js';
+import { MAX_PLAYERS, PICKUP } from '../../constants.js';
 import type { DirectorConfig, PerTeamSize, WaveTableEntry } from '../../data/index.js';
 import { clamp, dist2 } from '../../math/vec.js';
 import { allocId, alivePlayers } from '../world.js';
@@ -408,8 +408,8 @@ function makeEnemy(world: World, type: string, x: number, y: number, hpMul: numb
   const e: Enemy = {
     id: allocId(world),
     type,
-    x: clamp(x, def.radius, ARENA.width - def.radius),
-    y: clamp(y, def.radius, ARENA.height - def.radius),
+    x: clamp(x, def.radius, world.map.arena.width - def.radius),
+    y: clamp(y, def.radius, world.map.arena.height - def.radius),
     vx: 0,
     vy: 0,
     angle: 0,
@@ -450,8 +450,8 @@ export function pickSpawnPoint(
     const anchor = world.rng.pick(alive);
     const a = world.rng.range(0, Math.PI * 2);
     const d = world.rng.range(minD, maxD);
-    const x = clamp(anchor.x + Math.cos(a) * d, margin, ARENA.width - margin);
-    const y = clamp(anchor.y + Math.sin(a) * d, margin, ARENA.height - margin);
+    const x = clamp(anchor.x + Math.cos(a) * d, margin, world.map.arena.width - margin);
+    const y = clamp(anchor.y + Math.sin(a) * d, margin, world.map.arena.height - margin);
     let nearest = Infinity;
     for (const p of alive) nearest = Math.min(nearest, dist2(x, y, p.x, p.y));
     if (nearest >= minD * minD * 0.5) return [x, y];

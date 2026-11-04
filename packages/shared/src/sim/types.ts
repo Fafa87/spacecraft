@@ -1,5 +1,6 @@
 import type { Rng } from '../math/rng.js';
 import type { ContentRegistry, ExplosionSpec } from '../data/index.js';
+import type { MapDef } from '../maps/types.js';
 
 export type PlayerState = 'alive' | 'downed' | 'dead';
 
@@ -250,7 +251,10 @@ export interface DirectorState {
 }
 
 export interface World {
+  /** Content for this run; `content.map === map` and `content.director === map.director`. */
   content: ContentRegistry;
+  /** The map being played (arena, player spawn, director). Static data, like `content`. */
+  map: MapDef;
   seed: number;
   rng: Rng;
   tick: number;

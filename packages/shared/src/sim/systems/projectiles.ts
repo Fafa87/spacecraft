@@ -1,4 +1,4 @@
-import { ARENA, PLAYER } from '../../constants.js';
+import { PLAYER } from '../../constants.js';
 import { dist2 } from '../../math/vec.js';
 import type { SpatialHash } from '../spatialHash.js';
 import type { Enemy, Projectile, World } from '../types.js';
@@ -21,7 +21,13 @@ export function updateProjectiles(world: World, enemyHash: SpatialHash<Enemy>, d
     pr.x += pr.vx * dt;
     pr.y += pr.vy * dt;
     pr.life -= dt;
-    if (pr.life <= 0 || pr.x < 0 || pr.y < 0 || pr.x > ARENA.width || pr.y > ARENA.height) {
+    if (
+      pr.life <= 0 ||
+      pr.x < 0 ||
+      pr.y < 0 ||
+      pr.x > world.map.arena.width ||
+      pr.y > world.map.arena.height
+    ) {
       detonate(world, pr);
       continue;
     }
