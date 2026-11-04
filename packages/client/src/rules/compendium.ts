@@ -1,0 +1,349 @@
+/**
+ * Rules page compendium: every number is read from the shared content tables (@sms/shared),
+ * so the page is always correct for the version it ships with. Pure functions -> HTML strings.
+ */
+import {
+  ARENA,
+  GAME_VERSION,
+  MAX_PLAYERS,
+  PICKUP,
+  PLAYER,
+  TICK_RATE,
+  expectedDps,
+  expectedShotDamage,
+  sustainedDps,
+  saveChance,
+  weaponProfileLabel,
+  woundMul,
+  type ContentRegistry,
+  type EnemyDef,
+  type WeaponDef,
+} from '@sms/shared';
+import { escapeHtml as esc } from '../ui/format.js';
+
+const n = (v: number, d = 1): string => {
+  const r = Number(v.toFixed(d));
+  return String(r).replace('.', ',');
+};
+const pct = (v: number, d = 0): string => `${n(v * 100, d)}%`;
+const deg = (rad: number): string => `${n((rad * 180) / Math.PI, 1)}°`;
+const sv = (s: number): string => (s >= 7 ? 'brak' : `${s}+`);
+const ap = (a?: number): string => (a ? `-${a}` : '0');
+
+function table(head: string[], rows: string[][], cls = ''): string {
+  return `<div class="tw"><table class="${cls}"><thead><tr>${head.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows
+    .map(
+      (r) =>
+        `<tr>${r.map((c, i) => (i === 0 ? `<th scope="row">${c}</th>` : `<td>${c}</td>`)).join('')}</tr>`,
+    )
+    .join('')}</tbody></table></div>`;
+}
+
+const unlockLabel = (w: WeaponDef): string =>
+  w.unlockAtSec === 0
+    ? 'od startu'
+    : w.unlockAtSec === null
+      ? 'tylko skrzynie'
+      : `${w.unlockAtSec} s`;
+
+/** Weapon base stats. */
+export function weaponTable(c: ContentRegistry): string {
+  const rows = c.weaponOrder.map((w) => {
+    const p = w.projectile;
+    const range = p.speed * p.lifetime;
+    return [
+      `${w.slot}. ${esc(w.name)}`,
+      esc(w.roles.join(' · ')),
+      esc(weaponProfileLabel(w)),
+      `${n(p.damage, 1)}${w.pellets > 1 ? ` ×${w.pellets}` : ''}${p.explosion ? ` + wybuch ${n(p.explosion.damage)} (r ${p.explosion.radius})` : ''}`,
+      `${n(1 / w.fireInterval, 2)}/s`,
+      `${w.magazine}`,
+      `${n(w.reloadTime, 2)} s`,
+      deg(w.spread),
+      `${Math.round(range)} px`,
+      `${p.pierce}`,
+      `${pct(w.moveSpeedMul)} / ${pct(w.moveSpeedMul * w.fireMoveMul)}`,
+      unlockLabel(w),
+      w.crateWeight ? `${w.crateWeight}` : '—',
+    ];
+  });
+  return table(
+    [
+      'Broń',
+      'Rola',
+      'Profil',
+      'Obrażenia / pocisk',
+      'Szybkostrzelność',
+      'Magazynek',
+      'Przeładowanie',
+      'Rozrzut',
+      'Zasięg',
+      'Przebicie',
+      'Ruch (zwykle / strzelając)',
+      'Dostępna',
+      'Waga w skrzyni',
+    ],
+    rows,
+  );
+}
+
+/** Special mechanics per weapon (heat, bracing, knockback, drag, explosion). */
+export function weaponSpecials(c: ContentRegistry): string {
+  const items = c.weaponOrder.map((w) => {
+    const p = w.projectile;
+    const s: string[] = [`odrzut ${p.knockback}`, `prędkość pocisku ${p.speed} px/s`];
+    if (p.drag) s.push(`hamowanie pocisku ${pct(p.drag)}/s`);
+    if (p.explosion)
+      s.push(
+        `wybuch: ${n(p.explosion.damage)} obrażeń w promieniu ${p.explosion.radius} px (na krawędzi ${pct(p.explosion.edgeFactor)})${p.explosion.strength !== undefined ? `, S${p.explosion.strength} AP${ap(p.explosion.ap)}` : ''}${p.explosion.friendlyFire ? ', <b>rani też marines</b>' : ''}`,
+      );
+    if (w.braceDelay !== undefined)
+      s.push(
+        `zaparcie: po ${n(w.braceDelay, 2)} s bez ruchu strzela ×${n(w.braceFireRateMult ?? 1, 2)} szybciej, rozrzut ×${n(w.braceSpreadMult ?? 1, 2)}`,
+      );
+    if (w.heat) {
+      const h = w.heat;
+      s.push(
+        `ciepło: +${h.perShot}/strzał, max ${h.max}, stygnie ${h.coolPerSec}/s; od ${pct(h.superchargeAt)} strzały przeładowane (obrażenia ×${n(h.superchargeDamageMul, 2)}, S+${h.superchargeStrength ?? 0}, AP+${h.superchargeAp ?? 0}); przegrzanie: ${h.selfDamage} obrażeń dla strzelca i ${n(h.ventTime, 2)} s chłodzenia`,
+      );
+    }
+    s.push(w.automatic ? 'automatyczna (trzymaj spust)' : 'półautomatyczna');
+    return `<li><b>${esc(w.name)}</b> — ${esc(w.description)}<br><span class="muted">${s.join(' · ')}</span></li>`;
+  });
+  return `<ul class="specials">${items.join('')}</ul>`;
+}
+
+/** Expected DPS of every weapon vs every enemy (S vs T, armour save; no range/heat/bracing). */
+export function dpsMatrix(c: ContentRegistry, mode: 'burst' | 'sustained' = 'burst'): string {
+  const enemies = [...c.enemies.values()];
+  const rows = c.weaponOrder.map((w) => [
+    esc(w.name),
+    ...enemies.map((e) => {
+      const v = mode === 'burst' ? expectedDps(w, e) : sustainedDps(w, e);
+      const ttk = e.hp / v;
+      return `${n(v, 0)}<small>${Number.isFinite(ttk) ? ` · ${n(ttk, 2)} s` : ''}</small>`;
+    }),
+  ]);
+  return table(['Broń \\ cel', ...enemies.map((e) => esc(e.name))], rows, 'matrix');
+}
+
+/** Supercharged DPS for heat weapons. */
+export function superchargeRows(c: ContentRegistry): string {
+  const heat = c.weaponOrder.filter((w) => w.heat);
+  if (!heat.length) return '';
+  const enemies = [...c.enemies.values()];
+  return table(
+    ['Przeładowany strzał', ...enemies.map((e) => esc(e.name))],
+    heat.map((w) => [esc(w.name), ...enemies.map((e) => `${n(expectedDps(w, e, true), 0)}`)]),
+    'matrix',
+  );
+}
+
+function enemyAttack(e: EnemyDef, c: ContentRegistry): string {
+  const a: string[] = [];
+  if (e.behavior !== 'kamikaze' && e.contactDamage)
+    a.push(
+      `wręcz ${e.contactDamage} co ${n(e.contactCooldown, 2)} s (${n(e.contactDamage / e.contactCooldown, 1)} DPS)`,
+    );
+  if (e.ranged) {
+    const r = e.ranged;
+    a.push(
+      `strzał ${r.projectile.damage}${r.projectile.explosion ? ` + wybuch ${r.projectile.explosion.damage} (r ${r.projectile.explosion.radius})` : ''} co ${n(r.cooldown, 2)} s, zasięg ${r.range} px (trzyma dystans ${r.preferredDistance})`,
+    );
+  }
+  if (e.charge) {
+    const ch = e.charge;
+    a.push(
+      `szarża: ${ch.minDistance}–${ch.triggerDistance} px, zamach ${n(ch.windup, 2)} s, ${n(ch.duration, 2)} s z prędkością ×${n(ch.speedMul, 2)}, ${ch.damage} obrażeń, odnowienie ${n(ch.cooldown, 1)} s`,
+    );
+  }
+  if (e.explode) {
+    const x = e.explode;
+    a.push(
+      `wybuch ${x.damage} w promieniu ${x.radius} px (krawędź ${pct(x.edgeFactor)}), lont ${n(x.fuse, 2)} s od ${x.triggerDistance} px${x.onDeath ? ', wybucha też po śmierci' : ''}`,
+    );
+  }
+  if (e.burrow)
+    a.push(
+      `podkopuje się (×${n(e.burrow.speedMul, 2)} prędkości, nie można trafić), wynurza się ${e.burrow.emergeDistance} px od marine`,
+    );
+  if (e.synapse)
+    a.push(
+      `synapsa: rój w promieniu ${e.synapse.radius} px szybszy ×${n(e.synapse.speedMul, 2)}, obrażenia ×${n(e.synapse.damageMul, 2)}`,
+    );
+  if (e.spawner)
+    a.push(
+      `wypuszcza ${esc(c.enemies.get(e.spawner.enemy)?.name ?? e.spawner.enemy)} co ${n(e.spawner.interval, 1)} s (max ${e.spawner.max}, gdy marine bliżej niż ${e.spawner.range} px)`,
+    );
+  return a.join('<br>');
+}
+
+export function enemyTable(c: ContentRegistry): string {
+  const eliteT = c.director.teamScaling.eliteThreat;
+  const enemies = [...c.enemies.values()].sort((a, b) => a.threat - b.threat);
+  return table(
+    [
+      'Tyranid',
+      'Klasa',
+      'Życie',
+      'T',
+      'Pancerz',
+      'Prędkość',
+      'Rozmiar',
+      'Masa',
+      'Zagrożenie',
+      'Punkty',
+      'Apteczka',
+      'Ataki',
+    ],
+    enemies.map((e) => [
+      `${esc(e.name)}<br><small class="muted">${esc(e.role)}</small>`,
+      e.boss ? '<b class="boss">BOSS</b>' : e.threat >= eliteT ? 'ELITA' : 'rój',
+      `${e.hp}`,
+      `${e.toughness}`,
+      sv(e.save),
+      `${e.speed} px/s`,
+      `r ${e.radius}`,
+      `${e.mass}`,
+      `${n(e.threat, 2)}`,
+      `${e.points}`,
+      pct(e.medkitDropChance),
+      enemyAttack(e, c),
+    ]),
+  );
+}
+
+/** Strength vs Toughness and save tables (from data/profile.ts functions). */
+export function profileTables(): string {
+  const ts = [3, 4, 5, 6, 8, 10];
+  const ss = [3, 4, 5, 6, 8, 9, 10];
+  const wound = table(
+    ['S \\ T', ...ts.map((t) => `T${t}`)],
+    ss.map((s) => [`S${s}`, ...ts.map((t) => `×${n(woundMul(s, t), 2)}`)]),
+    'matrix',
+  );
+  const saves = [2, 3, 4, 5, 6, 7];
+  const aps = [0, 1, 2, 3, 4];
+  const save = table(
+    ['Pancerz \\ AP', ...aps.map((a) => `AP${ap(a)}`)],
+    saves.map((s) => [sv(s), ...aps.map((a) => pct(saveChance(s, a)))]),
+    'matrix',
+  );
+  return `<h4>Mnożnik obrażeń: Siła (S) broni vs Wytrzymałość (T) celu</h4>${wound}
+  <h4>Szansa, że pancerz zatrzyma trafienie</h4>${save}`;
+}
+
+const perTeam = (arr: readonly number[], i: number): number =>
+  arr[Math.min(i, arr.length - 1)] ?? 1;
+
+/** Squad-size multipliers (1..MAX_PLAYERS) straight from director.teamScaling. */
+export function teamScalingTable(c: ContentRegistry): string {
+  const t = c.director.teamScaling;
+  const d = c.director;
+  const sizes = Array.from({ length: MAX_PLAYERS }, (_, i) => i);
+  const row = (label: string, arr: readonly number[]) => [
+    label,
+    ...sizes.map((i) => `×${n(perTeam(arr, i), 2)}`),
+  ];
+  return table(
+    ['Graczy', ...sizes.map((i) => `${i + 1}`)],
+    [
+      row('Liczba wrogów w fali (budżet)', t.budget),
+      row('Tempo napływu', t.pace),
+      row('Limit żywych naraz', t.maxAlive),
+      row('Życie Tyranidów', t.hp),
+      row(`Udział elit (zagrożenie ≥ ${t.eliteThreat})`, t.elite),
+      row('Limit potomstwa (Rippery, miny)', t.children),
+      ['Bossy na pojawienie', ...sizes.map((i) => `${perTeam(d.bosses.count, i)}`)],
+      [
+        'Apteczki z zabójstw / falę',
+        ...sizes.map((i) => `${Math.round(d.drops.medkits.base + d.drops.medkits.perMarine * i)}`),
+      ],
+      [
+        'Skrzynie z bronią / falę',
+        ...sizes.map((i) => `${Math.round(d.drops.crates.base + d.drops.crates.perMarine * i)}`),
+      ],
+    ],
+    'matrix',
+  );
+}
+
+/** Per-wave budget / HP growth for a solo marine and the wave table weights. */
+export function waveTable(c: ContentRegistry, waves = 15): string {
+  const d = c.director;
+  const w = d.waves;
+  const rows: string[][] = [];
+  for (let i = 1; i <= waves; i++) {
+    const budget = w.budget.base + w.budget.perWave * Math.pow(i - 1, w.budget.exponent);
+    const pace = w.pace.base + w.pace.perWave * (i - 1);
+    const maxAlive = Math.min(d.maxAlive.cap, d.maxAlive.base + d.maxAlive.perWave * (i - 1));
+    const hp = 1 + w.hpScalePerWave * (i - 1);
+    const boss = i >= d.bosses.firstWave && (i - d.bosses.firstWave) % d.bosses.everyWave === 0;
+    const appearance = boss ? (i - d.bosses.firstWave) / d.bosses.everyWave : 0;
+    rows.push([
+      `${i}`,
+      n(budget, 1),
+      n(pace, 1),
+      `${Math.round(maxAlive)}`,
+      `×${n(hp, 2)}`,
+      boss
+        ? `${esc(c.enemy(d.bosses.enemy).name)} (1 os.: ${perTeam(d.bosses.count, 0) + appearance * d.bosses.extraPerAppearance})`
+        : '—',
+    ]);
+  }
+  const ids = [...c.enemies.keys()];
+  const weights = table(
+    ['Od fali', ...ids.map((id) => esc(c.enemy(id).name))],
+    d.waveTable.map((e) => {
+      const sum = Object.values(e.weights).reduce((a, b) => a + b, 0);
+      return [
+        `${e.fromWave}`,
+        ...ids.map((id) => (e.weights[id] ? pct(e.weights[id]! / sum) : '—')),
+      ];
+    }),
+    'matrix',
+  );
+  return `${table(['Fala', 'Budżet zagrożenia (solo)', 'Zagrożenie / s (solo)', 'Limit żywych (solo)', 'Życie wrogów', 'Boss'], rows, 'matrix')}
+  <p class="muted">Budżet fali = (${w.budget.base} + ${w.budget.perWave}·(n−1)^${n(w.budget.exponent, 2)}) × mnożnik drużyny. Każdy wróg „kosztuje” tyle, ile wynosi jego zagrożenie. Życie rośnie o ${pct(w.hpScalePerWave)} na falę, razy mnożnik drużyny. Limit żywych: ${d.maxAlive.base} + ${d.maxAlive.perWave}/falę (maks. ${d.maxAlive.cap}). Pierwsza fala po ${w.firstDelay} s, przerwa między falami ${w.breather} s. Gdy zostanie ≤ ${w.reveal.remaining} wrogów (lub ${pct(w.reveal.fraction)} fali), albo minie ${w.reveal.afterSec} s, resztki są ujawniane i polują (×${n(w.reveal.speedMul, 2)} prędkości). Po ${w.forceNextAfter} s fala następna rusza i tak.</p>
+  <h4>Skład fal (szansa na typ przy losowaniu, 1 gracz)</h4>${weights}
+  <p class="muted">W większej drużynie wagi elit mnożone są przez „udział elit” z tabeli wyżej.</p>`;
+}
+
+export function marineTable(): string {
+  return table(
+    ['Parametr', 'Wartość'],
+    [
+      ['Życie', `${PLAYER.maxHp}`],
+      ['Prędkość', `${PLAYER.speed} px/s (× mnożnik broni)`],
+      ['Powrót prędkości po puszczeniu spustu', `${PLAYER.fireMoveRecover} s`],
+      ['Czas na podniesienie (wykrwawienie)', `${PLAYER.bleedOutTime} s`],
+      ['Czas podnoszenia', `${PLAYER.reviveTime} s w promieniu ${PLAYER.reviveRadius} px`],
+      ['Życie po podniesieniu', pct(PLAYER.reviveHpFraction)],
+      [
+        'Nietykalność po trafieniu / podniesieniu',
+        `${PLAYER.hurtInvuln} s / ${PLAYER.reviveInvuln} s`,
+      ],
+      ['Apteczka', `+${PICKUP.medkitHeal} życia, leży ${PICKUP.lifetime} s`],
+      ['Arena', `${ARENA.width} × ${ARENA.height} px`],
+      ['Symulacja', `${TICK_RATE} ticków/s`],
+    ],
+  );
+}
+
+/** Full compendium body (inside the <details>). */
+export function compendiumHtml(c: ContentRegistry): string {
+  return `
+  <p class="muted">Wszystkie liczby są generowane z kodu gry v${GAME_VERSION}. Odległości w pikselach areny, czasy w sekundach. DPS = średnie obrażenia na sekundę przy trafieniu każdym pociskiem, z uwzględnieniem S vs T i pancerza (bez zasięgu, ciepła i zaparcia). Po kropce: czas zabicia jednego wroga z bazowym życiem (fala 1, solo).</p>
+  <h3>Space Marine</h3>${marineTable()}
+  <h3>Bronie</h3>${weaponTable(c)}
+  <h4>Cechy specjalne</h4>${weaponSpecials(c)}
+  <h3>Tyranidzi</h3>${enemyTable(c)}
+  <h3>DPS broni vs każdy Tyranid (ciągły ogień, bez przeładowań)</h3>${dpsMatrix(c, 'burst')}
+  <h3>DPS z przeładowaniami (średnia na cały magazynek)</h3>${dpsMatrix(c, 'sustained')}
+  ${superchargeRows(c) ? `<h3>Plazma — strzały przeładowane (DPS)</h3>${superchargeRows(c)}` : ''}
+  <h3>Profile 40k: Siła, Wytrzymałość, pancerz</h3>
+  <p class="muted">Obrażenia trafienia = obrażenia × mnożnik S vs T, albo 0, jeśli pancerz zatrzyma pocisk (rzut przy każdym trafieniu). Broń bez profilu (wybuchy wrogów) ignoruje T i pancerz. Przykład: średnio na trafienie ${esc(c.weaponOrder[0]!.name)} w ${esc([...c.enemies.values()].at(-1)!.name)}: ${n(expectedShotDamage(c.weaponOrder[0]!, [...c.enemies.values()].at(-1)!), 2)}.</p>
+  ${profileTables()}
+  <h3>Fale</h3>${waveTable(c)}
+  <h3>Trudność a liczba graczy</h3>${teamScalingTable(c)}`;
+}

@@ -16,7 +16,18 @@ export default defineConfig({
   // .env files (.env.production with the public Firebase web config) live in the repo root.
   envDir: fileURLToPath(new URL('../..', import.meta.url)),
   server: { host: '0.0.0.0', port: 5173 },
-  build: { target: 'es2022', sourcemap: true, chunkSizeWarningLimit: 1024 },
+  build: {
+    target: 'es2022',
+    sourcemap: true,
+    chunkSizeWarningLimit: 1024,
+    // Second page: rules + generated compendium (src/rules).
+    rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL('index.html', import.meta.url)),
+        rules: fileURLToPath(new URL('rules.html', import.meta.url)),
+      },
+    },
+  },
   // peerjs ships CJS deps; let Vite pre-bundle them.
   optimizeDeps: { include: ['peerjs'] },
 });
