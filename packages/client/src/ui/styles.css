@@ -1115,3 +1115,31 @@ body.rotate-blocked .ios-hint {
     min-height: 32px;
   }
 }
+
+/* main menu: gothic cathedral backdrop (original generated art), slow drift + vignette for readability */
+body:has(#ui .screen.menu)::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(10, 8, 6, 0.35), rgba(10, 8, 6, 0.85) 75%),
+    linear-gradient(rgba(10, 8, 6, 0.25), rgba(10, 8, 6, 0.55)),
+    url('./assets/menu-bg.webp') center 40% / cover no-repeat,
+    var(--bg);
+  animation: menu-bg-drift 40s ease-in-out infinite alternate;
+}
+@keyframes menu-bg-drift {
+  from {
+    transform: scale(1.02);
+  }
+  to {
+    transform: scale(1.08) translateY(-1%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body:has(#ui .screen.menu)::before {
+    animation: none;
+  }
+}
