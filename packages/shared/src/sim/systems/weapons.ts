@@ -1,5 +1,4 @@
-import { PLAYER } from '../../constants.js';
-import type { WeaponDef } from '../../data/index.js';
+import { SIM_MUZZLE_FORWARD, type WeaponDef } from '../../data/index.js';
 import { allocId } from '../world.js';
 import type { Player, World } from '../types.js';
 import { damagePlayer } from './combat.js';
@@ -141,7 +140,7 @@ export function fireWeapon(world: World, p: Player, def: WeaponDef, braced = fal
   const spec = def.projectile;
   const sc = isSupercharged(p, def);
   const dmgMul = sc ? def.heat!.superchargeDamageMul : 1;
-  const muzzle = PLAYER.radius + 10;
+  const muzzle = SIM_MUZZLE_FORWARD; // visual barrel tips: data/muzzle.ts (client-side only)
   const mx = p.x + Math.cos(p.aim) * muzzle;
   const my = p.y + Math.sin(p.aim) * muzzle;
   world.stats.shots++;

@@ -2,6 +2,10 @@ import {
   BREACH_STATE,
   defaultContent,
   MARINE_SPRINT,
+  MUZZLE_CONVERGE_PX,
+  muzzleBlend,
+  muzzleDef,
+  muzzlePoint,
   PLAYER,
   ENEMY_FLAG,
   type ChapterDef,
@@ -21,6 +25,7 @@ import {
   DEFAULT_ENEMY_VISUAL,
   DEFAULT_PROJECTILE_VISUAL,
   ENEMY_VISUALS,
+  PROJECTILE_TRACERS,
   PROJECTILE_VISUALS,
   type EnemyVisual,
 } from './visuals.js';
@@ -113,6 +118,26 @@ export class Renderer {
   readonly landings: Landing[] = [];
   private corpses: Corpse[] = [];
   private recoil = new Map<number, number>();
+  /** Held-weapon transform as last drawn, per player (muzzle FX + shot origins use it). */
+  private heldPose = new Map<
+    number,
+    { x: number; y: number; a: number; back: number; rot: number; scale: number; w: string }
+  >();
+  /** Recent shots: sim muzzle + visual muzzle, to anchor the first frames of new projectiles. */
+  private pendingShots: {
+    sx: number;
+    sy: number;
+    a: number;
+    mx: number;
+    my: number;
+    t: number;
+  }[] = [];
+  /** Per projectile: offset from its sim path to the visual muzzle (null = enemy / unmatched). */
+  private projMuzzle = new Map<
+    number,
+    { sx: number; sy: number; ox: number; oy: number; mx: number; my: number } | null
+  >();
+  private playerProjKinds: Set<string> | null = null;
   private props: Prop[] = [];
   private creep: { x: number; y: number; v: number; ang: number; s: number }[] = [];
   private time = 0;
@@ -178,6 +203,47 @@ export class Renderer {
     this.recoil.set(playerId, px);
   }
 
+  /**
+   * World barrel tip of a marine's weapon as currently drawn (local: predicted pose; remote:
+   * interpolated), incl. recoil slide and the post-sprint raise. Null if not drawn yet.
+   */
+  muzzleWorld(playerId: number, weaponId?: string): { x: number; y: number; a: number } | null {
+    const h = this.heldPose.get(playerId);
+    if (!h) return null;
+    return muzzlePoint(h.x, h.y, h.a, weaponId ?? h.w, h);
+  }
+
+  /**
+   * A shot left the sim muzzle (sx, sy) along `a`; it is drawn leaving the visual muzzle (mx, my).
+   * New projectiles on that ray blend from the visual muzzle into their sim path.
+   */
+  registerShot(sx: number, sy: number, a: number, mx: number, my: number): void {
+    this.pendingShots.push({ sx, sy, a, mx, my, t: this.time });
+    if (this.pendingShots.length > 64) this.pendingShots.splice(0, this.pendingShots.length - 64);
+  }
+
+  /** Match a newly seen player projectile at (x, y) to the shot it came from. */
+  private matchShot(x: number, y: number): (typeof this.pendingShots)[number] | null {
+    let best: (typeof this.pendingShots)[number] | null = null;
+    let bestPerp = Infinity;
+    for (const s of this.pendingShots) {
+      if (this.time - s.t > 0.4) continue;
+      const dx = x - s.sx;
+      const dy = y - s.sy;
+      const c = Math.cos(s.a);
+      const n = Math.sin(s.a);
+      const along = dx * c + dy * n;
+      const perp = Math.abs(-dx * n + dy * c);
+      if (along < -3 || along > MUZZLE_CONVERGE_PX * 1.5) continue;
+      if (perp > 6 + along * 0.6) continue; // within any weapon's spread cone
+      if (perp < bestPerp) {
+        bestPerp = perp;
+        best = s;
+      }
+    }
+    return best;
+  }
+
   resize(): void {
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
     const w = window.innerWidth;
@@ -199,6 +265,9 @@ export class Renderer {
     this.tracks.clear();
     this.corpses = [];
     this.recoil.clear();
+    this.heldPose.clear();
+    this.pendingShots = [];
+    this.projMuzzle.clear();
   }
 
   /** Sprite world width (atlas px / scale). */
@@ -794,7 +863,7 @@ export class Renderer {
    * Braced heavy weapon: feet planted wide (mag-clamp marks either side), a tight amber firing
    * cone ahead and a bipod stub at the muzzle — readable at a glance for the whole squad.
    */
-  private drawBraceStance(x: number, y: number, a: number, time: number): void {
+  private drawBraceStance(x: number, y: number, a: number, time: number, weaponId: string): void {
     const { ctx } = this;
     const c = Math.cos(a);
     const s = Math.sin(a);
@@ -831,8 +900,9 @@ export class Renderer {
     ctx.arc(x, y, 30, a + Math.PI - 0.9, a + Math.PI + 0.9);
     ctx.stroke();
     // bipod at the muzzle
-    const mx = x + c * 40;
-    const my = y + s * 40;
+    const md = muzzleDef(weaponId);
+    const mx = x + c * (md.forward - 8) - s * md.lateral;
+    const my = y + s * (md.forward - 8) + c * md.lateral;
     ctx.strokeStyle = 'rgba(40,36,30,0.95)';
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -861,7 +931,7 @@ export class Renderer {
       const mine = p.id === f.myId && f.me?.sprint;
       const sprinting = p.st === 'alive' && (mine ? f.me!.sprint!.sprinting : p.sp === 1);
 
-      if (p.br && p.st === 'alive') this.drawBraceStance(x, y, a, time);
+      if (p.br && p.st === 'alive') this.drawBraceStance(x, y, a, time, p.w);
       if (sprinting) this.drawSprintTrail(p, x, y, a, f.dt);
       this.drawShadow(x, y, PLAYER.radius + 6);
       ctx.strokeStyle = color;
@@ -872,6 +942,7 @@ export class Renderer {
       ctx.stroke();
       ctx.globalAlpha = 1;
 
+      if (p.st !== 'alive') this.heldPose.delete(p.id);
       if (p.st === 'downed') {
         if (!this.assets.draw(ctx, `marine_${ch.id}_down`, 0, x, y, 0)) {
           ctx.fillStyle = ch.primary;
@@ -920,9 +991,18 @@ export class Renderer {
           // Weapon: held in the aim direction. v0.6.0 hotfix: while sprinting it is NOT drawn
           // at all (the back-slung pose looked odd); over the ready delay it fades in and
           // raises from a lowered, pulled-in pose to the aim. Same for local and remote marines.
+          const e = pose * pose * (3 - 2 * pose);
+          const back = rec * e + 6 * (1 - e);
+          this.heldPose.set(p.id, {
+            x,
+            y,
+            a,
+            back,
+            rot: (1 - e) * 0.7,
+            scale: 0.9 + 0.1 * e,
+            w: p.w,
+          });
           if (weaponDrawn(pose)) {
-            const e = pose * pose * (3 - 2 * pose);
-            const back = rec * e + 6 * (1 - e);
             ctx.globalAlpha = e;
             this.assets.draw(
               ctx,
@@ -1067,6 +1147,17 @@ export class Renderer {
     ctx.fillRect(bx + (36 * MARINE_SPRINT.minToStartS) / max, by - 1, 1, 5);
   }
 
+  private isPlayerKind(kind: string): boolean {
+    if (!this.playerProjKinds) {
+      this.playerProjKinds = new Set();
+      for (const w of this.content.weapons.values()) {
+        this.playerProjKinds.add(w.projectile.kind);
+        this.playerProjKinds.add(`${w.projectile.kind}_super`);
+      }
+    }
+    return this.playerProjKinds.has(kind);
+  }
+
   private drawProjectiles(f: RenderFrame): void {
     const { ctx } = this;
     const prev = new Map(f.a.projectiles.map((p) => [p[0], p]));
@@ -1075,9 +1166,53 @@ export class Renderer {
       const [id, kindIdx, bx, by, ang] = p;
       seen.add(id);
       const pa = prev.get(id);
-      const x = pa ? lerp(pa[2], bx, f.t) : bx;
-      const y = pa ? lerp(pa[3], by, f.t) : by;
+      const simX = pa ? lerp(pa[2], bx, f.t) : bx;
+      const simY = pa ? lerp(pa[3], by, f.t) : by;
       const kind = this.content.projectileKinds[kindIdx] ?? '';
+      // Player shots: drawn leaving the visual barrel tip, blending into the sim path.
+      let m = this.projMuzzle.get(id);
+      if (m === undefined) {
+        const shot = this.isPlayerKind(kind) ? this.matchShot(simX, simY) : null;
+        m = shot
+          ? {
+              sx: shot.sx,
+              sy: shot.sy,
+              ox: shot.mx - shot.sx,
+              oy: shot.my - shot.sy,
+              mx: shot.mx,
+              my: shot.my,
+            }
+          : null;
+        this.projMuzzle.set(id, m);
+      }
+      let x = simX;
+      let y = simY;
+      if (m) {
+        const k = muzzleBlend(Math.hypot(simX - m.sx, simY - m.sy));
+        x += m.ox * k;
+        y += m.oy * k;
+        const tr = PROJECTILE_TRACERS[kind];
+        if (tr) {
+          // streak behind the shot, clipped at the barrel tip
+          const len = Math.min(tr.len, Math.hypot(x - m.mx, y - m.my));
+          if (len > 0.5) {
+            const c = Math.cos(ang);
+            const s = Math.sin(ang);
+            const g = ctx.createLinearGradient(x - c * len, y - s * len, x, y);
+            g.addColorStop(0, 'rgba(0,0,0,0)');
+            g.addColorStop(1, tr.color);
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.strokeStyle = g;
+            ctx.lineWidth = tr.width;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(x - c * len, y - s * len);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.globalCompositeOperation = 'source-over';
+          }
+        }
+      }
       const vis = PROJECTILE_VISUALS[kind] ?? DEFAULT_PROJECTILE_VISUAL;
       if (vis.trail > 0) {
         const acc = (this.trailAcc.get(id) ?? 0) + vis.trail * f.dt;
@@ -1117,6 +1252,8 @@ export class Renderer {
       ctx.globalCompositeOperation = 'source-over';
     }
     for (const id of this.trailAcc.keys()) if (!seen.has(id)) this.trailAcc.delete(id);
+    for (const id of this.projMuzzle.keys()) if (!seen.has(id)) this.projMuzzle.delete(id);
+    this.pendingShots = this.pendingShots.filter((s) => this.time - s.t <= 0.4);
   }
 
   private drawParticles(): void {

@@ -1,5 +1,6 @@
 import {
   DECAL_VARIANTS,
+  muzzleDef,
   weaponRolesLabel,
   type ContentRegistry,
   type GameEvent,
@@ -93,14 +94,18 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
           volume: mine ? 1 : 0.6,
           priority: mine ? 8 : undefined,
         });
+      // Visual barrel tip of the weapon as drawn (before this shot's recoil slide); falls back
+      // to the sim muzzle (ev.x/ev.y, on the aim line) if the marine was not drawn yet.
+      const tip = r.muzzleWorld(ev.p, ev.w) ?? { x: ev.x, y: ev.y, a: ev.a };
+      const mx = tip.x;
+      const my = tip.y;
+      const dir = tip.a;
+      r.registerShot(ev.x, ev.y, ev.a, mx, my);
       r.kick(ev.p, vis.recoil * (ev.s ? 1.6 : 1));
-      // ev.x/ev.y is the muzzle position
-      const mx = ev.x;
-      const my = ev.y;
       if (ev.w === 'flamer') {
         P.burst(mx, my, 3, {
           speed: 70,
-          dir: ev.a,
+          dir,
           spread: 0.5,
           color: '#ffb050',
           maxLife: 0.22,
@@ -109,7 +114,7 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
         });
         P.burst(mx, my, 1, {
           speed: 40,
-          dir: ev.a,
+          dir,
           color: '#3a2a20',
           maxLife: 0.9,
           size: 6,
@@ -125,7 +130,7 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
           sprite: 'fx_muzzle',
           maxLife: 0.07,
           size: vis.muzzle * big,
-          angle: ev.a,
+          angle: dir,
           additive: true,
           drag: 0,
           color: vis.muzzleColor,
@@ -133,7 +138,7 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
         if (ev.w === 'plasma_gun' || ev.w === 'meltagun')
           P.burst(mx, my, ev.s ? 10 : 5, {
             speed: 120,
-            dir: ev.a,
+            dir,
             spread: 0.8,
             color: vis.muzzleColor,
             maxLife: 0.25,
@@ -141,10 +146,11 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
             additive: true,
           });
         if (vis.casing) {
-          const side = ev.a + Math.PI / 2;
+          const side = dir + Math.PI / 2; // ejection port on the marine's right
+          const breech = muzzleDef(ev.w).breech;
           P.spawn({
-            x: mx - Math.cos(ev.a) * 10,
-            y: my - Math.sin(ev.a) * 10,
+            x: mx - Math.cos(dir) * breech,
+            y: my - Math.sin(dir) * breech,
             vx: Math.cos(side) * 130 + (Math.random() - 0.5) * 40,
             vy: Math.sin(side) * 130,
             maxLife: 0.55,
