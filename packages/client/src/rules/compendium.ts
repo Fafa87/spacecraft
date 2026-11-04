@@ -6,6 +6,7 @@ import {
   GAME_VERSION,
   MARINE_DEFLECTION,
   MARINE_DIRECTIONAL_ARMOUR,
+  MARINE_SPRINT,
   MAX_PLAYERS,
   PICKUP,
   PLAYER,
@@ -336,12 +337,41 @@ export function marineTable(c: ContentRegistry): string {
   );
 }
 
+/** Sprint values (data/sprint.ts). */
+export function sprintTable(): string {
+  const S = MARINE_SPRINT;
+  return table(
+    ['Parametr', 'Wartość'],
+    [
+      [
+        'Prędkość sprintu',
+        `×${n(S.speedMul, 2)} = ${n(PLAYER.speed * S.speedMul, 0)} px/s (bez kary za broń)`,
+      ],
+      ['Kondycja (maks.)', `${n(S.staminaMaxS, 2)} s sprintu`],
+      ['Zużycie', `${n(S.drainPerS, 2)} / s`],
+      [
+        'Odnowa (tylko stojąc)',
+        `${n(S.regenStandingPerS, 3)} / s — pełna po ${n(S.staminaMaxS / S.regenStandingPerS, 2)} s`,
+      ],
+      ['Minimum do startu', `${n(S.minToStartS, 2)} s`],
+      ['Broń gotowa po sprincie', `${n(S.weaponReadyDelayS, 2)} s`],
+      ['Strzał w sprincie', 'niemożliwy (spust ignorowany)'],
+      ['Kierunek pancerza w sprincie', 'kierunek biegu'],
+    ],
+  );
+}
+
 /** Directional armour arcs + front-plate ricochet chances (data/armour.ts). */
 export function armourTables(c: ContentRegistry): string {
   const A = MARINE_DIRECTIONAL_ARMOUR;
   const D = MARINE_DEFLECTION;
   const arcs = table(
-    ['Strona', 'Kąt od kierunku celowania', 'Mnożnik obrażeń', 'Rykoszet pocisków'],
+    [
+      'Strona',
+      'Kąt od kierunku celowania (w sprincie: biegu)',
+      'Mnożnik obrażeń',
+      'Rykoszet pocisków',
+    ],
     [
       ['Przód', `0–${A.frontArcDeg}°`, `×${n(A.front, 2)}`, 'tak'],
       ['Boki', `${A.frontArcDeg}–${180 - A.rearArcDeg}°`, `×${n(A.side, 2)}`, 'nie'],
@@ -386,6 +416,7 @@ export function compendiumHtml(c: ContentRegistry): string {
   return `
   <p class="muted">Wszystkie liczby są generowane z kodu gry v${GAME_VERSION}. Odległości w pikselach areny, czasy w sekundach. DPS = średnie obrażenia na sekundę przy trafieniu każdym pociskiem, z uwzględnieniem S vs T i pancerza (bez zasięgu, ciepła i zaparcia). Po kropce: czas zabicia jednego wroga z bazowym życiem (fala 1, solo).</p>
   <h3>Space Marine</h3>${marineTable(c)}
+  <h3>Sprint</h3>${sprintTable()}
   <h3>Pancerz kierunkowy i rykoszety</h3>${armourTables(c)}
   <h3>Bronie</h3>${weaponTable(c)}
   <h4>Cechy specjalne</h4>${weaponSpecials(c)}

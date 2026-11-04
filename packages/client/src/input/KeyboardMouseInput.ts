@@ -1,8 +1,8 @@
 import type { ActionIntent, ContinuousIntent, InputSource } from './InputSource.js';
 
 /**
- * Keyboard + mouse: WASD/arrows move, mouse aims, LMB/Space fires, 1-9 / Q E / wheel switch
- * weapons, R reloads. Behaviour is identical to the pre-abstraction InputState.
+ * Keyboard + mouse: WASD/arrows move, mouse aims, LMB/Space fires, Shift (hold) sprints,
+ * 1-9 / Q E / wheel switch weapons, R reloads. Behaviour is identical to the pre-abstraction InputState.
  */
 export class KeyboardMouseInput implements InputSource {
   readonly kind = 'kbm' as const;
@@ -83,6 +83,7 @@ export class KeyboardMouseInput implements InputSource {
       move: { x, y },
       aim: { kind: 'screen', x: this.mouseX, y: this.mouseY },
       fire: this.mouseDown || this.down('Space'),
+      sprint: this.down('ShiftLeft') || this.down('ShiftRight'),
     };
   }
 

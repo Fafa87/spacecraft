@@ -584,6 +584,32 @@ body.touch-mode canvas#game.playing ~ .touch-layer {
 .tb.pressed {
   background: rgba(255, 192, 74, 0.45);
 }
+/* SPRINT: tap-toggle on the left edge, just inboard of where the move stick usually floats
+   (below the armour bar, clear of the bottom-centre buttons). */
+.tb.sprint {
+  position: absolute;
+  left: max(12px, env(safe-area-inset-left));
+  top: 50%;
+  transform: translateY(-50%);
+  width: 58px;
+  height: 58px;
+  font-size: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.tb.sprint span {
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  margin-top: 3px;
+}
+.tb.sprint.on {
+  background: rgba(255, 192, 74, 0.5);
+  border-color: rgba(255, 210, 120, 0.9);
+  color: #fff6dc;
+}
 /* touch phone held in portrait: full-screen "rotate your device" (input paused meanwhile) */
 .rotate-overlay {
   display: none;

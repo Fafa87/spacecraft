@@ -1,4 +1,22 @@
-import { stepPlayerMovement, TICK_DT, type PlayerInput } from '@sms/shared';
+import {
+  isMoving,
+  marineSprintSpeed,
+  newSprintState,
+  stepPlayerMovement,
+  stepSprint,
+  TICK_DT,
+  type PlayerInput,
+  type SprintState,
+} from '@sms/shared';
+
+interface PendingInput {
+  input: PlayerInput;
+  /** Walking speed for this tick (weapon carry + firing slow-down), used when not sprinting. */
+  walk: number;
+  canMove: boolean;
+  /** Sprint allowed (host supports it, not reviving a squadmate). */
+  sprintOk: boolean;
+}
 
 /**
  * Client-side prediction for the local marine's movement. Inputs are applied
@@ -10,7 +28,9 @@ export class Predictor {
   pos = { x: 0, y: 0 };
   /** Position before the latest predicted tick (for sub-tick render blending). */
   prev = { x: 0, y: 0 };
-  private pending: Array<{ input: PlayerInput; speed: number }> = [];
+  /** Predicted sprint state (same pure state machine as the host; rewound on every snapshot). */
+  sprint: SprintState = newSprintState();
+  private pending: PendingInput[] = [];
   private initialized = false;
   /** Visual error offset that decays to 0. */
   private errX = 0;
@@ -26,19 +46,49 @@ export class Predictor {
     this.pending = [];
     this.initialized = false;
     this.errX = this.errY = 0;
+    this.sprint = newSprintState();
   }
 
-  /** Apply a freshly sent input locally. */
-  applyLocal(input: PlayerInput, speed: number, canMove: boolean): void {
+  /**
+   * Apply a freshly sent input locally. Steps the sprint state first (like the host), then asks
+   * `walkSpeed` for the non-sprint speed (it may depend on the sprint state, e.g. the trigger is
+   * ignored right after a sprint so it mustn't slow us down).
+   */
+  applyLocal(
+    input: PlayerInput,
+    walkSpeed: number | ((s: SprintState) => number),
+    canMove: boolean,
+    sprintOk = true,
+  ): void {
     if (!this.initialized) return;
     this.prev = { ...this.pos };
-    this.pending.push({ input, speed: canMove ? speed : 0 });
+    if (canMove) this.stepSprintFor(input, sprintOk);
+    const walk = typeof walkSpeed === 'number' ? walkSpeed : walkSpeed(this.sprint);
+    this.pending.push({ input, walk, canMove, sprintOk });
     if (this.pending.length > 120) this.pending.shift();
-    if (canMove) stepPlayerMovement(this.pos, input.mx, input.my, speed, TICK_DT);
+    if (canMove) stepPlayerMovement(this.pos, input.mx, input.my, this.speed(walk), TICK_DT);
   }
 
-  /** Reconcile with the authoritative state for our player. */
-  reconcile(serverX: number, serverY: number, ackSeq: number, canMove: boolean): void {
+  private stepSprintFor(input: PlayerInput, sprintOk: boolean): void {
+    stepSprint(this.sprint, input.sprint === true, isMoving(input.mx, input.my), sprintOk, TICK_DT);
+  }
+
+  private speed(walk: number): number {
+    return this.sprint.sprinting ? marineSprintSpeed() : walk;
+  }
+
+  /**
+   * Reconcile with the authoritative state for our player. `sprint` = the host's sprint state
+   * at `ackSeq` (omitted by hosts without sprint support: the local state is then kept).
+   */
+  reconcile(
+    serverX: number,
+    serverY: number,
+    ackSeq: number,
+    canMove: boolean,
+    sprint?: SprintState,
+  ): void {
+    if (sprint) this.sprint = { ...sprint };
     if (!this.initialized) {
       this.pos = { x: serverX, y: serverY };
       this.prev = { ...this.pos };
@@ -49,8 +99,11 @@ export class Predictor {
     this.pending = this.pending.filter((p) => p.input.seq > ackSeq);
     const next = { x: serverX, y: serverY };
     if (canMove)
-      for (const p of this.pending)
-        stepPlayerMovement(next, p.input.mx, p.input.my, p.speed, TICK_DT);
+      for (const p of this.pending) {
+        if (!p.canMove) continue;
+        if (sprint) this.stepSprintFor(p.input, p.sprintOk);
+        stepPlayerMovement(next, p.input.mx, p.input.my, this.speed(p.walk), TICK_DT);
+      }
     const dx = before.x - next.x;
     const dy = before.y - next.y;
     const err = Math.hypot(dx, dy);

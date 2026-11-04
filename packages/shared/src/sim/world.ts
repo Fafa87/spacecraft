@@ -1,5 +1,5 @@
 import { PLAYER } from '../constants.js';
-import { defaultContent, type ContentRegistry } from '../data/index.js';
+import { defaultContent, newSprintState, type ContentRegistry } from '../data/index.js';
 import { Rng } from '../math/rng.js';
 import { emptyInput, type Player, type World } from './types.js';
 
@@ -116,6 +116,7 @@ export function createPlayer(
     killsByType: {},
     stillTime: 0,
     fireSlow: 0,
+    sprint: newSprintState(),
     damageDealt: 0,
     diedAt: null,
   };

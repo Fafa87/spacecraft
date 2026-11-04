@@ -4,6 +4,7 @@ import {
   ROLE_SHORT,
   weaponProfileLabel,
   weaponRolesLabel,
+  MARINE_SPRINT,
   type ContentRegistry,
   type EnemyDef,
   type WeaponDef,
@@ -501,10 +502,36 @@ export class Hud {
           ctx.fillText(`${me.ammo}/${def.magazine}`, x + cell / 2, by - 4);
         }
       }
+      if (active) this.weaponLock(ctx, me, x, y, cell, 64);
       ctx.globalAlpha = 1;
       this.slotRects.push({ slot: def.slot, owned, x, y, w: cell, h: 64 });
       x += cell + 6;
     }
+  }
+
+  /**
+   * Sprint weapon lock on the active slot: greyed out while sprinting ("SPRINT"), then a gold
+   * fill rises over the MARINE_SPRINT.weaponReadyDelayS until the weapon is ready again.
+   */
+  private weaponLock(
+    ctx: CanvasRenderingContext2D,
+    me: PlayerSnap,
+    x: number,
+    y: number,
+    cw: number,
+    ch: number,
+  ): void {
+    const wd = me.wd ?? 0;
+    if (!me.sp && wd <= 0) return;
+    const ready = me.sp ? 0 : 1 - Math.min(1, wd / MARINE_SPRINT.weaponReadyDelayS);
+    ctx.fillStyle = 'rgba(12,12,14,0.68)';
+    ctx.fillRect(x + 2, y + 2, cw - 4, (ch - 4) * (1 - ready));
+    ctx.fillStyle = 'rgba(232,196,106,0.85)';
+    ctx.fillRect(x + 2, y + ch - 5, (cw - 4) * ready, 3);
+    ctx.textAlign = 'center';
+    ctx.font = F(700, 10);
+    ctx.fillStyle = me.sp ? '#f2e3b0' : HUD.gold;
+    ctx.fillText(me.sp ? 'SPRINT' : 'READY…', x + cw / 2, y + ch / 2 + 4);
   }
 
   /** Touch layout: big tappable weapon slots stacked under the minimap on the right. */
@@ -584,6 +611,7 @@ export class Hud {
           y + chh - 6,
         );
       }
+      if (active) this.weaponLock(ctx, me, x, y, cw, chh);
       ctx.globalAlpha = 1;
       this.slotRects.push({ slot: def.slot, owned, x, y, w: cw, h: chh });
     });

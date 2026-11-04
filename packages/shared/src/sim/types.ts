@@ -1,5 +1,5 @@
 import type { Rng } from '../math/rng.js';
-import type { ContentRegistry, ExplosionSpec } from '../data/index.js';
+import type { ContentRegistry, ExplosionSpec, SprintState } from '../data/index.js';
 import type { MapDef } from '../maps/types.js';
 
 export type PlayerState = 'alive' | 'downed' | 'dead';
@@ -17,6 +17,11 @@ export interface PlayerInput {
   /** Weapon slot to switch to (1..9) or 0 for none. */
   slot: number;
   reload: boolean;
+  /**
+   * Sprint held (v0.5.3-dev). Optional so protocol v5 inputs without it stay valid
+   * (missing = not sprinting).
+   */
+  sprint?: boolean;
 }
 
 export const emptyInput = (): PlayerInput => ({
@@ -69,6 +74,8 @@ export interface Player {
   stillTime: number;
   /** Firing slow-down 0..1: 1 while the trigger is held, eases to 0 after release. */
   fireSlow: number;
+  /** Sprint stamina / state / post-sprint weapon delay (see data/sprint.ts). */
+  sprint: SprintState;
   damageDealt: number;
   /** Survival second this marine died (or null). */
   diedAt: number | null;

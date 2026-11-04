@@ -11,6 +11,7 @@ export * from './types.js';
 export * from './naming.js';
 export * from './profile.js';
 export * from './armour.js';
+export * from './sprint.js';
 export { WEAPONS, ENEMIES, DIRECTOR, CHAPTERS };
 
 /**

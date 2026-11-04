@@ -83,7 +83,9 @@ export function isClientMessage(m: unknown): m is ClientMessage {
       typeof i.mx === 'number' &&
       typeof i.my === 'number' &&
       typeof i.aim === 'number' &&
-      Number.isFinite(i.aim as number)
+      Number.isFinite(i.aim as number) &&
+      // optional sprint bit (v5-compatible: older clients just never send it)
+      (i.sprint === undefined || typeof i.sprint === 'boolean')
     );
   }
   if (t === 'join') {

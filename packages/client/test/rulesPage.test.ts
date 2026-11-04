@@ -4,9 +4,11 @@ import {
   enemyProjectileDeflectChances,
   expectedDps,
   MARINE_DIRECTIONAL_ARMOUR,
+  MARINE_SPRINT,
+  PLAYER,
 } from '@sms/shared';
 import { rulesHtml } from '../src/rules/rulesPage.js';
-import { armourTables, dpsMatrix } from '../src/rules/compendium.js';
+import { armourTables, dpsMatrix, sprintTable } from '../src/rules/compendium.js';
 
 describe('rules page', () => {
   const html = rulesHtml(defaultContent);
@@ -33,5 +35,17 @@ describe('rules page', () => {
       expect(t).toContain(`${Math.round(v * 100)}%`);
     expect(html).toContain('id="pancerz"');
     expect(html).toContain('Pancerz kierunkowy i rykoszety');
+  });
+  it('sprint section + compendium values come from MARINE_SPRINT', () => {
+    const S = MARINE_SPRINT;
+    const c = (v: number) => String(Number(v.toFixed(2))).replace('.', ',');
+    expect(html).toContain('id="sprint"');
+    expect(html).toContain('Shift');
+    expect(html).toContain('SPRINT');
+    const t = sprintTable();
+    for (const v of [S.speedMul, S.staminaMaxS, S.minToStartS, S.weaponReadyDelayS, 7])
+      expect(t).toContain(c(v));
+    expect(t).toContain(c(PLAYER.speed * S.speedMul).split(',')[0]);
+    expect(html).toContain(`${c(S.weaponReadyDelayS)} s`);
   });
 });

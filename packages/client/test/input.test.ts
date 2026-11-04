@@ -86,6 +86,7 @@ describe('touchIntent', () => {
       move: { x: 0, y: 0 },
       aim: null,
       fire: false,
+      sprint: false,
     });
   });
 
@@ -125,13 +126,20 @@ describe('intent merging', () => {
     move: { x: 1, y: 0 },
     aim: { kind: 'screen', x: 10, y: 20 },
     fire: false,
+    sprint: false,
   };
   const touch: ContinuousIntent = {
     move: { x: 0, y: -0.5 },
     aim: { kind: 'angle', angle: 1 },
     fire: true,
+    sprint: false,
   };
-  const idleTouch: ContinuousIntent = { move: { x: 0, y: 0 }, aim: null, fire: false };
+  const idleTouch: ContinuousIntent = {
+    move: { x: 0, y: 0 },
+    aim: null,
+    fire: false,
+    sprint: false,
+  };
 
   it('PC mode is exactly the keyboard/mouse intent when touch is idle', () => {
     expect(combineIntents('kbm', kbm, idleTouch)).toEqual(kbm);
@@ -142,9 +150,16 @@ describe('intent merging', () => {
       move: { x: 0, y: -0.5 },
       aim: { kind: 'angle', angle: 1 },
       fire: true,
+      sprint: false,
     });
     expect(combineIntents('touch', { ...kbm, fire: true }, idleTouch).fire).toBe(true);
     expect(combineIntents('touch', kbm, idleTouch).aim).toBeNull();
+  });
+
+  it('sprints from either device (Shift or the touch SPRINT toggle)', () => {
+    expect(combineIntents('kbm', { ...kbm, sprint: true }, idleTouch).sprint).toBe(true);
+    expect(combineIntents('touch', kbm, { ...touch, sprint: true }).sprint).toBe(true);
+    expect(combineIntents('touch', kbm, touch).sprint).toBe(false);
   });
 
   it('resolves direct slots and cycling over owned weapons', () => {

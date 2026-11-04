@@ -1,6 +1,7 @@
 import {
   BREACH_STATE,
   defaultContent,
+  MARINE_SPRINT,
   PLAYER,
   ENEMY_FLAG,
   type ChapterDef,
@@ -8,6 +9,7 @@ import {
   type EnemyDef,
   type PlayerSnap,
   type Snapshot,
+  type SprintState,
 } from '@sms/shared';
 import { lerp, lerpAngle } from '../game/interpolation.js';
 import { drawBreach } from './breaches.js';
@@ -30,7 +32,7 @@ export interface RenderFrame {
   t: number;
   myId: number;
   /** Predicted local position + aim (overrides interpolated state for our marine). */
-  me: { x: number; y: number; aim: number } | null;
+  me: { x: number; y: number; aim: number; sprint?: SprintState | null } | null;
   nowMs: number;
   dt: number;
 }
@@ -850,12 +852,17 @@ export class Renderer {
       const ch: ChapterDef = this.content.chapter(p.c);
       const color = chapterUiColor(ch);
       const w = this.walk.get(p.id) ?? { x, y, dist: 0 };
-      w.dist += Math.hypot(x - w.x, y - w.y);
+      const stepX = x - w.x;
+      const stepY = y - w.y;
+      w.dist += Math.hypot(stepX, stepY);
       w.x = x;
       w.y = y;
       this.walk.set(p.id, w);
+      const mine = p.id === f.myId && f.me?.sprint;
+      const sprinting = p.st === 'alive' && (mine ? f.me!.sprint!.sprinting : p.sp === 1);
 
       if (p.br && p.st === 'alive') this.drawBraceStance(x, y, a, time);
+      if (sprinting) this.drawSprintTrail(p, x, y, a, f.dt);
       this.drawShadow(x, y, PLAYER.radius + 6);
       ctx.strokeStyle = color;
       ctx.globalAlpha = 0.55;
@@ -939,8 +946,70 @@ export class Renderer {
           ctx.fillStyle = p.vt ? '#ff5030' : '#6fd8ff';
           ctx.fillRect(x - 18, y - 28, 36 * Math.min(1, p.ht), 2);
         }
+        if (p.id === f.myId && f.me?.sprint) this.drawStaminaBar(f.me.sprint, x, y, time);
       }
     }
+  }
+
+  /**
+   * Sprint feedback seen by everyone: kicked-up dust behind the boots and a faint afterimage
+   * trailing the marine (subtle; no extra network data beyond the sprint flag).
+   */
+  private drawSprintTrail(p: PlayerSnap, x: number, y: number, a: number, dt: number): void {
+    const { ctx } = this;
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    if (Math.random() < dt * 20)
+      this.particles.spawn({
+        x: x - c * 14 + (Math.random() - 0.5) * 14,
+        y: y - s * 14 + (Math.random() - 0.5) * 14 + 6,
+        vx: -c * 40 + (Math.random() - 0.5) * 24,
+        vy: -s * 40 + (Math.random() - 0.5) * 24,
+        maxLife: 0.5,
+        size: 3.5,
+        grow: 2.6,
+        color: '#6b5a44',
+        shape: 'smoke',
+        additive: false,
+      });
+    const body = `marine_${this.content.chapter(p.c).id}`;
+    for (const [k, alpha] of [
+      [1, 0.16],
+      [2, 0.07],
+    ] as const) {
+      ctx.globalAlpha = alpha;
+      const gx = x - c * 11 * k;
+      const gy = y - s * 11 * k;
+      if (!this.assets.draw(ctx, body, 0, gx, gy, a)) {
+        ctx.fillStyle = this.content.chapter(p.c).primary;
+        ctx.beginPath();
+        ctx.arc(gx, gy, PLAYER.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /** Local marine's sprint stamina: a thin bar under the boots, hidden while full and idle. */
+  private drawStaminaBar(sp: SprintState, x: number, y: number, time: number): void {
+    const max = MARINE_SPRINT.staminaMaxS;
+    if (!sp.sprinting && sp.stamina >= max - 1e-6) return;
+    const { ctx } = this;
+    const frac = Math.max(0, Math.min(1, sp.stamina / max));
+    const low = !sp.sprinting && sp.stamina < MARINE_SPRINT.minToStartS;
+    const bx = x - 18;
+    const by = y + 26;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(bx - 1, by - 1, 38, 5);
+    ctx.fillStyle = low
+      ? `rgba(220,90,60,${0.65 + 0.35 * Math.sin(time * 10)})`
+      : sp.sprinting
+        ? '#f2e3b0'
+        : '#9fc7e8';
+    ctx.fillRect(bx, by, 36 * frac, 3);
+    // restart threshold tick
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillRect(bx + (36 * MARINE_SPRINT.minToStartS) / max, by - 1, 1, 5);
   }
 
   private drawProjectiles(f: RenderFrame): void {

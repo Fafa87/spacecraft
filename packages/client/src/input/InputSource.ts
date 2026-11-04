@@ -21,6 +21,8 @@ export interface ContinuousIntent {
   /** Null = no aim input right now (keep the previous aim). */
   aim: AimIntent | null;
   fire: boolean;
+  /** Sprint requested (Shift held / touch SPRINT toggle on). */
+  sprint: boolean;
 }
 
 /** Discrete actions latched until consumed so taps between ticks are never lost. */

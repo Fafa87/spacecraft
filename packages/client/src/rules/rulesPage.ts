@@ -3,6 +3,7 @@ import {
   GAME_VERSION,
   MARINE_DEFLECTION,
   MARINE_DIRECTIONAL_ARMOUR,
+  MARINE_SPRINT,
   MAX_PLAYERS,
   PLAYER,
   enemyProjectileDeflectChances,
@@ -25,6 +26,8 @@ export function rulesHtml(c: ContentRegistry): string {
   const boss = c.enemy(c.director.bosses.enemy).name;
   const d = c.director;
   const A = MARINE_DIRECTIONAL_ARMOUR;
+  const SP = MARINE_SPRINT;
+  const sec = (v: number) => `${String(Number(v.toFixed(2))).replace('.', ',')} s`;
   const pc = (v: number) => `${Math.round(v * 100)}%`;
   const mul = (v: number) => `×${String(v).replace('.', ',')}`;
   const defl = enemyProjectileDeflectChances(c.enemies.values());
@@ -45,7 +48,7 @@ export function rulesHtml(c: ContentRegistry): string {
   <p class="muted">Wersja v${GAME_VERSION}</p>
 </header>
 <nav class="toc">
-  <a href="#cel">Cel</a><a href="#sterowanie">Sterowanie</a><a href="#tryby">Tryby</a><a href="#multi">Multiplayer</a><a href="#bron">Broń</a><a href="#pancerz">Pancerz</a><a href="#wrogowie">Tyranidzi</a><a href="#punkty">Punkty</a><a href="#rady">Rady</a><a href="#kompendium">Kompendium</a>
+  <a href="#cel">Cel</a><a href="#sterowanie">Sterowanie</a><a href="#sprint">Sprint</a><a href="#tryby">Tryby</a><a href="#multi">Multiplayer</a><a href="#bron">Broń</a><a href="#pancerz">Pancerz</a><a href="#wrogowie">Tyranidzi</a><a href="#punkty">Punkty</a><a href="#rady">Rady</a><a href="#kompendium">Kompendium</a>
 </nav>
 <section id="cel"><h2>Cel gry</h2>
   <p>Jesteś Space Marine broniącym zrujnowanej iglicy ula. Tyranidzi atakują <b>falami</b> z wyłomów w ścianach i szybów w podłodze. Następna fala rusza dopiero, gdy zginie cała poprzednia (po ${d.waves.breather} s przerwy). Każda fala jest większa, a potwory mają więcej życia. Co ${d.bosses.everyWave}. fala od ${d.bosses.firstWave}. prowadzi boss — <b>${esc(boss)}</b>.</p>
@@ -58,6 +61,7 @@ export function rulesHtml(c: ContentRegistry): string {
       <li><b>Mysz</b> — celowanie</li>
       <li><b>Lewy przycisk / Spacja</b> — strzał (przytrzymaj przy broni automatycznej)</li>
       <li><b>1–${ws.length}</b>, <b>Q / E</b>, <b>kółko myszy</b> — zmiana broni</li>
+      <li><b>Shift</b> (przytrzymaj) — sprint</li>
       <li><b>R</b> — przeładowanie</li>
       <li><b>M</b> — wycisz dźwięk</li>
       <li><b>Esc</b> — menu / wyjście (w grze solo pauza)</li>
@@ -65,12 +69,24 @@ export function rulesHtml(c: ContentRegistry): string {
     <div><h3>Telefon / tablet</h3><ul>
       <li><b>Lewy kciuk</b> (lewa połowa ekranu) — ruch</li>
       <li><b>Prawy kciuk</b> — celowanie i automatyczny ogień</li>
+      <li><b>» SPRINT</b> (przy lewej krawędzi) — dotknij, żeby włączyć sprint, dotknij znowu albo puść drążek ruchu, żeby wyłączyć</li>
       <li><b>Dotknij ikony broni</b> — zmiana broni</li>
       <li><b>⟳</b> — przeładowanie, <b>🔊</b> — dźwięk, <b>⏸</b> — menu</li>
       <li><b>⛶</b> — pełny ekran (Android). Na iPhonie: Udostępnij → „Do ekranu początkowego”, potem uruchamiaj grę z ikony.</li>
       <li>Najlepiej grać poziomo.</li>
     </ul></div>
   </div>
+</section>
+<section id="sprint"><h2>Sprint</h2>
+  <p>Marine może na chwilę rzucić się biegiem: <b>${mul(SP.speedMul)}</b> zwykłej prędkości (${Math.round(PLAYER.speed * SP.speedMul)} px/s — ciężar broni nie spowalnia sprintu). Sprint zaczyna się od razu, ale <b>w biegu nie da się strzelać</b> — spust jest ignorowany i nie przerywa sprintu.</p>
+  <ul>
+    <li><b>Kondycja</b>: ${sec(SP.staminaMaxS)} sprintu (pasek pod marine). Kończy się sama przy zerze; ponownie ruszysz dopiero, gdy będzie co najmniej ${sec(SP.minToStartS)}.</li>
+    <li>Kondycja wraca <b>tylko, gdy stoisz w miejscu</b> — pełna po ${sec(SP.staminaMaxS / SP.regenStandingPerS)}. Zwykły marsz jej nie odnawia.</li>
+    <li>Po sprincie broń jest gotowa dopiero po <b>${sec(SP.weaponReadyDelayS)}</b> (złoty pasek „READY…” na ikonie broni). Broń półautomatyczną trzeba wtedy nacisnąć ponownie.</li>
+    <li>W sprincie marine patrzy tam, dokąd biegnie — <b>uciekając, nadstawiasz plecy</b> (tylny pancerz ${mul(A.rear)}).</li>
+    <li>Nie da się sprintować, podnosząc brata (w promieniu ${PLAYER.reviveRadius} px od powalonego).</li>
+    <li>Sprint innych graczy widać po kurzu i smugach za marine.</li>
+  </ul>
 </section>
 <section id="tryby"><h2>Tryby gry</h2><ul>
   <li><b>SOLO DEPLOY</b> — samotna obrona. Esc pauzuje grę.</li>
@@ -99,7 +115,7 @@ export function rulesHtml(c: ContentRegistry): string {
   </ul>
 </section>
 <section id="pancerz"><h2>Pancerz kierunkowy</h2>
-  <p>Pancerz wspomagany najlepiej chroni z przodu. <b>Przód to kierunek, w którym celujesz</b> (mysz albo prawy kciuk; gdy na telefonie tylko idziesz — kierunek marszu). Liczy się, skąd przychodzi atak: przy ciosie wręcz i szarży — gdzie stoi potwór, przy pocisku — skąd nadleciał, przy wybuchu — gdzie jest jego środek.</p>
+  <p>Pancerz wspomagany najlepiej chroni z przodu. <b>Przód to kierunek, w którym celujesz</b> (mysz albo prawy kciuk; gdy na telefonie tylko idziesz — kierunek marszu; w sprincie — kierunek biegu). Liczy się, skąd przychodzi atak: przy ciosie wręcz i szarży — gdzie stoi potwór, przy pocisku — skąd nadleciał, przy wybuchu — gdzie jest jego środek.</p>
   <ul>
     <li><b>Przód</b> (±${A.frontArcDeg}° od kierunku celowania) — obrażenia <b>${mul(A.front)}</b></li>
     <li><b>Boki</b> — obrażenia <b>${mul(A.side)}</b></li>
@@ -127,7 +143,7 @@ export function rulesHtml(c: ContentRegistry): string {
   <li>Hormagaunty i Carnifex szarżują — uskocz, gdy widzisz zamach.</li>
   <li>Spore Mine wybucha przy marines — zestrzel ją z daleka (zabójstwa od jej wybuchu idą na Twoje konto).</li>
   <li>Tyranid Warrior to stwór synapsy — przyspiesza i wzmacnia rój wokół siebie. Biovore wypuszcza Spore Mine. Zabijaj je w pierwszej kolejności.</li>
-  <li>Puść spust, żeby uciec — strzelanie spowalnia.</li>
+  <li>Puść spust, żeby uciec — strzelanie spowalnia. W razie biedy sprint, ale pamiętaj o plecach i o chwili bez broni po biegu.</li>
   <li>Nie odwracaj się plecami do roju — z tyłu dostajesz najmocniej, a z przodu pancerz odbija część pocisków.</li>
 </ul></section>
 <section id="kompendium"><h2>Kompendium</h2>

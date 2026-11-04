@@ -1,5 +1,6 @@
 import { ARENA, PLAYER } from '../../constants.js';
 import { clamp } from '../../math/vec.js';
+import { MARINE_SPRINT, sprintWeaponReady, type SprintState } from '../../data/sprint.js';
 import type { ArenaSize } from '../../maps/types.js';
 
 /**
@@ -43,3 +44,24 @@ export function marineMoveSpeed(
 ): number {
   return PLAYER.speed * weapon.moveSpeedMul * (1 - (1 - weapon.fireMoveMul) * fireSlow);
 }
+
+/** Sprint speed: MARINE_SPRINT.speedMul × base marine speed (no carry / firing penalty). */
+export const marineSprintSpeed = (): number => PLAYER.speed * MARINE_SPRINT.speedMul;
+
+/**
+ * The trigger as the sim sees it: ignored while sprinting and during the post-sprint weapon
+ * delay (so it doesn't fire or slow the marine down either).
+ */
+export const effectiveFire = (fire: boolean, sprint: SprintState): boolean =>
+  fire && sprintWeaponReady(sprint);
+
+/** Facing while sprinting: the movement direction (null = keep the aim). */
+export function sprintFacing(sprint: SprintState, mx: number, my: number): number | null {
+  return sprint.sprinting && (mx !== 0 || my !== 0) ? Math.atan2(my, mx) : null;
+}
+
+/** Movement input magnitude below this counts as standing still (stick drift / deadzone). */
+export const STILL_INPUT = 0.15;
+
+/** Real movement input (stick drift below STILL_INPUT counts as standing still). */
+export const isMoving = (mx: number, my: number): boolean => Math.hypot(mx, my) > STILL_INPUT;

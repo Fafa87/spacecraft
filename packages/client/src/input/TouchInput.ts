@@ -28,9 +28,15 @@ export function touchIntent(
 ): ContinuousIntent {
   const m = move.active ? { x: move.x, y: move.y } : { x: 0, y: 0 };
   if (aim.active)
-    return { move: m, aim: { kind: 'angle', angle: aim.angle }, fire: aim.mag >= fireThreshold };
-  if (move.active) return { move: m, aim: { kind: 'angle', angle: move.angle }, fire: false };
-  return { move: m, aim: null, fire: false };
+    return {
+      move: m,
+      aim: { kind: 'angle', angle: aim.angle },
+      fire: aim.mag >= fireThreshold,
+      sprint: false,
+    };
+  if (move.active)
+    return { move: m, aim: { kind: 'angle', angle: move.angle }, fire: false, sprint: false };
+  return { move: m, aim: null, fire: false, sprint: false };
 }
 
 /** Which stick a new touch starts: left half moves, right half aims. */
@@ -65,6 +71,11 @@ export class TouchInput implements InputSource {
   readonly moveStick = new VirtualStick({ ...TOUCH_TUNING.move, follow: true });
   readonly aimStick = new VirtualStick({ ...TOUCH_TUNING.aim, follow: true });
   private latched: ActionIntent = { ...NO_ACTIONS };
+  /**
+   * SPRINT is a tap-toggle (the left thumb is busy on the move stick, so it can't also hold a
+   * button): tap → on; it switches off on a second tap or when the move stick is released.
+   */
+  sprintOn = false;
   private listeners: Array<() => void> = [];
   onActivity: (() => void) | null = null;
 
@@ -76,6 +87,7 @@ export class TouchInput implements InputSource {
     this.layer = document.createElement('div');
     this.layer.className = 'touch-layer';
     this.layer.innerHTML = `
+      <button class="tb sprint" data-act="sprint" aria-label="Sprint" aria-pressed="false">»<span>SPRINT</span></button>
       <div class="touch-buttons">
         <button class="tb" data-act="menu" aria-label="Menu / leave game">⏸</button>
         <button class="tb" data-act="mute" aria-label="Mute">🔊</button>
@@ -119,12 +131,23 @@ export class TouchInput implements InputSource {
   }
 
   private button(act: string, b: HTMLButtonElement): void {
+    if (act === 'sprint') {
+      this.setSprint(!this.sprintOn);
+      return;
+    }
     if (act === 'reload') this.latched.reload = true;
     else if (act === 'mute') this.opts.onButton?.('mute');
     else if (act === 'menu') this.opts.onButton?.('menu');
     else if (act === 'fullscreen') void toggleFullscreen();
     b.classList.add('pressed');
     setTimeout(() => b.classList.remove('pressed'), 120);
+  }
+
+  setSprint(on: boolean): void {
+    this.sprintOn = on;
+    const b = this.layer.querySelector('[data-act="sprint"]');
+    b?.classList.toggle('on', on);
+    b?.setAttribute('aria-pressed', String(on));
   }
 
   setMuted(muted: boolean): void {
@@ -158,12 +181,18 @@ export class TouchInput implements InputSource {
   private onEnd(e: TouchEvent): void {
     e.preventDefault();
     for (const t of Array.from(e.changedTouches)) {
-      for (const s of [this.moveStick, this.aimStick]) if (s.touchId === t.identifier) s.end();
+      for (const s of [this.moveStick, this.aimStick])
+        if (s.touchId === t.identifier) {
+          s.end();
+          if (s === this.moveStick) this.setSprint(false); // stopped running
+        }
     }
   }
 
   read(): ContinuousIntent {
-    return touchIntent(this.moveStick.vector, this.aimStick.vector);
+    const intent = touchIntent(this.moveStick.vector, this.aimStick.vector);
+    intent.sprint = this.sprintOn;
+    return intent;
   }
 
   takeActions(): ActionIntent {
@@ -192,6 +221,7 @@ export class TouchInput implements InputSource {
   reset(): void {
     this.moveStick.end();
     this.aimStick.end();
+    this.setSprint(false);
   }
 
   dispose(): void {
