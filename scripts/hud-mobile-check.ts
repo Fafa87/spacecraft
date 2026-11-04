@@ -224,6 +224,29 @@ async function main(): Promise<void> {
         `${tag}: voice overlay at the top centre between the corner block and the minimap`,
       );
       await p.screenshot({ path: path.join(shots, `hud-mobile-${tag}.png`) });
+      // v0.6.0 hotfix: with the voice row shown, the top-centre messages stack right under it
+      await p.evaluate(() => (window as any).__sms.game.notify('+ Medicae kit', 'good'));
+      await new Promise((r) => setTimeout(r, 500));
+      const stack = await p.evaluate(() => {
+        const hud = (window as any).__sms.game.hud;
+        const ui: number = hud.lastUi;
+        const ins = hud.lastIns;
+        return (hud.topStack as Box[]).map((r) => ({
+          x: ins.left + r.x * ui,
+          y: ins.top + r.y * ui,
+          w: r.w * ui,
+          h: r.h * ui,
+          n: 'top message',
+        }));
+      });
+      const vBottom = Math.max(...b.voice.map((v) => v.y + v.h));
+      check(
+        stack.length === 1 &&
+          stack[0].y >= vBottom &&
+          stack[0].y - vBottom < 12 &&
+          !stack.some((m) => [...b.voice, ...b.hud].some((x) => hit(m, x))),
+        `${tag}: top-centre notice sits right under the voice row (y=${stack[0]?.y | 0}, voice bottom ${vBottom | 0}), clear of voice + HUD`,
+      );
     }
     const d = await boxes(host);
     const dClash = d.voice.some((v) => [...d.hud].some((x) => hit(v, x)));

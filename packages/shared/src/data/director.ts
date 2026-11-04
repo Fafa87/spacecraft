@@ -10,6 +10,12 @@ export const TEAM_HP_SCALING_FACTOR = 0.5;
  * Measured from the solo value so solo pace (0.85) stays unchanged.
  */
 export const TEAM_PACE_SCALING_FACTOR = 0.5;
+/**
+ * v0.6.0 hotfix: more supplies. Weapon crates +50% (per-wave budget and spawn interval) and
+ * medkits +20% (per-wave budget and every Tyranid's drop chance, data/enemies.ts).
+ */
+export const CRATE_DROP_FACTOR = 1.5;
+export const MEDKIT_DROP_FACTOR = 1.2;
 const V050_TEAM_PACE = [0.85, 2.3, 4.22, 6.3, 9.0, 11.2, 12.9, 14.54];
 const V050_TEAM_HP = [1, 1.15, 1.3, 1.4, 1.55, 1.7, 1.75, 1.75];
 
@@ -64,10 +70,18 @@ export const DIRECTOR: DirectorConfig = {
     groupSpread: 60,
   },
   drops: {
-    medkits: { base: 2, perMarine: 0.5 },
-    crates: { base: 1, perMarine: 0.25 },
+    // v0.6.0: medkits 2 + 0.5/marine, crates 1 + 0.25/marine; hotfix: ×1.2 / ×1.5
+    medkits: { base: 2 * MEDKIT_DROP_FACTOR, perMarine: 0.5 * MEDKIT_DROP_FACTOR },
+    crates: { base: 1 * CRATE_DROP_FACTOR, perMarine: 0.25 * CRATE_DROP_FACTOR },
   },
-  crates: { firstAfter: 10, intervalMin: 20, intervalMax: 32, minDistance: 220, maxDistance: 520 },
+  // v0.6.0: a crate every 20-32 s; hotfix: interval / 1.5 (so the timer doesn't cap the budget)
+  crates: {
+    firstAfter: 10,
+    intervalMin: 20 / CRATE_DROP_FACTOR,
+    intervalMax: 32 / CRATE_DROP_FACTOR,
+    minDistance: 220,
+    maxDistance: 520,
+  },
   // A Carnifex leads wave 3 and every 3rd wave after it.
   bosses: {
     enemy: 'carnifex',

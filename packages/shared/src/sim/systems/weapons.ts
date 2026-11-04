@@ -16,13 +16,15 @@ export function grantWeapon(world: World, player: Player, weaponId: string): boo
   return true;
 }
 
-/** Time-based unlocks: every marine gets the weapon when survival time crosses `unlockAtSec`. */
-export function updateTimedUnlocks(world: World, prevTime: number): void {
+/**
+ * Wave unlocks: when wave `wave` starts, every marine still in the fight (alive or downed) gets
+ * each weapon whose `unlockAtWave` is that wave. Deterministic (driven by the director's wave
+ * counter in the shared sim), so the host and every peer agree in multiplayer.
+ */
+export function unlockWaveWeapons(world: World, wave: number): void {
   for (const def of world.content.weaponOrder) {
-    if (def.unlockAtSec === null || def.unlockAtSec <= 0) continue;
-    if (prevTime < def.unlockAtSec && world.time >= def.unlockAtSec) {
-      for (const p of world.players) if (p.state !== 'dead') grantWeapon(world, p, def.id);
-    }
+    if (def.unlockAtWave === null || def.unlockAtWave <= 0 || def.unlockAtWave !== wave) continue;
+    for (const p of world.players) if (p.state !== 'dead') grantWeapon(world, p, def.id);
   }
 }
 

@@ -15,12 +15,14 @@ vi.hoisted(() => {
 import {
   commitBody,
   endpoint,
+  HIDDEN_SLACK,
   parseCount,
   parseTop,
   rankQuery,
   topQuery,
 } from '../src/highscores/firestore.js';
 import { FirestoreHighscoreStore } from '../src/highscores/FirestoreHighscoreStore.js';
+import { isHiddenRun } from '../src/highscores/hidden.js';
 import { FallbackHighscoreStore } from '../src/highscores/FallbackHighscoreStore.js';
 import { LocalHighscoreStore } from '../src/highscores/LocalHighscoreStore.js';
 import { createHighscoreStore, pickBackend } from '../src/highscores/index.js';
@@ -167,6 +169,36 @@ describe('per-version boards', () => {
 });
 
 describe('Firestore REST parsing', () => {
+  it('hides test, flagged, listed and pre-release runs on every board', () => {
+    const rows = [
+      {
+        document: {
+          name: `${DOCS}/highscores/run_ok_1234567`,
+          fields: fields(90_000, ['A'], '0.6.0'),
+          createTime: '2026-11-04T20:00:39.705670Z',
+        },
+      },
+      docJson('zz_test_mw2j6g64_909rro', fields(1000, ['ZZ-test'], '0.6.0-test')),
+      docJson('run_mvy1rz0t_4gcw6yu9jw', fields(404_033, ['Marine'], '0.6.0')),
+      docJson('run_flagged_1234', {
+        ...fields(80_000, ['B'], '0.6.0'),
+        hidden: { booleanValue: true },
+      }),
+      {
+        document: {
+          name: `${DOCS}/highscores/run_early_123456`,
+          fields: fields(70_000, ['C'], '0.6.0'),
+          createTime: '2026-11-01T16:31:38.983903Z',
+        },
+      },
+    ];
+    expect(parseTop(rows).map((e) => e.id)).toEqual(['run_ok_1234567']);
+    expect(isHiddenRun({ runId: 'run_x', version: '0.5.2', at: '2026-11-01T00:00:00Z' })).toBe(
+      false,
+    );
+    expect(isHiddenRun({ runId: 'run_x', version: 'garbage' })).toBe(true);
+  });
+
   it('parses documents and skips malformed/invalid/test ones', () => {
     const rows = [
       { readTime: 'x' }, // empty result row
@@ -229,7 +261,29 @@ describe('FirestoreHighscoreStore (mocked fetch)', () => {
     );
     const store = new FirestoreHighscoreStore(cfg, { fetch: f });
     expect(await store.submit(run())).toEqual({ status: 'server', rank: 3 });
-    expect(calls.map(methodOf)).toEqual(['commit', 'runAggregationQuery']);
+    // + the runs above, to discount hidden (test / pre-release) rows from the rank
+    expect(calls.map(methodOf)).toEqual(['commit', 'runAggregationQuery', 'runQuery']);
+  });
+
+  it('rank skips hidden rows above (test / pre-release runs)', async () => {
+    const { f } = mockFetch((m) =>
+      m === 'commit'
+        ? { status: 200, json: { writeResults: [{}] } }
+        : m === 'runAggregationQuery'
+          ? { status: 200, json: count(3) }
+          : {
+              status: 200,
+              json: [
+                docJson('run_a_123456', fields(500_000, ['A'])),
+                docJson('zz_test_x', fields(400_000, ['ZZ-test'], '0.1.0-test')),
+                docJson('run_mvy1rz0t_4gcw6yu9jw', fields(300_000, ['Marine'])),
+              ],
+            },
+    );
+    expect(await new FirestoreHighscoreStore(cfg, { fetch: f }).submit(run())).toEqual({
+      status: 'server',
+      rank: 2,
+    });
   });
 
   it('normalizes rude/odd names before sending', async () => {
@@ -271,7 +325,8 @@ describe('FirestoreHighscoreStore (mocked fetch)', () => {
     const res = await new FirestoreHighscoreStore(cfg, { fetch: f }).top(2, 5);
     expect(res.source).toBe('server');
     expect(res.entries.map((e) => e.id)).toEqual(['run_a_123456', 'run_b_123456']);
-    expect(calls[0].body.structuredQuery.limit).toBe(5);
+    // over-fetched so hidden rows don't shorten the board
+    expect(calls[0].body.structuredQuery.limit).toBe(5 + HIDDEN_SLACK);
   });
 });
 

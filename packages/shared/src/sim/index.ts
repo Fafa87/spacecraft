@@ -21,6 +21,7 @@ export {
   enemyHpScale,
   waveWeightsFor,
   dropCaps,
+  dropRates,
   isBossWave,
   buildRoster,
   remainingEnemies,

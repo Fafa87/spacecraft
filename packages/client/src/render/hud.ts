@@ -115,6 +115,12 @@ export interface HudLayout {
   /** Bottom of the left column in HUD units (last element drawn there). */
   leftBottom: number;
   voice: VoiceSlot;
+  /**
+   * Compact only: the free top-centre band (HUD units, x0..x1) between the corner block and the
+   * minimap. Every centred message (boss bar, wave banner, downed/revive, notices) stacks down
+   * from the top of it (v0.6.0 hotfix), under the voice row when that is shown.
+   */
+  topBand: { x0: number; x1: number } | null;
 }
 
 const TEAM_W = 200;
@@ -154,10 +160,12 @@ export function hudLayout(
   const team = showTeam ? { top: teamTop, cols, rowH, h: 14 + rows * rowH } : null;
   const leftBottom = team ? team.top + team.h : block ? block.y + block.h : touch && o.me ? 68 : 0;
   let voice: VoiceSlot;
+  let topBand: HudLayout['topBand'] = null;
   if (compact) {
     // top centre, between the left block and the minimap (minimap panel: w-206 .. w-8)
     const x0 = 10 + BLOCK_W + 8;
     const x1 = w - 190 - 12 - 4 - 8;
+    topBand = { x0, x1 };
     voice = {
       x: ins.left + x0 * ui,
       y: ins.top + 6,
@@ -176,7 +184,7 @@ export function hudLayout(
       compact: touch,
     };
   }
-  return { ui, compact, block, team, leftBottom, voice };
+  return { ui, compact, block, team, leftBottom, voice, topBand };
 }
 
 interface SlotRect {
@@ -202,11 +210,20 @@ export class Hud {
     private readonly content: ContentRegistry,
   ) {}
 
-  /** Weapon slot rects in HUD units from the last frame (touch hit-testing). */
+  /**
+   * Weapon slot rects from the last frame, in CSS px (collected in HUD units while drawing,
+   * converted at the end of draw()) - touch hit-testing compares clientX/Y against them.
+   */
   private slotRects: SlotRect[] = [];
-  /** Last frame's HUD scale + safe-area inset, to map CSS px into HUD units. */
-  private lastUi = 1;
-  private lastIns: Insets = NO_INSETS;
+  /** Last frame's HUD scale + safe-area inset (HUD units -> CSS px; layout checks). */
+  lastUi = 1;
+  lastIns: Insets = NO_INSETS;
+  /** Last drawn touch sticks (debug/test hook: the move stick's sprint feedback). */
+  lastSticks: StickView[] | null = null;
+  /** Compact: rects (HUD units) of the stacked top-centre messages drawn last frame (test hook). */
+  topStack: Rect[] = [];
+  private voiceBottomAt = -1e9;
+  private voiceBottomCache = 0;
   /** Last frame's layout (debug / layout checks). */
   layout: HudLayout | null = null;
   private voiceKey = '';
@@ -237,10 +254,12 @@ export class Hud {
     document.documentElement.removeAttribute('data-vx-compact');
   }
 
-  /** Returns the owned weapon slot under a CSS-px point, or 0. */
-  slotAt(cx: number, cy: number): number {
-    const x = (cx - this.lastIns.left) / this.lastUi;
-    const y = (cy - this.lastIns.top) / this.lastUi;
+  /**
+   * Returns the owned weapon slot under a CSS-px point (touch clientX/Y), or 0.
+   * `slotRects` are already converted to CSS px at the end of draw(), so compare directly
+   * (v0.6.0 hotfix: converting the point to HUD units again made taps miss on phones).
+   */
+  slotAt(x: number, y: number): number {
     const pad = 6;
     const hit = this.slotRects.find(
       (r) => x >= r.x - pad && x <= r.x + r.w + pad && y >= r.y - pad && y <= r.y + r.h + pad,
@@ -254,6 +273,7 @@ export class Hud {
     const ins = s.inset ?? NO_INSETS;
     this.lastUi = ui;
     this.lastIns = ins;
+    this.lastSticks = s.touch ?? null;
     // Everything below works in "HUD units" = CSS px / ui, inside the safe area.
     const w = (cw - ins.left - ins.right) / ui;
     const h = (ch - ins.top - ins.bottom) / ui;
@@ -284,13 +304,33 @@ export class Hud {
     if (s.me) {
       if (touch) this.weaponColumn(ctx, w, s.me);
       else this.weapons(ctx, w, h, s.me);
-      this.stateBanner(ctx, w, h, s.me);
       if (s.me.br && s.me.st === 'alive') this.braced(ctx, w, touch ? h - 24 : h - 122, s.now ?? 0);
     }
-    // compact: the clock left the top centre, the voice overlay (one row) sits there instead
-    const boss = this.bossBar(ctx, w, s, L.compact ? 64 : 80);
-    this.waveBanner(ctx, w, h, s);
-    this.notices(ctx, w, s.notices, (boss ? 136 : 110) - (L.compact ? 6 : 0));
+    if (L.topBand) {
+      // compact phone: the clock left the top centre, so every centred message hugs the top of
+      // the safe area (under the voice row when shown), stacking downward in the free band
+      const band = L.topBand;
+      const cx = (band.x0 + band.x1) / 2;
+      const maxW = band.x1 - band.x0;
+      let y = Math.max(6, (this.voiceBottom() - ins.top) / ui + 4);
+      this.topStack = [];
+      const push = (hgt: number) => {
+        if (hgt > 0) {
+          this.topStack.push({ x: band.x0, y, w: maxW, h: hgt });
+          y += hgt + 4;
+        }
+      };
+      push(this.bossBar(ctx, cx, s, y + 4, Math.min(360, maxW - 16)));
+      push(this.waveBanner(ctx, cx, h, s, y, maxW));
+      if (s.me) push(this.stateBanner(ctx, cx, h, s.me, y, maxW));
+      push(this.notices(ctx, cx, s.notices, y, maxW));
+    } else {
+      this.topStack = [];
+      const boss = this.bossBar(ctx, w / 2, s, 80, 360) > 0;
+      this.waveBanner(ctx, w / 2, h, s, null, 0);
+      if (s.me) this.stateBanner(ctx, w / 2, h, s.me, null, 0);
+      this.notices(ctx, w / 2, s.notices, boss ? 136 : 110, 0);
+    }
     this.footer(ctx, w, h, s);
     // convert slot rects to CSS px
     for (const r of this.slotRects) {
@@ -353,8 +393,14 @@ export class Hud {
     return chapterUiColor(this.content.chapter(c));
   }
 
-  /** Boss health bar under the timer; returns true when drawn. */
-  private bossBar(ctx: CanvasRenderingContext2D, w: number, s: HudState, y: number): boolean {
+  /** Boss health bar centred on `cx` (under the timer; compact: top of the band); returns its height (0 = none). */
+  private bossBar(
+    ctx: CanvasRenderingContext2D,
+    cx: number,
+    s: HudState,
+    y: number,
+    bw: number,
+  ): number {
     let def: EnemyDef | undefined;
     let hp = 0;
     let count = 0;
@@ -367,16 +413,15 @@ export class Hud {
         hp = e[5];
       }
     }
-    if (!def) return false;
-    const bw = 360;
-    const x = w / 2 - bw / 2;
+    if (!def) return 0;
+    const x = cx - bw / 2;
     this.panel(ctx, x - 8, y - 4, bw + 16, 34);
     ctx.textAlign = 'center';
     ctx.font = F(700, 12);
     ctx.fillStyle = HUD.parchment;
-    ctx.fillText(`☠ ${def.name.toUpperCase()}${count > 1 ? ` ×${count}` : ''} ☠`, w / 2, y + 10);
+    ctx.fillText(`☠ ${def.name.toUpperCase()}${count > 1 ? ` ×${count}` : ''} ☠`, cx, y + 10);
     this.bar(ctx, x + 4, y + 15, bw - 8, 8, hp / 100, '#a01818');
-    return true;
+    return 34;
   }
 
   private timer(ctx: CanvasRenderingContext2D, w: number, s: HudState): void {
@@ -403,22 +448,37 @@ export class Hud {
   }
 
   /** Breather between waves: big "WAVE N CLEARED" plate with the countdown. */
-  private waveBanner(ctx: CanvasRenderingContext2D, w: number, h: number, s: HudState): void {
+  /**
+   * Breather banner ("WAVE N CLEARED", countdown). Classic: at 30% height; compact (`top` set):
+   * a shorter plate at `top` of the top band. Returns its height (0 = none).
+   */
+  private waveBanner(
+    ctx: CanvasRenderingContext2D,
+    cx: number,
+    h: number,
+    s: HudState,
+    top: number | null,
+    maxW: number,
+  ): number {
     const wv = s.snap.wv;
-    if (!wv || wv.a || s.snap.wave < 1) return;
-    const y = h * 0.3;
-    this.panel(ctx, w / 2 - 190, y - 34, 380, 64);
+    if (!wv || wv.a || s.snap.wave < 1) return 0;
+    const compact = top !== null;
+    const bw = compact ? Math.min(380, maxW) : 380;
+    const bh = compact ? 46 : 64;
+    const y = compact ? top + 30 : h * 0.3;
+    this.panel(ctx, cx - bw / 2, y - (compact ? 30 : 34), bw, bh);
     ctx.textAlign = 'center';
-    ctx.font = F(800, 24);
+    ctx.font = F(800, compact ? 18 : 24);
     ctx.fillStyle = HUD.gold;
-    ctx.fillText(`✠ WAVE ${s.snap.wave} CLEARED ✠`, w / 2, y - 2);
-    ctx.font = F(600, 13);
+    ctx.fillText(`✠ WAVE ${s.snap.wave} CLEARED ✠`, cx, y - (compact ? 8 : 2));
+    ctx.font = F(600, compact ? 11 : 13);
     ctx.fillStyle = HUD.parchment;
     ctx.fillText(
       `Wave ${s.snap.wave + 1} in ${Math.ceil(wv.nx ?? 0)}s — resupply, regroup`,
-      w / 2,
-      y + 20,
+      cx,
+      y + (compact ? 9 : 20),
     );
+    return bh;
   }
 
   private team(
@@ -721,8 +781,8 @@ export class Hud {
       ctx.fillText(
         owned
           ? def.name.toUpperCase()
-          : def.unlockAtSec
-            ? `UNLOCK ${formatTime(def.unlockAtSec * 1000)}`
+          : def.unlockAtWave
+            ? `UNLOCK WAVE ${def.unlockAtWave}`
             : 'CRATE ONLY',
         x + cell / 2,
         y + 56,
@@ -851,8 +911,8 @@ export class Hud {
         ctx.fillText(
           owned
             ? def.name.toUpperCase()
-            : def.unlockAtSec
-              ? `🔒 ${formatTime(def.unlockAtSec * 1000)}`
+            : def.unlockAtWave
+              ? `🔒 WAVE ${def.unlockAtWave}`
               : 'CRATE',
           x + cw / 2,
           y + chh - 6,
@@ -874,9 +934,13 @@ export class Hud {
   ): void {
     if (!alive) return;
     for (const st of sticks) {
-      const color = st.kind === 'move' ? '232,217,176' : '224,184,80';
+      if (st.kind === 'move' && st.sprintRing) {
+        this.moveStick(ctx, st, h);
+        continue;
+      }
+      const color = '224,184,80';
       if (!st.engaged) {
-        const hx = st.kind === 'move' ? 110 : w - 230;
+        const hx = w - 230;
         const hy = h - 100;
         ctx.strokeStyle = `rgba(${color},0.22)`;
         ctx.lineWidth = 2;
@@ -886,12 +950,9 @@ export class Hud {
         ctx.textAlign = 'center';
         ctx.font = F(600, 11);
         ctx.fillStyle = `rgba(${color},0.5)`;
-        ctx.fillText(st.kind === 'move' ? 'MOVE' : 'AIM · FIRE', hx, hy + 4);
-        if (st.sprintRing) this.sprintRing(ctx, hx, hy, st.sprintRing, false, true);
+        ctx.fillText('AIM · FIRE', hx, hy + 4);
         continue;
       }
-      if (st.sprintRing)
-        this.sprintRing(ctx, st.origin.x, st.origin.y, st.sprintRing, !!st.sprintLit, false);
       ctx.fillStyle = `rgba(${color},0.12)`;
       ctx.strokeStyle = `rgba(${color},0.5)`;
       ctx.lineWidth = 2;
@@ -906,73 +967,198 @@ export class Hud {
     }
   }
 
-  /** Move stick's outer "sprint zone": push the thumb out here to sprint (lit while sprinting). */
-  private sprintRing(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    r: number,
-    lit: boolean,
-    hint: boolean,
-  ): void {
+  /**
+   * Move stick (v0.6.0 hotfix feedback), from the centre out:
+   *  - base disc with a solid "max walk" ring at the radius: ring + knob turn gold once the thumb
+   *    reaches it (full walking speed);
+   *  - an empty dead gap (radius .. sprintZone.enter × radius) so full speed never sprints by
+   *    accident;
+   *  - a dashed red-orange sprint band (enter .. outer, label »), lit solid only while the marine
+   *    really sprints, greyed with "NO STAMINA" / "FIRING" when a sprint can't start.
+   * The knob is clamped to the band's outer edge (the stick origin follows beyond it).
+   */
+  private moveStick(ctx: CanvasRenderingContext2D, st: StickView, h: number): void {
+    const R = st.radius;
+    const engaged = st.engaged;
+    const ox = engaged ? st.origin.x : 110;
+    const oy = engaged ? st.origin.y : h - 100;
+    const inner = st.sprintRing ?? R * 1.2;
+    const outer = st.sprintOuter ?? R * 1.5;
+    const mode = engaged ? (st.sprintMode ?? 'off') : 'off';
+    const maxWalk = engaged && !!st.maxWalk && mode !== 'on';
+    const sprinting = mode === 'on';
+    const blocked = mode === 'noStamina' || mode === 'fire';
+    const a0 = engaged ? 1 : 0.45;
     ctx.save();
-    ctx.setLineDash(lit ? [] : [6, 6]);
-    ctx.lineWidth = lit ? 5 : 2;
-    ctx.strokeStyle = lit
-      ? 'rgba(255,192,74,0.9)'
-      : hint
-        ? 'rgba(232,217,176,0.14)'
-        : 'rgba(255,192,74,0.38)';
-    if (lit) {
-      ctx.shadowColor = 'rgba(255,170,40,0.8)';
-      ctx.shadowBlur = 12;
+    // sprint band
+    const mid = (inner + outer) / 2;
+    ctx.lineWidth = outer - inner;
+    ctx.setLineDash(sprinting ? [] : [7, 7]);
+    ctx.strokeStyle = sprinting
+      ? 'rgba(255,110,40,0.55)'
+      : blocked
+        ? 'rgba(140,140,140,0.22)'
+        : `rgba(255,110,40,${0.16 * a0})`;
+    if (sprinting) {
+      ctx.shadowColor = 'rgba(255,120,40,0.9)';
+      ctx.shadowBlur = 14;
     }
     ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.arc(ox, oy, mid, 0, Math.PI * 2);
     ctx.stroke();
     ctx.shadowBlur = 0;
     ctx.setLineDash([]);
+    // band edges: thin lines so the dead gap reads as a gap
+    ctx.lineWidth = sprinting ? 2.5 : 1;
+    ctx.strokeStyle = sprinting
+      ? 'rgba(255,150,70,0.95)'
+      : blocked
+        ? 'rgba(160,160,160,0.4)'
+        : `rgba(255,130,60,${0.45 * a0})`;
+    for (const r of [inner, outer]) {
+      ctx.beginPath();
+      ctx.arc(ox, oy, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     ctx.textAlign = 'center';
-    ctx.font = F(700, 9);
-    ctx.fillStyle = lit ? 'rgba(255,214,130,0.95)' : `rgba(232,217,176,${hint ? 0.3 : 0.55})`;
-    ctx.fillText(lit ? '» SPRINT «' : '» SPRINT', x, y - r - 5);
+    ctx.font = F(800, sprinting ? 14 : 12);
+    ctx.fillStyle = sprinting
+      ? 'rgba(255,214,150,1)'
+      : blocked
+        ? 'rgba(180,180,180,0.7)'
+        : `rgba(255,150,80,${0.75 * a0})`;
+    ctx.fillText('»', ox, oy - mid + 4);
+    if (blocked) {
+      ctx.font = F(700, 9);
+      ctx.fillText(mode === 'fire' ? 'FIRING' : 'NO STAMINA', ox, oy - outer - 5);
+    } else if (sprinting) {
+      ctx.font = F(700, 9);
+      ctx.fillText('SPRINT', ox, oy - outer - 5);
+    }
+    // base disc + max-walk ring
+    ctx.fillStyle = `rgba(232,217,176,${engaged ? 0.12 : 0.04})`;
+    ctx.strokeStyle = maxWalk ? HUD.gold : `rgba(232,217,176,${engaged ? 0.6 : 0.3})`;
+    ctx.lineWidth = maxWalk ? 4 : 2;
+    ctx.beginPath();
+    ctx.arc(ox, oy, R, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    if (!engaged) {
+      ctx.font = F(600, 11);
+      ctx.fillStyle = 'rgba(232,217,176,0.5)';
+      ctx.fillText('MOVE', ox, oy + 4);
+      ctx.restore();
+      return;
+    }
+    // knob (clamped to the band's outer edge by VirtualStick.knob)
+    ctx.fillStyle = sprinting
+      ? 'rgba(255,130,50,0.9)'
+      : maxWalk
+        ? 'rgba(242,196,80,0.9)'
+        : `rgba(232,217,176,${st.active ? 0.75 : 0.4})`;
+    ctx.beginPath();
+    ctx.arc(st.knob.x, st.knob.y, R * 0.45, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
   }
 
-  private stateBanner(ctx: CanvasRenderingContext2D, w: number, h: number, me: PlayerSnap): void {
-    if (me.st === 'alive') return;
-    ctx.textAlign = 'center';
-    ctx.font = F(800, 34);
-    ctx.fillStyle = me.st === 'downed' ? '#e04a30' : HUD.dim;
-    ctx.fillText(
-      me.st === 'downed' ? 'BATTLE-BROTHER DOWN' : 'FALLEN IN SERVICE',
-      w / 2,
-      h / 2 - 90,
-    );
-    ctx.font = F(600, 16);
-    ctx.fillStyle = HUD.parchment;
-    ctx.fillText(
+  /** Downed / fallen alert. Classic: above the centre; compact (`top` set): in the top band. Returns its height. */
+  private stateBanner(
+    ctx: CanvasRenderingContext2D,
+    cx: number,
+    h: number,
+    me: PlayerSnap,
+    top: number | null,
+    maxW: number,
+  ): number {
+    if (me.st === 'alive') return 0;
+    const compact = top !== null;
+    const title = me.st === 'downed' ? 'BATTLE-BROTHER DOWN' : 'FALLEN IN SERVICE';
+    const sub =
       me.st === 'downed'
         ? me.rv > 0
           ? `Being revived… ${Math.round(me.rv * 100)}%`
           : `Bleeding out in ${Math.ceil(me.bo)}s — a battle-brother must stand next to you`
-        : 'Your squad fights on. Spectating…',
-      w / 2,
-      h / 2 - 62,
-    );
+        : 'Your squad fights on. Spectating…';
+    ctx.textAlign = 'center';
+    if (compact) {
+      ctx.font = F(600, this.fitSize(ctx, sub, 600, 12, maxW - 16));
+      const subFont = ctx.font;
+      this.panel(ctx, cx - maxW / 2, top, maxW, 44);
+      ctx.font = F(800, this.fitSize(ctx, title, 800, 20, maxW - 16));
+      ctx.fillStyle = me.st === 'downed' ? '#e04a30' : HUD.dim;
+      ctx.fillText(title, cx, top + 21);
+      ctx.font = subFont;
+      ctx.fillStyle = HUD.parchment;
+      ctx.fillText(sub, cx, top + 37);
+      return 44;
+    }
+    ctx.font = F(800, 34);
+    ctx.fillStyle = me.st === 'downed' ? '#e04a30' : HUD.dim;
+    ctx.fillText(title, cx, h / 2 - 90);
+    ctx.font = F(600, 16);
+    ctx.fillStyle = HUD.parchment;
+    ctx.fillText(sub, cx, h / 2 - 62);
+    return 0;
   }
 
-  private notices(ctx: CanvasRenderingContext2D, w: number, notices: Notice[], top: number): void {
+  /** Largest font size ≤ `size` (min 8) at which `text` fits `maxW`. */
+  private fitSize(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    weight: number,
+    size: number,
+    maxW: number,
+  ): number {
+    ctx.font = F(weight, size);
+    const tw = ctx.measureText(text).width;
+    return tw <= maxW ? size : Math.max(8, Math.floor((size * maxW) / tw));
+  }
+
+  /** Bottom (CSS px) of the voice overlay when it sits in the compact top band; 0 when absent. */
+  private voiceBottom(): number {
+    if (typeof document === 'undefined') return 0;
+    const now = performance.now();
+    if (now - this.voiceBottomAt < 250) return this.voiceBottomCache;
+    this.voiceBottomAt = now;
+    let b = 0;
+    for (const el of Array.from(document.querySelectorAll('.vx > *'))) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) b = Math.max(b, r.bottom);
+    }
+    this.voiceBottomCache = b;
+    return b;
+  }
+
+  /**
+   * Notices (pickups, unlocks, host/connection messages…). Classic: `top` is the 1st baseline;
+   * compact (`maxW` > 0): `top` is the top edge, smaller rows fitted to the band. Returns the
+   * height used.
+   */
+  private notices(
+    ctx: CanvasRenderingContext2D,
+    cx: number,
+    notices: Notice[],
+    top: number,
+    maxW: number,
+  ): number {
+    const compact = maxW > 0;
+    const rowH = compact ? 21 : 26;
+    const list = notices.slice(compact ? -4 : -5);
     ctx.textAlign = 'center';
-    notices.slice(-5).forEach((n, i) => {
+    list.forEach((n, i) => {
       ctx.globalAlpha = Math.min(1, n.ttl);
-      ctx.font = n.kind === 'warn' ? F(800, 22) : F(700, 16);
+      const weight = n.kind === 'warn' ? 800 : 700;
+      const size = compact ? (n.kind === 'warn' ? 18 : 14) : n.kind === 'warn' ? 22 : 16;
+      ctx.font = F(weight, compact ? this.fitSize(ctx, n.text, weight, size, maxW - 8) : size);
+      const y = compact ? top + 16 + i * rowH : top + i * 26;
       ctx.fillStyle = 'rgba(0,0,0,0.75)';
-      ctx.fillText(n.text, w / 2 + 1, top + 1 + i * 26);
+      ctx.fillText(n.text, cx + 1, y + 1);
       ctx.fillStyle = NOTICE_COLORS[n.kind];
-      ctx.fillText(n.text, w / 2, top + i * 26);
+      ctx.fillText(n.text, cx, y);
     });
     ctx.globalAlpha = 1;
+    return compact && list.length ? 4 + list.length * rowH : 0;
   }
 
   private footer(ctx: CanvasRenderingContext2D, w: number, h: number, s: HudState): void {

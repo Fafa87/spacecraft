@@ -8,6 +8,7 @@ import {
   PLAYER,
   enemyProjectileDeflectChances,
   leaderboardBoard,
+  dropRates,
   type ContentRegistry,
 } from '@sms/shared';
 import { escapeHtml as esc } from '../ui/format.js';
@@ -16,12 +17,12 @@ import { compendiumHtml } from './compendium.js';
 export function rulesHtml(c: ContentRegistry): string {
   const ws = c.weaponOrder;
   const start = ws
-    .filter((w) => w.unlockAtSec === 0)
+    .filter((w) => w.unlockAtWave === 0)
     .map((w) => esc(w.name))
     .join(', ');
   const unlocks = ws
-    .filter((w) => w.unlockAtSec)
-    .map((w) => `<li><b>${esc(w.name)}</b> — po ${w.unlockAtSec} s przetrwania</li>`)
+    .filter((w) => w.unlockAtWave)
+    .map((w) => `<li><b>${esc(w.name)}</b> — na starcie fali ${w.unlockAtWave}</li>`)
     .join('');
   const boss = c.enemy(c.director.bosses.enemy).name;
   const d = c.director;
@@ -30,6 +31,8 @@ export function rulesHtml(c: ContentRegistry): string {
   const sec = (v: number) => `${String(Number(v.toFixed(2))).replace('.', ',')} s`;
   const pc = (v: number) => `${Math.round(v * 100)}%`;
   const mul = (v: number) => `×${String(v).replace('.', ',')}`;
+  const num = (v: number) => String(Number(v.toFixed(2))).replace('.', ',');
+  const soloDrops = dropRates(d, 1);
   const defl = enemyProjectileDeflectChances(c.enemies.values());
   const shooters = [...c.enemies.values()].filter(
     (e) => e.ranged && defl[e.ranged.projectile.kind],
@@ -69,8 +72,7 @@ export function rulesHtml(c: ContentRegistry): string {
     <div><h3>Telefon / tablet</h3><ul>
       <li><b>Lewy kciuk</b> (lewa połowa ekranu) — ruch</li>
       <li><b>Prawy kciuk</b> — celowanie i automatyczny ogień</li>
-      <li><b>Sprint lewym kciukiem</b> — wypchnij drążek ruchu poza jego okrąg, do zewnętrznego pierścienia „» SPRINT” (zapala się na złoto); sprintujesz, dopóki trzymasz kciuk w pierścieniu, cofnięcie do środka kończy sprint</li>
-      <li><b>» SPRINT</b> (prawy dolny róg) — albo dotknij prawym kciukiem, żeby włączyć sprint; dotknij znowu albo puść drążek ruchu, żeby wyłączyć</li>
+      <li><b>Sprint lewym kciukiem</b> — to jedyny sposób na sprint na telefonie (bez osobnego przycisku). Gdy gałka dojdzie do okręgu drążka, marine idzie pełnym marszem (okrąg i gałka robią się złote). Za nim jest krótka przerwa, a dalej zewnętrzny, przerywany czerwono-pomarańczowy pierścień „»”: wypchnij kciuk do niego, a sprintujesz, dopóki go tam trzymasz (pierścień się zapala). Cofnięcie do środka kończy sprint. Szary pierścień z napisem NO STAMINA / FIRING znaczy, że sprint teraz nie ruszy (za mało kondycji albo trzymasz spust).</li>
       <li><b>Dotknij ikony broni</b> — zmiana broni</li>
       <li><b>⟳</b> — przeładowanie, <b>🔊</b> — dźwięk, <b>⏸</b> — menu</li>
       <li><b>⛶</b> — pełny ekran (Android). Na iPhonie: Udostępnij → „Do ekranu początkowego”, potem uruchamiaj grę z ikony.</li>
@@ -80,13 +82,14 @@ export function rulesHtml(c: ContentRegistry): string {
 </section>
 <section id="sprint"><h2>Sprint</h2>
   <p>Marine może na chwilę rzucić się biegiem: <b>${mul(SP.speedMul)}</b> zwykłej prędkości (${Math.round(PLAYER.speed * SP.speedMul)} px/s — ciężar broni nie spowalnia sprintu). Sprint zaczyna się od razu, ale <b>w biegu nie da się strzelać</b> — spust jest ignorowany i nie przerywa sprintu.</p>
+  <p><b>Sprint nie ruszy, póki trzymasz spust</b> (mysz/klawisz strzału albo strzelający drążek celowania): prośba o sprint (Shift albo drążek ruchu w pierścieniu sprintu) czeka, a gdy puścisz spust i nadal chcesz biec, sprint rusza od razu. Sprint, który już trwa, biegnie dalej — spust jest wtedy ignorowany, jak wyżej.</p>
   <ul>
     <li><b>Kondycja</b>: ${sec(SP.staminaMaxS)} sprintu (pasek pod marine). Kończy się sama przy zerze; ponownie ruszysz dopiero, gdy będzie co najmniej ${sec(SP.minToStartS)}.</li>
     <li>Kondycja wraca <b>tylko, gdy stoisz w miejscu</b> — pełna po ${sec(SP.staminaMaxS / SP.regenStandingPerS)}. Zwykły marsz jej nie odnawia.</li>
     <li>Po sprincie broń jest gotowa dopiero po <b>${sec(SP.weaponReadyDelayS)}</b> (złoty pasek „READY…” na ikonie broni). Broń półautomatyczną trzeba wtedy nacisnąć ponownie.</li>
     <li>W sprincie marine patrzy tam, dokąd biegnie — <b>uciekając, nadstawiasz plecy</b> (tylny pancerz ${mul(A.rear)}).</li>
     <li>Nie da się sprintować, podnosząc brata (w promieniu ${PLAYER.reviveRadius} px od powalonego).</li>
-    <li>W sprincie marine zarzuca broń na plecy i biegnie z pustymi rękami; po sprincie widać, jak ją podnosi.</li>
+    <li>W sprincie marine biegnie z pustymi rękami (broni nie widać); po sprincie broń pojawia się i unosi do celu przez czas gotowości.</li>
     <li>Sprint innych graczy widać po kurzu i smugach za marine.</li>
   </ul>
 </section>
@@ -118,8 +121,8 @@ export function rulesHtml(c: ContentRegistry): string {
   </ul>
 </section>
 <section id="bron"><h2>Broń</h2>
-  <p>Na start masz: <b>${start}</b>. Kolejne bronie odblokowują się wszystkim z czasem:</p><ul>${unlocks}</ul>
-  <p>Dodatkowo na mapie spadają <b>skrzynie z bronią</b>, a z zabitych Tyranidów — <b>apteczki</b>. Każda broń ma rolę: ANTI-HORDE na roje drobnicy, ANTI-ELITE/ANTI-TANK na duże bestie.</p>
+  <p>Na start masz: <b>${start}</b>. Kolejne bronie odblokowują się wszystkim (żywym i powalonym) na początku kolejnych fal:</p><ul>${unlocks}</ul>
+  <p>Dodatkowo na mapie spadają <b>skrzynie z bronią</b> (co ${sec(d.crates.intervalMin)}–${sec(d.crates.intervalMax)}, średnio ${num(soloDrops.crates)} na falę w pojedynkę), a z zabitych Tyranidów — <b>apteczki</b> (do średnio ${num(soloDrops.medkits)} na falę w pojedynkę; więcej w większym oddziale, boss zawsze zostawia apteczkę). Każda broń ma rolę: ANTI-HORDE na roje drobnicy, ANTI-ELITE/ANTI-TANK na duże bestie.</p>
   <ul>
     <li><b>Strzelanie spowalnia</b>: ciężka broń spowalnia zawsze, a przy wciśniętym spuście jeszcze bardziej.</li>
     <li><b>Zaparcie</b>: niektóre ciężkie bronie, gdy stoisz w miejscu, strzelają szybciej i celniej.</li>

@@ -5,7 +5,7 @@ import { updateEnemies } from './systems/enemies.js';
 import { updatePickups } from './systems/pickups.js';
 import { updatePlayerMovement, updatePlayerStatus } from './systems/players.js';
 import { updateProjectiles } from './systems/projectiles.js';
-import { updatePlayerWeapon, updateTimedUnlocks } from './systems/weapons.js';
+import { unlockWaveWeapons, updatePlayerWeapon } from './systems/weapons.js';
 import type { Enemy, PlayerInput, World } from './types.js';
 
 const enemyHash = new SpatialHash<Enemy>(64);
@@ -30,16 +30,17 @@ function rebuildHash(world: World): void {
 export function stepWorld(world: World, dt: number = TICK_DT): void {
   if (world.over) return;
   world.events = [];
-  const prevTime = world.time;
   world.tick++;
   world.time += dt;
 
   updatePlayerMovement(world, dt);
   for (const p of world.players) updatePlayerWeapon(world, p, dt);
-  updateTimedUnlocks(world, prevTime);
 
   rebuildHash(world);
+  const prevWave = world.director.wave;
   updateDirector(world, dt);
+  // Weapons unlock at the start of their wave (after the director's 'surge' event).
+  if (world.director.wave !== prevWave) unlockWaveWeapons(world, world.director.wave);
   updateEnemies(world, enemyHash, dt);
 
   rebuildHash(world);

@@ -82,7 +82,8 @@ export function killEnemy(world: World, enemy: Enemy, killer?: Player): void {
   // Drops come out of the wave's medkit budget (bosses always drop); children never drop.
   const st = world.director;
   const roll = !enemy.child && world.rng.chance(def.medkitDropChance);
-  const inBudget = st.drops.medkits < dropCaps(world.content.director, world.teamSize).medkits;
+  const inBudget =
+    st.drops.medkits < dropCaps(world.content.director, world.teamSize, st.wave).medkits;
   if (roll && (inBudget || def.boss)) {
     st.drops.medkits++;
     world.pickups.push({

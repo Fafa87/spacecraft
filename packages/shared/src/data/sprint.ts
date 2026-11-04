@@ -11,16 +11,19 @@
  *   range of a downed squadmate (can't sprint while reviving), or stamina runs out (auto-stop;
  *   a restart needs `minToStartS` again).
  * - While sprinting the trigger is ignored (it does NOT cancel the sprint: release sprint to
- *   fight). After any sprint ends, the weapon is ready only after `weaponReadyDelayS`.
+ *   fight).
+ * - v0.6.0 hotfix: a sprint does NOT start while the trigger is held (fire input: mouse/key or
+ *   the touch aim stick firing). The request waits; once the trigger is released and sprint is
+ *   still requested (while moving, with stamina), the sprint starts. After any sprint ends, the weapon is ready only after `weaponReadyDelayS`.
  * - While sprinting the marine faces where he runs (not the aim), so directional armour turns
  *   with him: running away exposes the rear plate.
  */
 export const MARINE_SPRINT = {
-  speedMul: 1.7,
-  /** Full stamina, in seconds of sprint. */
-  staminaMaxS: 3,
+  speedMul: 1.56, // v0.6.0 hotfix: bonus +70% → +56% (−20%)
+  /** Full stamina, in seconds of sprint (v0.6.0 hotfix: 3 → 2.4 s, −20%). */
+  staminaMaxS: 2.4,
   /** Stamina regained per second while standing still (full in 7 s). */
-  regenStandingPerS: 3 / 7,
+  regenStandingPerS: 2.4 / 7,
   /** Stamina spent per second of sprint. */
   drainPerS: 1,
   /** Minimum stamina to (re)start a sprint. */
@@ -46,7 +49,8 @@ export const newSprintState = (): SprintState => ({
 /**
  * One tick of the sprint state machine. Pure & deterministic (host sim and client prediction
  * share it). `moving` = real movement input (above the stick-drift threshold); `allowed` = false
- * while reviving a squadmate.
+ * while reviving a squadmate; `firing` = the raw fire input is held (blocks only the START of a
+ * sprint; a sprint already running keeps going and ignores the trigger).
  */
 export function stepSprint(
   s: SprintState,
@@ -54,10 +58,12 @@ export function stepSprint(
   moving: boolean,
   allowed: boolean,
   dt: number,
+  firing = false,
 ): void {
   const S = MARINE_SPRINT;
   const was = s.sprinting;
-  const sprint = want && moving && allowed && (was ? s.stamina > 0 : s.stamina >= S.minToStartS);
+  const canRun = was ? s.stamina > 0 : !firing && s.stamina >= S.minToStartS;
+  const sprint = want && moving && allowed && canRun;
   if (sprint) s.stamina = Math.max(0, s.stamina - S.drainPerS * dt);
   else if (!moving) s.stamina = Math.min(S.staminaMaxS, s.stamina + S.regenStandingPerS * dt);
   if (sprint) s.weaponDelay = 0;

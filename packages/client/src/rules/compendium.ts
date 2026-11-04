@@ -11,6 +11,7 @@ import {
   PICKUP,
   PLAYER,
   TICK_RATE,
+  dropRates,
   enemyProjectileDeflectChances,
   expectedDps,
   expectedShotDamage,
@@ -43,11 +44,11 @@ function table(head: string[], rows: string[][], cls = ''): string {
 }
 
 const unlockLabel = (w: WeaponDef): string =>
-  w.unlockAtSec === 0
+  w.unlockAtWave === 0
     ? 'od startu'
-    : w.unlockAtSec === null
+    : w.unlockAtWave === null
       ? 'tylko skrzynie'
-      : `${w.unlockAtSec} s`;
+      : `fala ${w.unlockAtWave}`;
 
 /** Weapon base stats. */
 export function weaponTable(c: ContentRegistry): string {
@@ -210,7 +211,7 @@ export function enemyTable(c: ContentRegistry): string {
       `${e.mass}`,
       `${n(e.threat, 2)}`,
       `${e.points}`,
-      pct(e.medkitDropChance),
+      pct(e.medkitDropChance, 1),
       enemyAttack(e, c),
     ]),
   );
@@ -258,14 +259,12 @@ export function teamScalingTable(c: ContentRegistry): string {
       row(`Udział elit (zagrożenie ≥ ${t.eliteThreat})`, t.elite),
       row('Limit potomstwa (Rippery, miny)', t.children),
       ['Bossy na pojawienie', ...sizes.map((i) => `${perTeam(d.bosses.count, i)}`)],
+      // average per wave; fractions carry over to the next wave (sim dropCaps)
       [
-        'Apteczki z zabójstw / falę',
-        ...sizes.map((i) => `${Math.round(d.drops.medkits.base + d.drops.medkits.perMarine * i)}`),
+        'Apteczki z zabójstw / falę (średnio)',
+        ...sizes.map((i) => n(dropRates(d, i + 1).medkits, 2)),
       ],
-      [
-        'Skrzynie z bronią / falę',
-        ...sizes.map((i) => `${Math.round(d.drops.crates.base + d.drops.crates.perMarine * i)}`),
-      ],
+      ['Skrzynie z bronią / falę (średnio)', ...sizes.map((i) => n(dropRates(d, i + 1).crates, 2))],
     ],
     'matrix',
   );
@@ -356,6 +355,7 @@ export function sprintTable(): string {
       ['Minimum do startu', `${n(S.minToStartS, 2)} s`],
       ['Broń gotowa po sprincie', `${n(S.weaponReadyDelayS, 2)} s`],
       ['Strzał w sprincie', 'niemożliwy (spust ignorowany)'],
+      ['Start sprintu przy wciśniętym spuście', 'wstrzymany do puszczenia spustu'],
       ['Kierunek pancerza w sprincie', 'kierunek biegu'],
     ],
   );
