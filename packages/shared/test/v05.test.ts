@@ -253,6 +253,12 @@ describe('v0.5 squad-size scaling', () => {
     expect(ts.hp.slice(0, 4).map((v) => +v.toFixed(3))).toEqual([1, 1.075, 1.15, 1.2]);
   });
 
+  it('v0.5.3 halves the per-marine pace increase, solo unchanged', () => {
+    expect(ts.pace.map((v) => +v.toFixed(3))).toEqual([
+      0.85, 1.575, 2.535, 3.575, 4.925, 6.025, 6.875, 7.695,
+    ]);
+  });
+
   it('rejects a scaling table that misses squad sizes', () => {
     const bad: DirectorConfig = {
       ...DIRECTOR,
