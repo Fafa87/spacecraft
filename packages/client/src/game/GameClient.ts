@@ -126,6 +126,7 @@ export class GameClient extends Emitter<GameClientEvents> {
     this.disposed = true;
     cancelAnimationFrame(this.raf);
     this.input.dispose();
+    this.hud.dispose();
     for (const u of this.unsubs) u();
     this.enemyAudio.stop();
     this.canvas.classList.remove('playing');

@@ -338,11 +338,19 @@ async function mobile(browser: Browser, deviceName: keyof typeof KnownDevices, e
     return w;
   });
   await sleep(200);
-  const rect = await page.evaluate(
-    (slot) =>
-      ((window as any).__sms.game.hud.slotRects as any[]).find((r) => r.slot === slot) ?? null,
-    target.slot,
-  );
+  const rect = await page.evaluate((slot) => {
+    // slotRects are in HUD units; the tap needs CSS px (safe-area inset + HUD scale)
+    const hud = (window as any).__sms.game.hud;
+    const r = (hud.slotRects as any[]).find((q) => q.slot === slot);
+    if (!r) return null;
+    const ui = hud.lastUi as number;
+    return {
+      x: hud.lastIns.left + r.x * ui,
+      y: hud.lastIns.top + r.y * ui,
+      w: r.w * ui,
+      h: r.h * ui,
+    };
+  }, target.slot);
   if (rect) {
     await t.start(2, { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 });
     await t.endAll();

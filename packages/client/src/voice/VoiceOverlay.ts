@@ -7,9 +7,12 @@ export interface VoiceOverlayOptions {
 }
 
 const CSS = `
-.vx{position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);left:50%;transform:translateX(-50%);
+.vx{position:fixed;top:var(--vx-y,calc(env(safe-area-inset-top,0px) + 6px));left:var(--vx-x,50%);
+transform:var(--vx-tf,translateX(-50%));width:var(--vx-w,auto);max-width:96vw;
+justify-content:var(--vx-jc,center);flex-wrap:wrap;
 z-index:50;display:flex;gap:6px;align-items:center;font:600 12px/1.2 system-ui,sans-serif;color:#e8dcc0;
-user-select:none;-webkit-user-select:none;touch-action:none;pointer-events:auto}
+user-select:none;-webkit-user-select:none;touch-action:none;pointer-events:none}
+.vx>*{pointer-events:auto}
 .vx button{font:inherit;color:inherit;background:rgba(20,16,12,.78);border:1px solid #8a7140;border-radius:14px;
 padding:6px 10px;min-height:30px;cursor:pointer}
 .vx button.on{background:#7a1d12;border-color:#e0a050}
@@ -17,9 +20,16 @@ padding:6px 10px;min-height:30px;cursor:pointer}
 .vx .p{background:rgba(20,16,12,.78);border:1px solid #5a4a30;border-radius:12px;padding:4px 8px;max-width:9em;
 overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .vx .p.wait{opacity:.5}
-.vx .err{color:#f0a080}`;
+.vx .err{color:#f0a080}
+[data-vx-compact] .vx{gap:4px;font-size:11px}
+[data-vx-compact] .vx button{min-height:26px;padding:4px 8px;border-radius:12px}
+[data-vx-compact] .vx .p{padding:3px 7px;max-width:7em}`;
 
 /**
+ * Position: the game HUD publishes a free slot as CSS variables (--vx-x/y/w/jc, see
+ * render/hud.ts publishVoiceSlot) — phones: top centre (the clock moved to the top-left block),
+ * desktop/tablet: under the squad list. Outside a mission it sits at the top centre.
+ *
  * Minimal voice HUD: one button to join voice (the required user gesture), then a mic button
  * (hold = push-to-talk, or tap = mute toggle in open-mic mode), a PTT/OPEN switch, and one
  * chip per squadmate that lights up while they speak (tap a chip: volume 100% → 50% → 0%).
