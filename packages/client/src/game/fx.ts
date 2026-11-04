@@ -65,6 +65,9 @@ function impactSound(content: ContentRegistry, kind: string): string | undefined
 
 const decal = (prefix: string) => `decal_${prefix}_${Math.floor(Math.random() * DECAL_VARIANTS)}`;
 
+/** Full width of the ricochet spark cone (radians, ~50°). */
+const DEFLECT_CONE = 0.87;
+
 /** Turns simulation events into particles, decals, sounds and HUD notices. */
 export function playEvent(ev: GameEvent, fx: FxContext): void {
   const { renderer: r, audio, content } = fx;
@@ -212,56 +215,72 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
       break;
     }
     case 'defl': {
-      // Enemy shot glanced off a marine's front plate: bright "ping" flash, a spray of sparks
-      // and a few fast streaks along the ricochet direction (`a`).
+      // Enemy shot glanced off a marine's front plate (`a` = ricochet direction). Kept small
+      // and short so it reads on a phone without drowning the fight: a ~0.06 s pinpoint
+      // flash, a tight ~50° cone of 5-7 sparks (white-hot core that burns out first, leaving
+      // a yellow/orange tail; shrinking, quick drag, no gravity) and one faint streak for
+      // the spent round. ~13 pooled particles per ricochet, no ring.
       if (!throttled('armour_deflect', 50))
         audio.play('carapace_ricochet', { x: ev.x, y: ev.y, volume: 0.8, rate: 1.35 });
       P.spawn({
         x: ev.x,
         y: ev.y,
-        shape: 'sprite',
-        sprite: 'fx_ring',
-        maxLife: 0.18,
-        size: 0.14,
-        grow: 2.5,
+        maxLife: 0.06,
+        size: 2,
+        grow: 0.5,
         additive: true,
         drag: 0,
-        color: '#cfe8ff',
+        color: '#fffdf2',
       });
-      P.spawn({
-        x: ev.x,
-        y: ev.y,
-        maxLife: 0.09,
-        size: 5,
-        grow: 0.4,
-        additive: true,
-        drag: 0,
-        color: '#ffffff',
-      });
-      P.burst(ev.x, ev.y, 7, {
-        speed: 300,
-        color: '#fff6d0',
-        maxLife: 0.2,
-        size: 1.8,
-        shape: 'spark',
-        additive: true,
-      });
-      for (let i = 0; i < 3; i++) {
-        const a = ev.a + (Math.random() - 0.5) * 0.5;
-        const sp = 520 + Math.random() * 260;
+      const n = 5 + ((Math.random() * 3) | 0);
+      for (let i = 0; i < n; i++) {
+        const a = ev.a + (Math.random() - 0.5) * DEFLECT_CONE;
+        const sp = 240 + Math.random() * 200;
+        const vx = Math.cos(a) * sp;
+        const vy = Math.sin(a) * sp;
+        const life = 0.15 + Math.random() * 0.13;
+        // tail (yellow or orange), outlives the core
         P.spawn({
           x: ev.x,
           y: ev.y,
-          vx: Math.cos(a) * sp,
-          vy: Math.sin(a) * sp,
-          maxLife: 0.16,
-          size: 2.4,
-          color: '#ffe8a0',
-          drag: 2,
+          vx,
+          vy,
+          maxLife: life,
+          size: 1.5,
+          grow: 0.3,
+          drag: 5,
+          color: i % 3 === 2 ? '#ff9a3c' : '#ffd25e',
+          shape: 'spark',
+          additive: true,
+        });
+        // white-hot core
+        P.spawn({
+          x: ev.x,
+          y: ev.y,
+          vx,
+          vy,
+          maxLife: life * 0.45,
+          size: 1,
+          grow: 0.6,
+          drag: 5,
+          color: '#fffbe6',
           shape: 'spark',
           additive: true,
         });
       }
+      P.spawn({
+        x: ev.x,
+        y: ev.y,
+        vx: Math.cos(ev.a) * 620,
+        vy: Math.sin(ev.a) * 620,
+        maxLife: 0.12,
+        size: 1.1,
+        grow: 0.5,
+        drag: 2,
+        color: '#7a5d33',
+        shape: 'spark',
+        additive: true,
+      });
       break;
     }
     case 'die': {
