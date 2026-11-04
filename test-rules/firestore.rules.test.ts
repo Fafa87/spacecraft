@@ -368,6 +368,18 @@ describe('FirestoreHighscoreStore on a per-version board (REST)', () => {
   it('a v0.2 client cannot post a run tagged with another version', async () => {
     await expect(v2.submit(run('0.1.0', 100_000))).rejects.toMatchObject({ status: 403 });
   });
+
+  it('the dev preview board 0.0.0 works with the existing rules and stays isolated', async () => {
+    const dev = new FirestoreHighscoreStore({ ...base, board: '0.0.0' });
+    const v6 = new FirestoreHighscoreStore({ ...base, board: '0.6.0' });
+    expect(await dev.submit(run('0.0.0-dev', 100_000))).toEqual({ status: 'server', rank: 1 });
+    expect((await dev.top(1)).entries.map((e) => e.version)).toEqual(['0.0.0-dev']);
+    expect((await dev.topPlayers(1)).entries).toHaveLength(1);
+    // preview runs can't land on a real board, real runs can't land on the dev board
+    await expect(v6.submit(run('0.0.0-dev', 100_000))).rejects.toMatchObject({ status: 403 });
+    await expect(dev.submit(run('0.6.0', 100_000))).rejects.toMatchObject({ status: 403 });
+    expect((await v6.top(1)).entries).toEqual([]);
+  });
 });
 
 describe('FirestoreHighscoreStore against the emulator (REST, as in the browser)', () => {

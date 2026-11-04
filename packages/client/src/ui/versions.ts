@@ -1,5 +1,5 @@
 import { GAME_VERSION } from '@sms/shared';
-import { DEV_PREVIEW } from '../devPreview.js';
+import { DEV_PREVIEW, isDevBoardVersion } from '../devPreview.js';
 import { escapeHtml } from './format.js';
 
 /** One entry of /spacecraft/versions.json (written by scripts/deploy-pages.ts). */
@@ -24,7 +24,8 @@ export async function loadVersions(): Promise<VersionEntry[]> {
     const r = await fetch(`${siteRoot()}versions.json`, { cache: 'no-cache' });
     if (!r.ok) return [];
     const j = (await r.json()) as { versions?: VersionEntry[] };
-    return Array.isArray(j.versions) ? j.versions : [];
+    // the hidden dev-preview board (0.0.0) is never a real version
+    return Array.isArray(j.versions) ? j.versions.filter((v) => !isDevBoardVersion(v.version)) : [];
   } catch {
     return [];
   }

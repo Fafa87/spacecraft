@@ -2,7 +2,7 @@
  * `npm run deploy:dev`: on-demand, unversioned dev preview at https://<owner>.github.io/<repo>/dev/.
  *
  * Builds the current checkout with BASE_PATH=/<repo>/dev/ and VITE_DEV_PREVIEW=<short sha>
- * (menu badge "DEV PREVIEW <sha>", separate leaderboard board `dev`), then replaces ONLY the
+ * (menu badge "DEV PREVIEW <sha>", hidden leaderboard board `0.0.0`), then replaces ONLY the
  * `dev/` folder on gh-pages in one normal commit on top of origin/gh-pages. The root build,
  * every vX.Y.Z/ folder and versions.json are left untouched; the preview is never listed.
  * Never force-pushes: if the push is rejected, just run it again.
