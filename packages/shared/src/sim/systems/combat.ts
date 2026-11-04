@@ -1,5 +1,5 @@
 import { PICKUP, PLAYER } from '../../constants.js';
-import { saveChance, woundMul, type ExplosionSpec } from '../../data/index.js';
+import { armourMul, saveChance, woundMul, type ExplosionSpec } from '../../data/index.js';
 import { dist } from '../../math/vec.js';
 import { allocId } from '../world.js';
 import { dropCaps } from './director.js';
@@ -95,8 +95,26 @@ export function killEnemy(world: World, enemy: Enemy, killer?: Player): void {
   }
 }
 
-export function damagePlayer(world: World, player: Player, amount: number): void {
+/**
+ * Where a hit on a marine comes from, for directional armour (data/armour.ts).
+ * `fromX/fromY` = a point the damage comes from (attacker, blast centre);
+ * `dirX/dirY` = the vector from the marine towards the source (e.g. minus a projectile's velocity).
+ * Omitted = no direction (overheat etc.): unmodified damage.
+ */
+export type DamageSource = { fromX: number; fromY: number } | { dirX: number; dirY: number };
+
+export function damagePlayer(
+  world: World,
+  player: Player,
+  amount: number,
+  source?: DamageSource,
+): void {
   if (player.state !== 'alive' || player.invuln > 0 || amount <= 0) return;
+  if (source) {
+    const dx = 'dirX' in source ? source.dirX : source.fromX - player.x;
+    const dy = 'dirX' in source ? source.dirY : source.fromY - player.y;
+    amount *= armourMul(player.aim, dx, dy);
+  }
   player.hp -= amount;
   player.invuln = PLAYER.hurtInvuln;
   world.events.push({ e: 'hurt', p: player.id, d: Math.round(amount) });
@@ -155,7 +173,7 @@ export function explode(
       if (d > spec.radius) continue;
       // Player-fired explosions deal reduced self/team damage.
       const mul = opts.sourcePlayerId !== undefined ? 0.25 : 1;
-      damagePlayer(world, p, falloff(Math.max(0, d)) * mul);
+      damagePlayer(world, p, falloff(Math.max(0, d)) * mul, { fromX: x, fromY: y });
     }
   }
 }

@@ -9,6 +9,7 @@ import { WEAPONS } from './weapons.js';
 export * from './types.js';
 export * from './naming.js';
 export * from './profile.js';
+export * from './armour.js';
 export { WEAPONS, ENEMIES, DIRECTOR, CHAPTERS };
 
 /**

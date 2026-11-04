@@ -143,6 +143,8 @@ export interface Projectile {
   sy?: number;
   /** Enemy ids already hit (so piercing shots hit each target once). */
   hit: number[];
+  /** Ricocheted off a marine's front plate: harmless to everyone, fading out. */
+  deflected?: boolean;
   dead: boolean;
 }
 
@@ -193,6 +195,11 @@ export type GameEvent =
   | { e: 'swarm'; i: number; n: number }
   /** A player shot hit a Tyranid but its armour save stopped it (spark + ricochet, no marker). */
   | { e: 'bnc'; x: number; y: number; k: string }
+  /**
+   * An enemy shot glanced off marine `p`'s front plate at (x, y); `a` = ricochet direction
+   * (radians), `k` = projectile kind. JSON on the wire; clients that predate it ignore it.
+   */
+  | { e: 'defl'; p: number; x: number; y: number; a: number; k: string }
   /** Marine braced a bracing weapon (heavy bolter). */
   | { e: 'brace'; p: number; w: string }
   | { e: 'reload'; p: number; w: string }
