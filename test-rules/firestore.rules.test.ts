@@ -533,4 +533,19 @@ describe('v0.5.1+: one board per release (boards/<full version>, REST)', () => {
   ])('rejects %s on boards/0.5.1', async (_l, version) => {
     expect(await post('0.5.1', run({ version }))).toBe(403);
   });
+
+  it('v0.6.0 gets a fresh board with the same published rules (no republish needed)', async () => {
+    expect(await post('0.6.0', run({ version: '0.6.0' }))).toBe(200);
+    expect(await post('0.6.0', run({ version: '0.6.0-test' }))).toBe(200);
+    const s060 = new FirestoreHighscoreStore(cfg('0.6.0'));
+    expect((await s060.topPlayers(2, 10)).entries.length).toBeGreaterThan(0);
+  });
+
+  it.each([
+    ['the previous release', '0.5.2'],
+    ['a later patch', '0.6.1'],
+    ['a longer patch', '0.6.10'],
+  ])('rejects %s on boards/0.6.0', async (_l, version) => {
+    expect(await post('0.6.0', run({ version }))).toBe(403);
+  });
 });

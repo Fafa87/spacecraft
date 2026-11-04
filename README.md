@@ -322,8 +322,9 @@ The site is served from the **`gh-pages` branch** (Pages source "Deploy from a b
 /spacecraft/v0.4.2/          frozen v0.4.2
 /spacecraft/v0.5.0/          frozen v0.5.0
 /spacecraft/v0.5.1/          frozen v0.5.1
-/spacecraft/v0.5.2/          frozen v0.5.2 …
-/spacecraft/versions.json    {"latest":"0.5.2","versions":[{"version","date","title","path"}…]} (newest first)
+/spacecraft/v0.5.2/          frozen v0.5.2
+/spacecraft/v0.6.0/          frozen v0.6.0 …
+/spacecraft/versions.json    {"latest":"0.6.0","versions":[{"version","date","title","path"}…]} (newest first)
 ```
 
 The menu's **Previous versions** link reads `versions.json` from the site root (a frozen build
@@ -353,7 +354,7 @@ loaded. Each version keeps its own localStorage highscore table and its own Fire
      (`git worktree add /tmp/v010 v0.1.0 && cd /tmp/v010 && npm ci && BASE_PATH=/spacecraft/v0.1.0/ npm run build:pages`),
      then installed with `--add 0.1.0=/tmp/v010/packages/client/dist`.
 5. Check it live: `npx tsx scripts/pages-check.ts https://fafa87.github.io/spacecraft/` (also run
-   it on `/v0.1.0/`, `/v0.2.0/`, `/v0.3.0/`, `/v0.4.0/`, `/v0.4.1/`, `/v0.4.2/`, `/v0.5.0/`, `/v0.5.1/` and `/v0.5.2/`). It checks the menu, assets under the base path, local scores,
+   it on `/v0.1.0/`, `/v0.2.0/`, `/v0.3.0/`, `/v0.4.0/`, `/v0.4.1/`, `/v0.4.2/`, `/v0.5.0/`, `/v0.5.1/`, `/v0.5.2/` and `/v0.6.0/`). It checks the menu, assets under the base path, local scores,
    a P2P room, a solo run and the console.
 
 CI option: a `pages.yml` workflow that runs the same steps on `v*` tags
