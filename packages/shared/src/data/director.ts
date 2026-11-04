@@ -1,6 +1,13 @@
 import type { DirectorConfig } from './types.js';
 
 /**
+ * v0.5.3: share of the v0.5.0 per-marine Tyranid HP bonus that is kept (0.5 = halved, so a
+ * +30% bonus for a squad of 3 becomes +15%). Solo stays at 1.0; it still grows with squad size.
+ */
+export const TEAM_HP_SCALING_FACTOR = 0.5;
+const V050_TEAM_HP = [1, 1.15, 1.3, 1.4, 1.55, 1.7, 1.75, 1.75];
+
+/**
  * Spawn director tuning: finite Tyranid waves. Each wave has a fixed enemy budget; the next one
  * starts only after the whole wave (children included) is dead. Index-by-team-size arrays cover
  * squads of 1..8 marines (MAX_PLAYERS).
@@ -12,7 +19,7 @@ export const DIRECTOR: DirectorConfig = {
     pace: [0.85, 2.3, 4.22, 6.3, 9.0, 11.2, 12.9, 14.54],
     maxAlive: [1, 1.9, 2.9, 3.9, 4.9, 5.7, 6.3, 6.8],
     children: [0.85, 2.0, 3.3, 4.5, 6.0, 7.0, 7.5, 7.9],
-    hp: [1, 1.15, 1.3, 1.4, 1.55, 1.7, 1.75, 1.75],
+    hp: V050_TEAM_HP.map((v) => 1 + (v - 1) * TEAM_HP_SCALING_FACTOR),
     elite: [1, 1.5, 1.9, 2.3, 2.7, 3.1, 3.4, 3.8],
     eliteThreat: 3,
   },

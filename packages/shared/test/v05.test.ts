@@ -231,7 +231,8 @@ describe('v0.5 squad-size scaling', () => {
       expect(enemyHpScale(DIRECTOR, 4, n)).toBeGreaterThanOrEqual(enemyHpScale(DIRECTOR, 4, n - 1));
       expect(eliteShare(n)).toBeGreaterThan(eliteShare(n - 1));
     }
-    expect(enemyHpScale(DIRECTOR, 1, 8)).toBeGreaterThan(1.5);
+    expect(enemyHpScale(DIRECTOR, 1, 8)).toBeGreaterThan(1.3);
+    expect(enemyHpScale(DIRECTOR, 1, 8)).toBeLessThan(1.4);
   });
 
   it('spawned Tyranids of a big squad have more HP', () => {
@@ -245,6 +246,11 @@ describe('v0.5 squad-size scaling', () => {
         stepWorld(w, TICK_DT);
     }
     expect(squad.enemies[0]!.maxHp).toBeGreaterThan(solo.enemies[0]!.maxHp * 1.3);
+    expect(squad.enemies[0]!.maxHp).toBeLessThan(solo.enemies[0]!.maxHp * 1.4);
+  });
+
+  it('v0.5.3 halves the per-marine HP bonus, solo unchanged', () => {
+    expect(ts.hp.slice(0, 4).map((v) => +v.toFixed(3))).toEqual([1, 1.075, 1.15, 1.2]);
   });
 
   it('rejects a scaling table that misses squad sizes', () => {
