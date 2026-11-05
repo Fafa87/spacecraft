@@ -1,4 +1,4 @@
-import type { RunResult } from '@sms/shared';
+import { leaderboardRunVersion, type RunResult } from '@sms/shared';
 
 /**
  * Unversioned dev preview (`npm run deploy:dev` → https://<owner>.github.io/<repo>/dev/).
@@ -19,9 +19,12 @@ export const DEV_RUN_VERSION = `${DEV_BOARD}-dev`;
 export const boardFor = (versionBoard: string, preview: string | null = DEV_PREVIEW): string =>
   preview ? DEV_BOARD : versionBoard;
 
-/** A finished run as this build submits it: preview runs are re-tagged for the dev board. */
-export const runForBoard = (r: RunResult, preview: string | null = DEV_PREVIEW): RunResult =>
-  preview ? { ...r, version: DEV_RUN_VERSION } : r;
+/** A finished run as this build submits it: preview → dev board; aliases → shared-board version. */
+export const runForBoard = (r: RunResult, preview: string | null = DEV_PREVIEW): RunResult => {
+  if (preview) return { ...r, version: DEV_RUN_VERSION };
+  const version = leaderboardRunVersion(r.version);
+  return version === r.version ? r : { ...r, version };
+};
 
 /** The dev board is not a game version: never list it among real versions. */
 export const isDevBoardVersion = (version: string): boolean =>

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { GAME_VERSION, leaderboardBoard, type RunResult } from '@sms/shared';
+import { GAME_VERSION, leaderboardBoard, leaderboardRunVersion, type RunResult } from '@sms/shared';
 
 // config.ts reads location at import time (index.ts → config.ts).
 vi.hoisted(() => {
@@ -159,11 +159,20 @@ describe('per-version boards', () => {
     expect(leaderboardBoard('0.5.1')).toBe('0.5.1');
     expect(leaderboardBoard('0.5.1-test')).toBe('0.5.1');
     expect(leaderboardBoard('0.6.0')).toBe('0.6.0');
+    expect(leaderboardBoard('0.6.1')).toBe('0.6.0'); // BOARD_ALIASES: share 0.6.0 table
+    expect(leaderboardBoard('0.6.1-test')).toBe('0.6.0');
     expect(leaderboardBoard('12.30.4-beta.1')).toBe('12.30.4');
     expect(leaderboardBoard(GAME_VERSION)).toBe('0.6.0');
     expect(() => leaderboardBoard('x')).toThrow();
   });
-  it('the game build uses its own board', () => {
+  it('aliased releases stamp a board-prefixed run version for published rules', () => {
+    expect(leaderboardRunVersion('0.6.0')).toBe('0.6.0');
+    expect(leaderboardRunVersion('0.6.0-test')).toBe('0.6.0-test');
+    expect(leaderboardRunVersion('0.6.1')).toBe('0.6.0-0.6.1');
+    expect(leaderboardRunVersion('0.6.1-test')).toBe('0.6.0-test');
+    expect(leaderboardRunVersion('0.6.0-0.6.1').split(/[-+]/)[0]).toBe('0.6.0');
+  });
+  it('the game build uses the shared 0.6.0 board (no boards/0.6.1)', () => {
     expect(config.firebase === null || config.firebase.board === '0.6.0').toBe(true);
   });
 });

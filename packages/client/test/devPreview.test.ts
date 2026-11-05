@@ -25,6 +25,15 @@ describe('Dev preview (/dev/)', () => {
     expect(DEV_RUN_VERSION).toMatch(/^\d{1,3}\.\d{1,3}\.\d{1,3}(?:-[0-9A-Za-z.]{1,12})?$/);
   });
 
+  it('re-tags aliased releases (0.6.1 → 0.6.0-0.6.1) so published rules accept the shared board', () => {
+    const r = { runId: 'run_y', version: '0.6.1' } as RunResult;
+    expect(runForBoard(r, null).version).toBe('0.6.0-0.6.1');
+    expect(runForBoard(r, null).version.split(/[-+]/)[0]).toBe('0.6.0');
+    expect(runForBoard({ ...r, version: '0.6.1-test' } as RunResult, null).version).toBe(
+      '0.6.0-test',
+    );
+  });
+
   it('never lists the dev board as a real version', () => {
     expect(isDevBoardVersion('0.0.0')).toBe(true);
     expect(isDevBoardVersion('0.0.0-dev')).toBe(true);

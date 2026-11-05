@@ -382,8 +382,7 @@ export class GameClient extends Emitter<GameClientEvents> {
             aim: this.facing(meLatest),
             sprint: this.mySprint(meLatest),
             // Prefer live input so the pose appears the tick we hold still; fall back to host gd.
-            guarding:
-              (this.lastGuard && !isMoving(this.lastMx, this.lastMy)) || meLatest?.gd === 1,
+            guarding: (this.lastGuard && !isMoving(this.lastMx, this.lastMy)) || meLatest?.gd === 1,
           }
         : null,
       nowMs: now,

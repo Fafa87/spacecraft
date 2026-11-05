@@ -1,6 +1,6 @@
 {
   "name": "space-marine-survival",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "type": "module",
   "description": "Top-down co-op (1-4 players) swarm survival game for the web.",

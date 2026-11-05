@@ -96,7 +96,10 @@ const browser = await puppeteer.launch({
   await sleep(200);
   const style = await p.$eval('.rules-link', (el) => {
     const cs = getComputedStyle(el);
-    return { color: cs.color, textDecoration: cs.textDecorationLine + ' ' + cs.textDecorationStyle };
+    return {
+      color: cs.color,
+      textDecoration: cs.textDecorationLine + ' ' + cs.textDecorationStyle,
+    };
   });
   // gold accent ≈ rgb(224, 184, 80) = #e0b850
   const m = style.color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
@@ -172,7 +175,10 @@ const browser = await puppeteer.launch({
     const box = await btn.boundingBox();
     check(!!box && box.x > 400, `GUARD is on the right (x=${box?.x})`);
     // Must sit in the bottom-right pocket (below the weapon column), not mid-stack.
-    check(!!box && box.y + box.height > 300, `GUARD is low on screen (bottom=${box ? box.y + box.height : '?'})`);
+    check(
+      !!box && box.y + box.height > 300,
+      `GUARD is low on screen (bottom=${box ? box.y + box.height : '?'})`,
+    );
     await btn.hover();
     // pointer down and hold
     const cdp = await p.createCDPSession();

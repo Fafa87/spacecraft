@@ -318,7 +318,6 @@ describe('front-plate deflection (ricochet)', () => {
   });
 });
 
-
 describe('defensive stance (guard)', () => {
   it('frontMul is idle front ÷ 2 (+100% armour) and landedDamageMul is −30%', () => {
     expect(G.frontMul).toBeCloseTo(A.front / 2);

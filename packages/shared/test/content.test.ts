@@ -63,4 +63,3 @@ describe('weapon spread cones', () => {
     });
   });
 });
-

@@ -138,14 +138,12 @@ function hitPlayers(world: World, pr: Projectile, x0: number, y0: number): void 
       if (pr.damage > 0) {
         // Armour faces the incoming shot: source direction = against its travel (or its
         // segment start if it has somehow stopped).
-        const src =
-          pr.vx || pr.vy ? { dirX: -pr.vx, dirY: -pr.vy } : { fromX: x0, fromY: y0 };
+        const src = pr.vx || pr.vy ? { dirX: -pr.vx, dirY: -pr.vy } : { fromX: x0, fromY: y0 };
         const dx = pr.vx || pr.vy ? -pr.vx : x0 - p.x;
         const dy = pr.vx || pr.vy ? -pr.vy : y0 - p.y;
         let dmg = pr.damage;
         // A front hit that got past the plate while guarding takes a further −30%.
-        if (p.guarding && armourArc(p.aim, dx, dy) === 'front')
-          dmg *= MARINE_GUARD.landedDamageMul;
+        if (p.guarding && armourArc(p.aim, dx, dy) === 'front') dmg *= MARINE_GUARD.landedDamageMul;
         damagePlayer(world, p, dmg, src);
       }
       if (pr.explosion) {

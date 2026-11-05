@@ -3,7 +3,7 @@
  *   npm run check:firestore
  *
  * 1. creates one obvious test run on the current board (boards/<major.minor>/highscores; name
- *    "ZZ-test", version "<GAME_VERSION>-test" — hidden from the board)
+ *    "ZZ-test", version leaderboardRunVersion("<GAME_VERSION>-test") — hidden from the board)
  * 2. reads it back, runs the top-N query and the rank count (both need the composite index)
  * 3. checks that re-creating the same id is rejected (create-only → 409)
  * 4. checks that an implausible run is rejected by the rules (403)
@@ -14,7 +14,12 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { GAME_VERSION, leaderboardBoard, type RunResult } from '../packages/shared/src/index.js';
+import {
+  GAME_VERSION,
+  leaderboardBoard,
+  leaderboardRunVersion,
+  type RunResult,
+} from '../packages/shared/src/index.js';
 import {
   commitBody,
   endpoint,
@@ -82,7 +87,7 @@ const testRun: RunResult = {
   kills: 0,
   wave: 0,
   endedAt: new Date().toISOString(),
-  version: `${GAME_VERSION}-test`,
+  version: leaderboardRunVersion(`${GAME_VERSION}-test`),
   mode: 'local',
 };
 

@@ -24,14 +24,42 @@ export const FIRESTORE_BOARDS = 'boards';
  * major.minor boards ("0.5" = v0.5.0, "0.4" = v0.4.x).
  */
 export const PATCH_BOARDS_FROM: readonly [number, number, number] = [0, 5, 1];
+/**
+ * Releases that keep writing the previous board instead of opening a fresh table.
+ * Key = full game version (no -tag); value = existing boards/ id. Published Firestore rules are
+ * unchanged: writes still need version.split("[-+]")[0] == board, so aliased builds stamp
+ * `leaderboardRunVersion` (e.g. 0.6.1 → board 0.6.0, run version "0.6.0-0.6.1").
+ */
+export const BOARD_ALIASES: Readonly<Record<string, string>> = {
+  '0.6.1': '0.6.0',
+};
 /** Board id for a game version: "0.2.3" → "0.2", "0.5.0" → "0.5", "0.5.1(-x)" → "0.5.1". */
 export function leaderboardBoard(version: string): string {
   const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})/.exec(version);
   if (!m) throw new Error(`bad version ${version}`);
+  const full = `${m[1]}.${m[2]}.${m[3]}`;
+  if (BOARD_ALIASES[full]) return BOARD_ALIASES[full];
   const v = [Number(m[1]), Number(m[2]), Number(m[3])];
   const [a, b, c] = PATCH_BOARDS_FROM;
   const patchBoard = v[0] !== a ? v[0] > a : v[1] !== b ? v[1] > b : v[2] >= c;
-  return patchBoard ? `${v[0]}.${v[1]}.${v[2]}` : `${v[0]}.${v[1]}`;
+  return patchBoard ? full : `${v[0]}.${v[1]}`;
+}
+/**
+ * `version` field for a Firestore write. When the release aliases onto an older board, stamp a
+ * single -tag so published boardVersion() and versionPattern both accept the doc (pattern allows
+ * only one hyphenated tag). Examples: "0.6.1" → "0.6.0-0.6.1", "0.6.1-test" → "0.6.0-test"
+ * (stays hidden); "0.6.0" / "0.6.0-test" unchanged.
+ */
+export function leaderboardRunVersion(version: string): string {
+  const board = leaderboardBoard(version);
+  const m = /^(\d{1,3}\.\d{1,3}\.\d{1,3})(?:-([0-9A-Za-z.]{1,12}))?$/.exec(version);
+  if (!m) throw new Error(`bad version ${version}`);
+  const release = m[1];
+  const tag = m[2];
+  if (version.split(/[-+]/)[0] === board) return version;
+  // One -suffix only. Prefer board-release; -test (and other tags) collapse to board-<tag>.
+  if (!tag) return `${board}-${release}`;
+  return `${board}-${tag}`;
 }
 /** Fields of a legacy (v0.1.x, top-level collection) run. */
 export const FIRESTORE_LEGACY_FIELDS = [

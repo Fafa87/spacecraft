@@ -28,7 +28,13 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { leaderboardName, nameProblem, type RunResult } from '../packages/shared/src/index.js';
+import {
+  leaderboardBoard,
+  leaderboardName,
+  leaderboardRunVersion,
+  nameProblem,
+  type RunResult,
+} from '../packages/shared/src/index.js';
 import { FirestoreHighscoreStore } from '../packages/client/src/highscores/FirestoreHighscoreStore.js';
 import { commitBody, endpoint } from '../packages/client/src/highscores/firestore.js';
 
@@ -553,9 +559,21 @@ describe('v0.5.1+: one board per release (boards/<full version>, REST)', () => {
     expect((await s060.topPlayers(2, 10)).entries.length).toBeGreaterThan(0);
   });
 
+  it('v0.6.1 shares boards/0.6.0 via stamped version 0.6.0-0.6.1 (no boards/0.6.1, no rules republish)', async () => {
+    expect(await post('0.6.0', run({ version: '0.6.0-0.6.1' }))).toBe(200);
+    // -test stays a single tag (versionPattern); double tags like 0.6.0-0.6.1-test are invalid.
+    expect(await post('0.6.0', run({ version: '0.6.0-test' }))).toBe(200);
+    // Bare 0.6.1 is rejected on the shared board (client must stamp 0.6.0-0.6.1).
+    expect(await post('0.6.0', run({ version: '0.6.1' }))).toBe(403);
+    // Published rules would accept boards/0.6.1 + version 0.6.1 — the client never opens that path.
+    expect(leaderboardBoard('0.6.1')).toBe('0.6.0');
+    expect(leaderboardRunVersion('0.6.1')).toBe('0.6.0-0.6.1');
+    expect(await post('0.6.1', run({ version: '0.6.0-0.6.1' }))).toBe(403);
+  });
+
   it.each([
     ['the previous release', '0.5.2'],
-    ['a later patch', '0.6.1'],
+    ['a later patch (bare, without board prefix)', '0.6.1'],
     ['a longer patch', '0.6.10'],
   ])('rejects %s on boards/0.6.0', async (_l, version) => {
     expect(await post('0.6.0', run({ version }))).toBe(403);

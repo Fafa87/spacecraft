@@ -40,7 +40,8 @@ function resolveApiUrl(): string | null {
  * enforcing). Set VITE_FIREBASE_API_KEY + VITE_FIREBASE_PROJECT_ID at build time, e.g. in
  * .env.production (committed public defaults) or .env.production.local (repo root, gitignored).
  * VITE_FIRESTORE_URL points at an emulator. `?firestore=0` disables it for one session.
- * Each major.minor release has its own board (boards/0.2/highscores): new rules, fresh table.
+ * Board id comes from leaderboardBoard(GAME_VERSION) (per-release from v0.5.1, with BOARD_ALIASES
+ * when a patch keeps the previous table — e.g. 0.6.1 → boards/0.6.0).
  */
 function resolveFirebase(): FirestoreConfig | null {
   if (params.get('firestore') === '0') return null;

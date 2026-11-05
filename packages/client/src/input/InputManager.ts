@@ -42,7 +42,8 @@ export class InputManager {
   }
 
   read(): ContinuousIntent {
-    if (isRotateBlocked()) return { move: { x: 0, y: 0 }, aim: null, fire: false, sprint: false, guard: false };
+    if (isRotateBlocked())
+      return { move: { x: 0, y: 0 }, aim: null, fire: false, sprint: false, guard: false };
     return combineIntents(this.active, this.kbm.read(), this.touch.read());
   }
 
