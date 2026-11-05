@@ -10,3 +10,4 @@ export * from './highscore/index.js';
 export * from './util/emitter.js';
 export * from './util/ids.js';
 export * from './assets/index.js';
+export * from './petitions/index.js';

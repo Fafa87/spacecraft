@@ -579,3 +579,82 @@ describe('v0.5.1+: one board per release (boards/<full version>, REST)', () => {
     expect(await post('0.6.0', run({ version }))).toBe(403);
   });
 });
+
+describe('firestore.rules: petitions (Vox Relay)', () => {
+  const voterId = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+  const petId = () => `pet_${Date.now().toString(36)}_${seq++}`;
+  const goodPet = (patch: Record<string, unknown> = {}) => ({
+    category: 'bugs',
+    title: 'Carnifex za szybki',
+    body: 'Na fali 5 dogania sprint — proszę o nerf.',
+    name: 'Filip',
+    gameVersion: '0.6.1',
+    status: 'open',
+    source: 'live',
+    createdAt: serverTimestamp(),
+    ...patch,
+  });
+  const putPet = (data: Record<string, unknown>, id = petId()) =>
+    setDoc(doc(db(), 'petitions', id), data);
+
+  it('anyone can create an open petition and read the board', async () => {
+    const id = petId();
+    await assertSucceeds(putPet(goodPet(), id));
+    await assertSucceeds(getDocs(collection(db(), 'petitions')));
+  });
+
+  it('rejects bad petitions and blocks client status edits / deletes', async () => {
+    await assertFails(putPet(goodPet({ status: 'done' })));
+    await assertFails(putPet(goodPet({ status: 'hidden' })));
+    await assertFails(putPet(goodPet({ category: 'loot' })));
+    await assertFails(putPet(goodPet({ title: '' })));
+    await assertFails(putPet(goodPet({ title: 'x'.repeat(81) })));
+    await assertFails(putPet(goodPet({ body: 'x'.repeat(1501) })));
+    await assertFails(putPet(goodPet({ name: 'xXfuckXx' })));
+    await assertFails(putPet(goodPet({ source: 'staging' })));
+    await assertFails(putPet(goodPet({ cheat: true })));
+    await assertFails(putPet(goodPet(), 'x')); // bad id
+    const id = petId();
+    await assertSucceeds(putPet(goodPet(), id));
+    const ref = doc(db(), 'petitions', id);
+    await assertFails(updateDoc(ref, { status: 'hidden' }));
+    await assertFails(updateDoc(ref, { title: 'hacked' }));
+    await assertFails(deleteDoc(ref));
+  });
+
+  it('votes: one doc per petition+voter, create ±1, update ±1/0, no delete', async () => {
+    const id = petId();
+    await assertSucceeds(putPet(goodPet(), id));
+    const voteRef = doc(db(), 'petitionVotes', `${id}_${voterId}`);
+    await assertSucceeds(
+      setDoc(voteRef, { petitionId: id, voterId, value: 1 }),
+    );
+    await assertSucceeds(updateDoc(voteRef, { value: -1 }));
+    await assertSucceeds(updateDoc(voteRef, { value: 0 }));
+    await assertFails(updateDoc(voteRef, { value: 2 }));
+    await assertFails(updateDoc(voteRef, { petitionId: 'pet_other_xxxxxx' }));
+    await assertFails(deleteDoc(voteRef));
+    // Vote on missing petition
+    await assertFails(
+      setDoc(doc(db(), 'petitionVotes', `pet_missing_zzz_${voterId}`), {
+        petitionId: 'pet_missing_zzz',
+        voterId,
+        value: 1,
+      }),
+    );
+    // Bad vote id
+    await assertFails(
+      setDoc(doc(db(), 'petitionVotes', 'wrong-id'), {
+        petitionId: id,
+        voterId,
+        value: 1,
+      }),
+    );
+  });
+
+  it('accepts a -dev stamped gameVersion and source=dev', async () => {
+    await assertSucceeds(
+      putPet(goodPet({ gameVersion: '0.6.1-dev', source: 'dev' })),
+    );
+  });
+});

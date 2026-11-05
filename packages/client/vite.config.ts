@@ -20,11 +20,12 @@ export default defineConfig({
     target: 'es2022',
     sourcemap: true,
     chunkSizeWarningLimit: 1024,
-    // Second page: rules + generated compendium (src/rules).
+    // Extra pages: rules + generated compendium; Vox Relay feedback (src/feedback).
     rollupOptions: {
       input: {
         main: fileURLToPath(new URL('index.html', import.meta.url)),
         rules: fileURLToPath(new URL('rules.html', import.meta.url)),
+        feedback: fileURLToPath(new URL('feedback.html', import.meta.url)),
       },
     },
   },
