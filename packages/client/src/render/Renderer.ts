@@ -37,7 +37,7 @@ export interface RenderFrame {
   t: number;
   myId: number;
   /** Predicted local position + aim (overrides interpolated state for our marine). */
-  me: { x: number; y: number; aim: number; sprint?: SprintState | null } | null;
+  me: { x: number; y: number; aim: number; sprint?: SprintState | null; guarding?: boolean } | null;
   nowMs: number;
   dt: number;
 }
@@ -913,6 +913,42 @@ export class Renderer {
     ctx.restore();
   }
 
+  /**
+   * Defensive stance: raised front plate — a bright forward arc and planted boots (distinct
+   * from the heavy-bolter brace bipod behind the marine).
+   */
+  private drawGuardStance(x: number, y: number, a: number, time: number): void {
+    const { ctx } = this;
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    const pulse = 0.55 + 0.45 * Math.sin(time * 7);
+    ctx.save();
+    // Front shield arc (in the aim direction).
+    ctx.strokeStyle = `rgba(210, 230, 255, ${0.35 + 0.35 * pulse})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(x, y, 34, a - 0.95, a + 0.95);
+    ctx.stroke();
+    ctx.strokeStyle = `rgba(232, 196, 106, ${0.45 * pulse})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 28, a - 0.75, a + 0.75);
+    ctx.stroke();
+    // Planted boots under the marine.
+    for (const side of [-1, 1]) {
+      const fx = x - s * side * 16 + c * 4;
+      const fy = y + c * side * 16 + s * 4;
+      ctx.fillStyle = 'rgba(18, 20, 28, 0.9)';
+      ctx.beginPath();
+      ctx.ellipse(fx, fy, 9, 5, a, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(180, 210, 255, ${0.5 * pulse})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   private drawPlayers(f: RenderFrame): void {
     const { ctx } = this;
     const time = this.time;
@@ -932,6 +968,8 @@ export class Renderer {
       const sprinting = p.st === 'alive' && (mine ? f.me!.sprint!.sprinting : p.sp === 1);
 
       if (p.br && p.st === 'alive') this.drawBraceStance(x, y, a, time, p.w);
+      const guarding = p.st === 'alive' && (p.id === f.myId ? !!f.me?.guarding : p.gd === 1);
+      if (guarding) this.drawGuardStance(x, y, a, time);
       if (sprinting) this.drawSprintTrail(p, x, y, a, f.dt);
       this.drawShadow(x, y, PLAYER.radius + 6);
       ctx.strokeStyle = color;

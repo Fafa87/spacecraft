@@ -7,6 +7,7 @@ import {
   MARINE_AIM_RECOIL,
   MARINE_DEFLECTION,
   MARINE_DIRECTIONAL_ARMOUR,
+  MARINE_GUARD,
   MARINE_SPRINT,
   MAX_PLAYERS,
   PICKUP,
@@ -62,7 +63,7 @@ export function weaponTable(c: ContentRegistry): string {
       `${w.slot}. ${esc(w.name)}`,
       esc(w.roles.join(' · ')),
       esc(weaponProfileLabel(w)),
-      `${n(p.damage, 1)}${w.pellets > 1 ? ` ×${w.pellets}` : ''}${p.explosion ? ` + wybuch ${n(p.explosion.damage)} (r ${p.explosion.radius})` : ''}${p.endBurst ? ` (pudło: ${n(p.endBurst.damage)}, r ${p.endBurst.radius})` : ''}`,
+      `${n(p.damage, 1)}${w.pellets > 1 ? ` ×${w.pellets}` : ''}${p.explosion ? ` + wybuch ${n(p.explosion.damage)} (r ${p.explosion.radius})` : ''}${p.endBurst ? ` (koniec zasięgu: ${n(p.endBurst.damage)}, r ${p.endBurst.radius})` : ''}`,
       `${n(1 / w.fireInterval, 2)}/s`,
       `${w.magazine}`,
       `${n(w.reloadTime, 2)} s`,
@@ -106,7 +107,7 @@ export function weaponSpecials(c: ContentRegistry): string {
       );
     if (p.endBurst)
       s.push(
-        `wybuch na końcu zasięgu (gdy pocisk nikogo nie trafił): ${n(p.endBurst.damage)} obrażeń w promieniu ${p.endBurst.radius} px (na krawędzi ${pct(p.endBurst.edgeFactor)})${p.endBurst.strength !== undefined ? `, S${p.endBurst.strength} AP${ap(p.endBurst.ap)}` : ''}, ${p.endBurst.friendlyFire ? '<b>rani też marines</b>' : 'tylko wrogowie'}`,
+        `wybuch na końcu zasięgu (pudło albo po przebiciu — promień leci do max; nie po wyjściu z areny): ${n(p.endBurst.damage)} obrażeń w promieniu ${p.endBurst.radius} px (na krawędzi ${pct(p.endBurst.edgeFactor)})${p.endBurst.strength !== undefined ? `, S${p.endBurst.strength} AP${ap(p.endBurst.ap)}` : ''}, ${p.endBurst.friendlyFire ? '<b>rani też marines</b>' : 'tylko wrogowie'}`,
       );
     if (w.braceDelay !== undefined)
       s.push(
@@ -336,6 +337,10 @@ export function marineTable(c: ContentRegistry): string {
         'Pancerz (przód / boki / tył)',
         `×${n(MARINE_DIRECTIONAL_ARMOUR.front, 2)} / ×${n(MARINE_DIRECTIONAL_ARMOUR.side, 2)} / ×${n(MARINE_DIRECTIONAL_ARMOUR.rear, 2)} obrażeń`,
       ],
+      [
+        'Postawa obronna — przód',
+        `×${n(MARINE_GUARD.frontMul, 2)} (+${Math.round(MARINE_GUARD.frontArmourBonus * 100)}% pancerza); rykoszet: nie-odbicie ×${n(MARINE_GUARD.nonDeflectFactor, 2)}; trafiony pocisk ×${n(MARINE_GUARD.landedDamageMul, 2)}`,
+      ],
       ['Apteczka', `+${PICKUP.medkitHeal} życia, leży ${PICKUP.lifetime} s`],
       ['Arena', `${c.map.arena.width} × ${c.map.arena.height} px`],
       ['Symulacja', `${TICK_RATE} ticków/s`],
@@ -443,10 +448,30 @@ export function armourTables(c: ContentRegistry): string {
     ],
     rows,
   );
+  const G = MARINE_GUARD;
+  const guard = table(
+    ['Efekt postawy obronnej (stój + trzymanie)', 'Wartość'],
+    [
+      [
+        'Pancerz przedni',
+        `×${n(G.frontMul, 2)} (zamiast ×${n(A.front, 2)}; +${Math.round(G.frontArmourBonus * 100)}%)`,
+      ],
+      [
+        'Szansa rykoszetu',
+        `1 − ${n(G.nonDeflectFactor, 2)}·(1 − baza) — np. baza 50% → ${pct(1 - G.nonDeflectFactor * 0.5, 1)}`,
+      ],
+      [
+        'Pocisk z przodu, który przeszedł',
+        `×${n(G.landedDamageMul, 2)} obrażeń (−${Math.round((1 - G.landedDamageMul) * 100)}%)`,
+      ],
+      ['Sterowanie', 'RMB (PC) / 🛡 GUARD (telefon); koniec przy ruchu'],
+    ],
+  );
   return `${arcs}
-  <p class="muted">Kąt liczony między kierunkiem celowania marine a kierunkiem do źródła: atakujący (wręcz, szarża), kierunek, z którego nadleciał pocisk, albo środek wybuchu. Obrażenia bez kierunku (przegrzanie plazmy) — ×${n(A.side, 2)}. Wybuchy i ciosy wręcz też dostają mnożnik strony, ale nie mają rykoszetu. Mnożnik działa razem z synapsą (obrażenia × synapsa × strona).</p>
+  <p class="muted">Kąt liczony między kierunkiem celowania marine a kierunkiem do źródła: atakujący (wręcz, szarża), kierunek, z którego nadleciał pocisk, albo środek wybuchu. Obrażenia bez kierunku (przegrzanie plazmy) — ×${n(A.side, 2)}. Wybuchy i ciosy wręcz też dostają mnożnik strony, ale nie mają rykoszetu. Mnożnik działa razem z synapsą (obrażenia × synapsa × strona). Stałe: <code>data/armour.ts</code>, postawa: <code>data/guard.ts</code>.</p>
   <h4>Rykoszet z przedniego pancerza</h4>${defl}
-  <p class="muted">Szansa jest stała dla każdego rodzaju pocisku (tabela w danych gry); nowy pocisk bez wpisu dostaje ${pct(D.defaultChance, 1)}, pociski wybuchowe 0%. Synapsa jej nie zmienia. Odbity pocisk nie rani nikogo, odlatuje lustrzanie od pancerza (±${n((D.jitter * 180) / Math.PI, 0)}°, ${pct(D.speedMul)} prędkości) i znika po ${n(D.fadeTime, 2)} s.</p>`;
+  <p class="muted">Szansa jest stała dla każdego rodzaju pocisku (tabela w danych gry); nowy pocisk bez wpisu dostaje ${pct(D.defaultChance, 1)}, pociski wybuchowe 0%. Synapsa jej nie zmienia. Odbity pocisk nie rani nikogo, odlatuje lustrzanie od pancerza (±${n((D.jitter * 180) / Math.PI, 0)}°, ${pct(D.speedMul)} prędkości) i znika po ${n(D.fadeTime, 2)} s.</p>
+  <h4>Postawa obronna</h4>${guard}`;
 }
 
 /** Full compendium body (inside the <details>). */

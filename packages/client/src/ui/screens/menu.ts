@@ -56,8 +56,8 @@ export function createMenuScreen(actions: MenuActions, opts: MenuOptions): HTMLE
         </div>
         <div class="error" id="err"></div>
         <div class="help">
-          <span class="kbm-only"><b>WASD</b> move · <b>Mouse</b> aim · <b>LMB / Space</b> fire · <b>1-${opts.content.weaponOrder.length}</b> / <b>Q E</b> / wheel switch weapon · <b>R</b> reload · <b>M</b> mute<br></span>
-          <span class="touch-only"><b>Left thumb</b> move · <b>Right thumb</b> aim &amp; auto-fire · <b>tap a weapon</b> to switch · <b>⟳</b> reload · <b>⛶</b> fullscreen<br></span>
+          <span class="kbm-only"><b>WASD</b> move · <b>Mouse</b> aim · <b>LMB / Space</b> fire · <b>RMB</b> guard · <b>1-${opts.content.weaponOrder.length}</b> / <b>Q E</b> / wheel switch weapon · <b>R</b> reload · <b>M</b> mute<br></span>
+          <span class="touch-only"><b>Left thumb</b> move · <b>Right thumb</b> aim &amp; auto-fire · <b>🛡 GUARD</b> hold (right) · <b>tap a weapon</b> to switch · <b>⟳</b> reload · <b>⛶</b> fullscreen<br></span>
           Stand next to a downed battle-brother to revive them. Wargear unlocks over time; supply crates drop on the map. Plasma runs hot: past the line shots are supercharged, at the top it vents and burns you.
         </div>
         <div id="mixer"></div>

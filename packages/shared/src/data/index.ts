@@ -12,6 +12,7 @@ export * from './naming.js';
 export * from './profile.js';
 export * from './armour.js';
 export * from './sprint.js';
+export * from './guard.js';
 export * from './muzzle.js';
 export * from './recoil.js';
 export { WEAPONS, ENEMIES, DIRECTOR, CHAPTERS, CRATE_DROP_FACTOR, MEDKIT_DROP_FACTOR };

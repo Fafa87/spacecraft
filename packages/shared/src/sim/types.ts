@@ -22,6 +22,11 @@ export interface PlayerInput {
    * (missing = not sprinting).
    */
   sprint?: boolean;
+  /**
+   * Defensive stance held (dev). Optional so protocol v5 inputs without it stay valid
+   * (missing = not guarding). Only takes effect while standing still.
+   */
+  guard?: boolean;
 }
 
 export const emptyInput = (): PlayerInput => ({
@@ -80,6 +85,8 @@ export interface Player {
   moveFrac: number;
   /** Sprint stamina / state / post-sprint weapon delay (see data/sprint.ts). */
   sprint: SprintState;
+  /** Defensive stance active this tick (input held + standing still; see data/guard.ts). */
+  guarding: boolean;
   damageDealt: number;
   /** Survival second this marine died (or null). */
   diedAt: number | null;

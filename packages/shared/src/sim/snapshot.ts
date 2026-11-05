@@ -42,6 +42,8 @@ export interface PlayerSnap {
   stm?: number;
   /** Seconds until the weapon is ready again after a sprint (absent/0 = ready). */
   wd?: number;
+  /** Defensive stance (guard) active. Optional so older peers ignore it. */
+  gd?: 1;
 }
 
 /** Spawn point state in Snapshot.sp: idle, telegraphing (about to emerge), active (emerging). */
@@ -185,6 +187,7 @@ export function buildSnapshot(world: World, bleedOutTime: number): Snapshot {
       k: p.kills,
       sc: p.score,
       ...(isBraced(p, c.weapon(p.current)) ? { br: 1 as const } : {}),
+      ...(p.guarding ? { gd: 1 as const } : {}),
       ...heatFields(world, p),
       ...sprintFields(p),
       ...recoilFields(p),

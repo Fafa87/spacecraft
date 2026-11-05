@@ -39,9 +39,15 @@ export function armourArc(facing: number, dx: number, dy: number): ArmourArc {
   return 'side';
 }
 
-/** Damage multiplier for a hit from (dx, dy) relative to the marine, given its facing. */
-export function armourMul(facing: number, dx: number, dy: number): number {
-  return MARINE_DIRECTIONAL_ARMOUR[armourArc(facing, dx, dy)];
+/**
+ * Damage multiplier for a hit from (dx, dy) relative to the marine, given its facing.
+ * Optional `frontOverride` (e.g. MARINE_GUARD.frontMul while guarding) replaces the idle
+ * front multiplier; side/rear are unchanged. Keeps armour.ts free of a cycle on guard.ts.
+ */
+export function armourMul(facing: number, dx: number, dy: number, frontOverride?: number): number {
+  const arc = armourArc(facing, dx, dy);
+  if (arc === 'front' && frontOverride !== undefined) return frontOverride;
+  return MARINE_DIRECTIONAL_ARMOUR[arc];
 }
 
 /**

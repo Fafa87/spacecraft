@@ -1,5 +1,6 @@
 import {
   Emitter,
+  isMoving,
   marineMoveSpeed,
   playerMoveSpeed,
   stepFireSlow,
@@ -212,6 +213,10 @@ export class GameClient extends Emitter<GameClientEvents> {
 
   /** Last fire input we sent (stick feedback: a held trigger blocks the start of a sprint). */
   private lastFire = false;
+  /** Last guard input + move axes (local defensive-stance pose before the snapshot catches up). */
+  private lastGuard = false;
+  private lastMx = 0;
+  private lastMy = 0;
   private wasSprinting = false;
 
   /** Subtle haptic tick when a sprint really starts (touch on Android only; harmless no-op elsewhere). */
@@ -282,8 +287,12 @@ export class GameClient extends Emitter<GameClientEvents> {
         slot,
         reload: actions.reload,
         ...(alive && intent.sprint ? { sprint: true } : {}),
+        ...(alive && intent.guard ? { guard: true } : {}),
       });
       this.lastFire = sent.fire;
+      this.lastGuard = sent.guard === true;
+      this.lastMx = sent.mx;
+      this.lastMy = sent.my;
       // Sprint + firing slow-down exactly like the host sim (shared pure helpers), driven by our
       // own inputs: the sprint state steps first, then the (effective) trigger slows us down.
       const sprintOk = me.stm !== undefined && !this.reviving(latest!);
@@ -367,7 +376,16 @@ export class GameClient extends Emitter<GameClientEvents> {
       b: sample.b,
       t: sample.t,
       myId: this.myId,
-      me: myPos ? { ...myPos, aim: this.facing(meLatest), sprint: this.mySprint(meLatest) } : null,
+      me: myPos
+        ? {
+            ...myPos,
+            aim: this.facing(meLatest),
+            sprint: this.mySprint(meLatest),
+            // Prefer live input so the pose appears the tick we hold still; fall back to host gd.
+            guarding:
+              (this.lastGuard && !isMoving(this.lastMx, this.lastMy)) || meLatest?.gd === 1,
+          }
+        : null,
       nowMs: now,
       dt,
     });

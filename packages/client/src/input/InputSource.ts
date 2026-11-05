@@ -23,6 +23,8 @@ export interface ContinuousIntent {
   fire: boolean;
   /** Sprint requested (Shift held / touch move stick in the sprint band). */
   sprint: boolean;
+  /** Defensive stance requested (RMB / touch GUARD hold). Only works while standing still. */
+  guard: boolean;
 }
 
 /** Discrete actions latched until consumed so taps between ticks are never lost. */

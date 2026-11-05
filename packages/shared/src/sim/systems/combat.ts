@@ -1,5 +1,11 @@
 import { PICKUP, PLAYER } from '../../constants.js';
-import { armourMul, saveChance, woundMul, type ExplosionSpec } from '../../data/index.js';
+import {
+  armourMul,
+  MARINE_GUARD,
+  saveChance,
+  woundMul,
+  type ExplosionSpec,
+} from '../../data/index.js';
 import { dist } from '../../math/vec.js';
 import { allocId } from '../world.js';
 import { dropCaps } from './director.js';
@@ -114,7 +120,8 @@ export function damagePlayer(
   if (source) {
     const dx = 'dirX' in source ? source.dirX : source.fromX - player.x;
     const dy = 'dirX' in source ? source.dirY : source.fromY - player.y;
-    amount *= armourMul(player.aim, dx, dy);
+    const front = player.guarding ? MARINE_GUARD.frontMul : undefined;
+    amount *= armourMul(player.aim, dx, dy, front);
   }
   player.hp -= amount;
   player.invuln = PLAYER.hurtInvuln;

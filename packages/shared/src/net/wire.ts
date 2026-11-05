@@ -285,14 +285,15 @@ function readTable(r: Reader, nf: number, spec: TableSpec, t: Table): Array<[num
 }
 
 // ---- players: numeric rows with interned strings ----
-const PF = { br: 1, vt: 2, ht: 4, sp: 8, sd: 16 } as const;
+const PF = { br: 1, vt: 2, ht: 4, sp: 8, sd: 16, gd: 1 << 13 } as const;
 /**
  * Sprint data rides in the flags field above the boolean bits so protocol v5 stays compatible
  * (older clients only test bits 1/2/4): stamina in 1/100 s (9 bits) and the post-sprint weapon
  * delay in 1/100 s (7 bits). PF.sd marks that the host sent sprint data at all.
  */
 const PF_STM_SHIFT = 5;
-const PF_STM_MASK = 0x1ff;
+/** 8 bits (max 2.55 s); bit 13 of flags is PF.gd (was unused at staminaMax 2.4 s). */
+const PF_STM_MASK = 0xff;
 const PF_WD_SHIFT = 14;
 const PF_WD_MASK = 0x7f;
 const packSprint = (p: PlayerSnap): number =>
@@ -323,7 +324,11 @@ const PLAYER_FIELDS = 19;
 
 function playerRow(p: PlayerSnap, sym: Symbols): number[] {
   const flags =
-    ((p.br ? PF.br : 0) | (p.vt ? PF.vt : 0) | (p.ht !== undefined ? PF.ht : 0) | packSprint(p)) +
+    ((p.br ? PF.br : 0) |
+      (p.vt ? PF.vt : 0) |
+      (p.ht !== undefined ? PF.ht : 0) |
+      (p.gd ? PF.gd : 0) |
+      packSprint(p)) +
     packRecoil(p);
   return [
     sym.id(p.name),
@@ -373,6 +378,7 @@ function playerFromRow(id: number, v: number[], sym: Symbols): PlayerSnap {
   if (v[17] & PF.br) p.br = 1;
   if (v[17] & PF.ht) p.ht = v[18] / 100;
   if (v[17] & PF.vt) p.vt = 1;
+  if (v[17] & PF.gd) p.gd = 1;
   const rc = unpackRecoil(v[17]);
   if (rc) p.rc = rc;
   if (v[17] & PF.sd) {

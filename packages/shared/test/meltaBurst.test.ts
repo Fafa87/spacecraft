@@ -92,14 +92,32 @@ describe('Meltagun end-of-range burst', () => {
     expect(buddy.hp).toBe(buddyHp);
   });
 
-  it('no burst when the beam hits something', () => {
+  it('still bursts at max range after piercing a target', () => {
     const w = world();
     const p = w.players[0];
     const e = spawnEnemy(w, 'carnifex', p.x + 120, p.y);
     const hp0 = e.hp;
     const evs = fireOnce(w);
     expect(e.hp).toBeLessThan(hp0);
-    expect(meltaBooms(evs)).toHaveLength(0);
+    const booms = meltaBooms(evs);
+    expect(booms).toHaveLength(1);
+    const b = booms[0]!;
+    // Past the target, near max range
+    expect(b.x).toBeGreaterThan(e.x + 20);
+    expect(b.x - p.x).toBeGreaterThan(RANGE * 0.9);
+    expect(b.x - p.x).toBeLessThan(RANGE + 80);
+  });
+
+  it('keeps flying to max range after pierce is spent (no early death on last target)', () => {
+    const w = world();
+    const p = w.players[0];
+    // pierce: 3 → four hits spend it; pack gaunts on the beam line well before max range
+    const gaunts = [80, 110, 140, 170].map((dx) => spawnEnemy(w, 'termagant', p.x + dx, p.y));
+    const evs = fireOnce(w);
+    expect(gaunts.every((g) => g.dead || g.hp < g.maxHp)).toBe(true);
+    const booms = meltaBooms(evs);
+    expect(booms).toHaveLength(1);
+    expect(booms[0]!.x - p.x).toBeGreaterThan(RANGE * 0.9);
   });
 
   it('no burst when the shot leaves the arena', () => {

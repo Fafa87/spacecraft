@@ -40,10 +40,17 @@ export function touchIntent(
       aim: { kind: 'angle', angle: aim.angle },
       fire: aim.mag >= fireThreshold,
       sprint: false,
+      guard: false,
     };
   if (move.active)
-    return { move: m, aim: { kind: 'angle', angle: move.angle }, fire: false, sprint: false };
-  return { move: m, aim: null, fire: false, sprint: false };
+    return {
+      move: m,
+      aim: { kind: 'angle', angle: move.angle },
+      fire: false,
+      sprint: false,
+      guard: false,
+    };
+  return { move: m, aim: null, fire: false, sprint: false, guard: false };
 }
 
 /** Stick-edge sprint with hysteresis (pure, unit tested). `reach` = thumb distance in radii. */
@@ -136,7 +143,7 @@ export interface TouchInputOptions {
 
 /**
  * Twin-stick touch controls on a full-screen overlay: floating sticks on each half,
- * weapon slots via HUD taps, and buttons for reload / mute / fullscreen.
+ * weapon slots via HUD taps, buttons for reload / mute / fullscreen, and a holdable GUARD on the right.
  * Only visible in `body.touch-mode` (see device.ts).
  */
 export class TouchInput implements InputSource {
@@ -151,6 +158,8 @@ export class TouchInput implements InputSource {
   private latched: ActionIntent = { ...NO_ACTIONS };
   /** Sprint: the move thumb pushed past the ring (and the dead gap) into the sprint band. */
   readonly sprint = new TouchSprint();
+  /** Defensive stance held via the right-side GUARD button. */
+  private guardHeld = false;
   private listeners: Array<() => void> = [];
   onActivity: (() => void) | null = null;
 
@@ -167,11 +176,12 @@ export class TouchInput implements InputSource {
         <button class="tb" data-act="mute" aria-label="Mute">🔊</button>
         <button class="tb main" data-act="reload" aria-label="Reload">⟳<span>RELOAD</span></button>
         ${canFs ? '<button class="tb" data-act="fullscreen" aria-label="Fullscreen">⛶</button>' : ''}
-      </div>`;
+      </div>
+      <button class="tb hold guard-btn" data-act="guard" aria-label="Defensive stance (hold)">🛡<span>GUARD</span></button>`;
     host.append(this.layer);
 
     const on = <K extends keyof HTMLElementEventMap>(
-      el: HTMLElement | Document,
+      el: HTMLElement | Document | Window,
       type: K,
       fn: (e: HTMLElementEventMap[K]) => void,
       opts: AddEventListenerOptions = { passive: false },
@@ -194,6 +204,26 @@ export class TouchInput implements InputSource {
 
     this.layer.querySelectorAll<HTMLButtonElement>('button[data-act]').forEach((b) => {
       const act = b.dataset.act!;
+      if (act === 'guard') {
+        const down = (e: Event) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.guardHeld = true;
+          b.classList.add('pressed');
+        };
+        const up = (e: Event) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.guardHeld = false;
+          b.classList.remove('pressed');
+        };
+        on(b, 'touchstart', down);
+        on(b, 'touchend', up);
+        on(b, 'touchcancel', up);
+        on(b, 'pointerdown', down);
+        on(document, 'pointerup', up);
+        return;
+      }
       const fire = (e: Event) => {
         e.preventDefault();
         e.stopPropagation();
@@ -256,6 +286,7 @@ export class TouchInput implements InputSource {
   read(): ContinuousIntent {
     const intent = touchIntent(this.moveStick.vector, this.aimStick.vector);
     intent.sprint = this.sprint.on;
+    intent.guard = this.guardHeld;
     return intent;
   }
 
@@ -293,6 +324,8 @@ export class TouchInput implements InputSource {
     this.moveStick.end();
     this.aimStick.end();
     this.sprint.reset();
+    this.guardHeld = false;
+    this.layer.querySelector('[data-act="guard"]')?.classList.remove('pressed');
   }
 
   dispose(): void {

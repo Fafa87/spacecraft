@@ -598,6 +598,32 @@ body.touch-mode canvas#game.playing ~ .touch-layer {
 .tb.pressed {
   background: rgba(255, 192, 74, 0.45);
 }
+/* Holdable defensive stance on the right (away from the bottom centre system strip). */
+.guard-btn {
+  position: absolute;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(96px, calc(env(safe-area-inset-bottom) + 88px));
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  font-size: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  border-color: rgba(232, 196, 106, 0.55);
+  color: #e8c46a;
+}
+.guard-btn span {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  margin-top: 3px;
+}
+.guard-btn.pressed {
+  background: rgba(232, 196, 106, 0.4);
+  box-shadow: 0 0 14px rgba(232, 196, 106, 0.45);
+}
 /* touch phone held in portrait: full-screen "rotate your device" (input paused meanwhile) */
 .rotate-overlay {
   display: none;
@@ -808,10 +834,21 @@ input:focus {
   min-height: 1.3em;
   margin: -4px 0 8px;
 }
-.versions-link {
+.versions-link,
+.rules-link {
   color: var(--accent);
   cursor: pointer;
   text-decoration: underline dotted;
+}
+a.rules-link:link,
+a.rules-link:visited,
+a.rules-link:hover,
+a.rules-link:active {
+  color: var(--accent);
+  text-decoration: underline dotted;
+}
+a.rules-link:hover {
+  color: var(--accent2);
 }
 .versions-list {
   list-style: none;

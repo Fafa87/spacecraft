@@ -119,6 +119,7 @@ export function createPlayer(
     recoil: 0,
     moveFrac: 0,
     sprint: newSprintState(),
+    guarding: false,
     damageDealt: 0,
     diedAt: null,
   };

@@ -210,6 +210,12 @@ boards SQUADS · SURVIVAL and MARINES · POINTS, team size tabs) read them.
   Save (`data/profile.ts`). `combat.damageEnemy` scales damage by `woundMul(S, T)` and rolls the
   armour save on `world.rng` (so it is deterministic and host-authoritative); a saved hit does
   nothing and emits `bnc` (ricochet sound + sparks on the client, no marker on the enemy).
+- **Directional armour + defensive stance.** Incoming damage to marines is multiplied by
+  `armourMul(facing, dx, dy)` from `data/armour.ts` (front / side / rear arcs). Front-plate
+  projectile deflection chances live next to it (`MARINE_DEFLECTION`). Holding the defensive
+  stance (`data/guard.ts`, `Player.guarding`, wire flag `gd`) while standing still doubles front
+  armour (front mul 0.7→0.35), halves the non-deflect chance, and applies `landedDamageMul` to
+  front projectiles that still hit. Distinct from heavy-weapon brace (`braceDelay`).
 - **Firing slow-down (v0.5).** `Player.fireSlow` is 1 while the trigger is held and decays over
   `PLAYER.fireMoveRecover`; speed is `marineMoveSpeed(weapon, fireSlow)`
   (`sim/systems/movement.ts`). It depends only on input, so client prediction uses the same function.
