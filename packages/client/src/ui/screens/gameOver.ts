@@ -47,7 +47,7 @@ export function createGameOverScreen(
         <nav class="go-tabs" role="tablist">
           <button data-tab="squad" role="tab" class="active">SQUAD</button>
           <button data-tab="xenos" role="tab">XENOS</button>
-          <button data-tab="scores" role="tab">LEADERBOARDS</button>
+          <button data-tab="scores" role="tab">LEADERS</button>
         </nav>
         <div class="row go-actions">
           <button id="menu">MAIN MENU</button>
@@ -58,7 +58,7 @@ export function createGameOverScreen(
     </div>
     <div class="side">
       <div class="card go-panel tally-card" data-panel="xenos">${killTally(summary, opts)}</div>
-      <div class="card go-panel scores" data-panel="scores"><h2>LEADERBOARDS</h2><div id="hs"></div></div>
+      <div class="card go-panel scores" data-panel="scores"><h2>LEADERS</h2><div id="hs"></div></div>
     </div>
   </div>`);
   // Compact (phone landscape) layout shows one panel at a time; tabs are hidden on big screens.
