@@ -913,56 +913,6 @@ export class Renderer {
     ctx.restore();
   }
 
-  /**
-   * Guard cover silhouette. Stock `_top` is skipped while guarding (its twin gold-rimmed
-   * pauldrons stack into a disc when the torso twists). Instead: one elongated blue covering
-   * pauldron/arm into the aim, trailing shoulder back, simple helmet — no gold discs/arcs.
-   */
-  private drawGuardBrace(ch: ChapterDef, x: number, y: number, a: number): void {
-    const { ctx } = this;
-    const c = Math.cos(a);
-    const s = Math.sin(a);
-    ctx.save();
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    // Trailing shoulder — small, blue only, pulled back.
-    ctx.fillStyle = ch.primary;
-    ctx.beginPath();
-    ctx.ellipse(x - c * 2 + s * 13, y - s * 2 - c * 13, 6, 4, a - 0.9, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Helmet (stock _top skipped).
-    ctx.beginPath();
-    ctx.arc(x, y, 7.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#c02020';
-    ctx.beginPath();
-    ctx.arc(x + c * 2.8 - s * 2.2, y + s * 2.8 + c * 2.2, 1.5, 0, Math.PI * 2);
-    ctx.arc(x + c * 2.8 + s * 2.2, y + s * 2.8 - c * 2.2, 1.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Covering pauldron+arm: elongated BLUE capsule aimed into the threat (aspect ~3:1).
-    // Drawn as a thick stroke so it reads as a raised shoulder/arm, never a round plate.
-    const shX = x + c * 2 - s * 9;
-    const shY = y + s * 2 + c * 9;
-    const tipX = x + c * 26 - s * 11;
-    const tipY = y + s * 26 + c * 11;
-    ctx.strokeStyle = ch.primary;
-    ctx.lineWidth = 14;
-    ctx.beginPath();
-    ctx.moveTo(shX, shY);
-    ctx.lineTo(tipX, tipY);
-    ctx.stroke();
-    // Fist
-    ctx.fillStyle = ch.primary;
-    ctx.beginPath();
-    ctx.arc(tipX, tipY, 5, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
-  }
-
   private drawPlayers(f: RenderFrame): void {
     const { ctx } = this;
     const time = this.time;
@@ -1038,19 +988,21 @@ export class Renderer {
           p.st === 'alive'
             ? weaponPose(sprinting, mine ? f.me!.sprint!.weaponDelay : (p.wd ?? 0))
             : 1;
-        // Guard: slight body turn into the leading shoulder (same layers, no shield overlay).
-        const guardTwist = guarding ? -0.6 : 0;
+        // Guard (option B — leading shoulder): stock body + weapon + `_top`, modest twist,
+        // `_top` shifted toward the threat so the lead pauldron reads as cover; gun at the hip.
+        // No blob-arm primitives and `_top` is never skipped.
+        const guardTwist = guarding ? -0.3 : 0;
         const bodyA = a + guardTwist;
         if (this.assets.draw(ctx, body, frame, x, y, bodyA)) {
           // Weapon: held in the aim direction. v0.6.0 hotfix: while sprinting it is NOT drawn
           // at all (the back-slung pose looked odd); over the ready delay it fades in and
           // raises from a lowered, pulled-in pose to the aim. Same for local and remote marines.
-          // While guarding the gun is tucked in across the body so the raised pauldron reads.
+          // While guarding the gun sits at the hip/side (still readable), matching brace-options B.
           const e = pose * pose * (3 - 2 * pose);
           const guardTuck = guarding ? 1 : 0;
-          const back = rec * e + 6 * (1 - e) + 12 * guardTuck;
-          const wRot = (1 - e) * 0.7 + 0.95 * guardTuck;
-          const wScale = (0.9 + 0.1 * e) * (1 - 0.1 * guardTuck);
+          const back = rec * e + 6 * (1 - e) + 10 * guardTuck;
+          const wRot = (1 - e) * 0.7 + 0.7 * guardTuck;
+          const wScale = (0.9 + 0.1 * e) * (1 - 0.05 * guardTuck);
           this.heldPose.set(p.id, {
             x,
             y,
@@ -1066,17 +1018,28 @@ export class Renderer {
               ctx,
               held,
               0,
-              x - Math.cos(a) * back + Math.sin(a) * 14 * guardTuck,
-              y - Math.sin(a) * back - Math.cos(a) * 14 * guardTuck,
+              x - Math.cos(a) * back + Math.sin(a) * 10 * guardTuck,
+              y - Math.sin(a) * back - Math.cos(a) * 10 * guardTuck,
               a + wRot,
               wScale,
             );
             ctx.globalAlpha = 1;
           }
           if (pose < 1) this.drawRunningArms(ch, x, y, a, w.dist, 1 - pose);
+          // Always draw stock `_top` (pauldrons/helmet). While guarding, offset a few px toward
+          // the threat (perp to aim) so the leading shoulder reads as cover.
           if (guarding) {
-            // Skip stock _top — twin gold-rimmed pauldrons form a disc when twisted.
-            this.drawGuardBrace(ch, x, y, a);
+            const lead = 6;
+            const cA = Math.cos(a);
+            const sA = Math.sin(a);
+            this.assets.draw(
+              ctx,
+              `${body}_top`,
+              0,
+              x - sA * lead + cA * 2,
+              y + cA * lead + sA * 2,
+              bodyA,
+            );
           } else {
             this.assets.draw(ctx, `${body}_top`, 0, x, y, bodyA);
           }
@@ -1085,12 +1048,11 @@ export class Renderer {
           ctx.beginPath();
           ctx.arc(x, y, PLAYER.radius, 0, Math.PI * 2);
           ctx.fill();
-          if (guarding) this.drawGuardBrace(ch, x, y, bodyA);
           if (pose > 0) {
             ctx.strokeStyle = ch.trim;
             ctx.lineWidth = 5;
             ctx.globalAlpha = pose;
-            const reach = guarding ? 12 : 26;
+            const reach = guarding ? 14 : 26;
             ctx.beginPath();
             ctx.moveTo(x, y);
             ctx.lineTo(x + Math.cos(a) * reach * pose, y + Math.sin(a) * reach * pose);
