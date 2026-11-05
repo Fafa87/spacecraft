@@ -227,6 +227,12 @@ describe('PetitionStore + sort', () => {
     expect(byScore[0]!.myVote).toBe(1);
     const byNew = sortPetitions(cards, 'bugs', 'newest');
     expect(byNew[0]!.id).toBe('pet_c_33333333');
+    const allByScore = sortPetitions(cards, 'all', 'score');
+    expect(allByScore.map((c) => c.id)).toEqual([
+      'pet_a_11111111',
+      'pet_d_44444444',
+      'pet_c_33333333',
+    ]);
   });
 
   it('menu footer mentions PETYCJE next to rules (source check)', async () => {

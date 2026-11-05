@@ -104,12 +104,14 @@ export class PetitionStore {
   }
 }
 
+export type CategoryFilter = PetitionCategory | 'all';
+
 export function sortPetitions(
   cards: readonly PetitionCard[],
-  category: PetitionCategory,
+  category: CategoryFilter,
   mode: 'score' | 'newest',
 ): PetitionCard[] {
-  const filtered = cards.filter((c) => c.category === category);
+  const filtered = category === 'all' ? [...cards] : cards.filter((c) => c.category === category);
   return filtered.sort((a, b) => {
     if (mode === 'newest') {
       const t = b.createdAt.localeCompare(a.createdAt);

@@ -12,7 +12,7 @@ import { DEV_PREVIEW } from '../devPreview.js';
 import { HttpError } from '../highscores/HttpHighscoreStore.js';
 import { escapeHtml as esc, formatDate } from '../ui/format.js';
 import { storage } from '../util/storage.js';
-import { PetitionStore, sortPetitions } from './store.js';
+import { PetitionStore, sortPetitions, type CategoryFilter } from './store.js';
 
 const NAME_KEY = 'sms.name';
 const VOTER_KEY = 'sms.voterId';
@@ -22,6 +22,13 @@ const CAT_LABEL: Record<PetitionCategory, string> = {
   balance: 'Balans',
   ideas: 'Pomysły',
 };
+
+const TABS: { id: CategoryFilter; label: string }[] = [
+  { id: 'all', label: 'ALL' },
+  { id: 'bugs', label: CAT_LABEL.bugs },
+  { id: 'balance', label: CAT_LABEL.balance },
+  { id: 'ideas', label: CAT_LABEL.ideas },
+];
 
 export type SortMode = 'score' | 'newest';
 
@@ -86,7 +93,7 @@ function cardHtml(c: PetitionCard): string {
 }
 
 export function mountFeedback(root: HTMLElement, store: PetitionStore | null): void {
-  let category: PetitionCategory = 'bugs';
+  let category: CategoryFilter = 'all';
   let sort: SortMode = 'score';
   let cards: PetitionCard[] = [];
   let busy = false;
@@ -102,12 +109,10 @@ export function mountFeedback(root: HTMLElement, store: PetitionStore | null): v
   <p class="muted">Zgłoś błąd, uwagi do balansu albo pomysł. Głosuj — jeden głos na petycję z tej przeglądarki. v${esc(GAME_VERSION)}${DEV_PREVIEW ? ` · podgląd ${esc(DEV_PREVIEW)}` : ''}</p>
 </header>
 <div class="tabs" role="tablist">
-  ${(Object.keys(CAT_LABEL) as PetitionCategory[])
-    .map(
-      (k) =>
-        `<button type="button" class="tab${k === category ? ' active' : ''}" data-cat="${k}">${CAT_LABEL[k]}</button>`,
-    )
-    .join('')}
+  ${TABS.map(
+    (t) =>
+      `<button type="button" class="tab${t.id === category ? ' active' : ''}" data-cat="${t.id}">${t.label}</button>`,
+  ).join('')}
 </div>
 <div class="toolbar">
   <button type="button" class="sort active" data-sort="score">Najwyżej oceniane</button>
@@ -155,7 +160,11 @@ export function mountFeedback(root: HTMLElement, store: PetitionStore | null): v
       return;
     }
     if (!shown.length) {
-      listEl.innerHTML = `<div class="empty">Brak petycji w kategorii „${esc(CAT_LABEL[category])}”. Bądź pierwszy — złóż petycję.</div>`;
+      const empty =
+        category === 'all'
+          ? 'Brak petycji. Bądź pierwszy — złóż petycję.'
+          : `Brak petycji w kategorii „${esc(CAT_LABEL[category])}”. Bądź pierwszy — złóż petycję.`;
+      listEl.innerHTML = `<div class="empty">${empty}</div>`;
       return;
     }
     listEl.innerHTML = shown.map(cardHtml).join('');
@@ -190,10 +199,11 @@ export function mountFeedback(root: HTMLElement, store: PetitionStore | null): v
 
   root.querySelectorAll('.tab').forEach((btn) => {
     btn.addEventListener('click', () => {
-      category = (btn as HTMLElement).dataset.cat as PetitionCategory;
+      category = ((btn as HTMLElement).dataset.cat || 'all') as CategoryFilter;
       root.querySelectorAll('.tab').forEach((b) => b.classList.toggle('active', b === btn));
-      const sel = root.querySelector('#f-cat') as HTMLSelectElement;
-      sel.value = category;
+      if (category !== 'all') {
+        (root.querySelector('#f-cat') as HTMLSelectElement).value = category;
+      }
       renderList();
     });
   });
@@ -208,7 +218,9 @@ export function mountFeedback(root: HTMLElement, store: PetitionStore | null): v
 
   root.querySelector('#compose')!.addEventListener('click', () => {
     formEl.classList.remove('hidden');
-    (root.querySelector('#f-cat') as HTMLSelectElement).value = category;
+    if (category !== 'all') {
+      (root.querySelector('#f-cat') as HTMLSelectElement).value = category;
+    }
     (root.querySelector('#f-title') as HTMLInputElement).focus();
   });
   root.querySelector('#f-cancel')!.addEventListener('click', () => {
@@ -244,10 +256,12 @@ export function mountFeedback(root: HTMLElement, store: PetitionStore | null): v
       formEl.classList.add('hidden');
       (root.querySelector('#f-title') as HTMLInputElement).value = '';
       (root.querySelector('#f-body') as HTMLTextAreaElement).value = '';
-      category = cat;
-      root.querySelectorAll('.tab').forEach((b) =>
-        b.classList.toggle('active', (b as HTMLElement).dataset.cat === cat),
-      );
+      if (category !== 'all') {
+        category = cat;
+        root.querySelectorAll('.tab').forEach((b) =>
+          b.classList.toggle('active', (b as HTMLElement).dataset.cat === cat),
+        );
+      }
       await refresh();
       setStatus('Petycja przyjęta na Vox Relay.');
     } catch (err) {
