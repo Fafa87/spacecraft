@@ -914,61 +914,52 @@ export class Renderer {
   }
 
   /**
-   * Defensive stance pose (no shield graphic): Space Marine covers with the leading pauldron and
-   * raised gauntlet — same spirit as the sprint run-arms, just planted and covering the front.
-   * Drawn over body + helmet/_top so the raised pauldron clearly covers the front.
+   * Guard cover silhouette. Stock `_top` is skipped while guarding (its twin gold-rimmed
+   * pauldrons stack into a disc when the torso twists). Instead: one elongated blue covering
+   * pauldron/arm into the aim, trailing shoulder back, simple helmet — no gold discs/arcs.
    */
   private drawGuardBrace(ch: ChapterDef, x: number, y: number, a: number): void {
     const { ctx } = this;
     const c = Math.cos(a);
     const s = Math.sin(a);
-    // Leading shoulder shoved forward into the threat (covers the front arc).
-    const lead = 1;
-    const sx = x + c * 14 - s * 16 * lead;
-    const sy = y + s * 14 + c * 16 * lead;
     ctx.save();
     ctx.lineCap = 'round';
-    // Trailing shoulder settles back — body turned into the brace.
-    const tx = x - c * 4 + s * 12 * lead;
-    const ty = y - s * 4 - c * 12 * lead;
+    ctx.lineJoin = 'round';
+
+    // Trailing shoulder — small, blue only, pulled back.
     ctx.fillStyle = ch.primary;
-    ctx.strokeStyle = ch.trim;
-    ctx.lineWidth = 1.75;
     ctx.beginPath();
-    ctx.ellipse(tx, ty, 7.5, 5.5, a - 0.25 * lead, 0, Math.PI * 2);
+    ctx.ellipse(x - c * 2 + s * 13, y - s * 2 - c * 13, 6, 4, a - 0.9, 0, Math.PI * 2);
     ctx.fill();
-    ctx.stroke();
-    // Forearm bar across the torso (raised covering arm).
-    const hx = x + c * 2 - s * 4 * lead;
-    const hy = y + s * 2 + c * 4 * lead;
+
+    // Helmet (stock _top skipped).
+    ctx.beginPath();
+    ctx.arc(x, y, 7.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#c02020';
+    ctx.beginPath();
+    ctx.arc(x + c * 2.8 - s * 2.2, y + s * 2.8 + c * 2.2, 1.5, 0, Math.PI * 2);
+    ctx.arc(x + c * 2.8 + s * 2.2, y + s * 2.8 - c * 2.2, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Covering pauldron+arm: elongated BLUE capsule aimed into the threat (aspect ~3:1).
+    // Drawn as a thick stroke so it reads as a raised shoulder/arm, never a round plate.
+    const shX = x + c * 2 - s * 9;
+    const shY = y + s * 2 + c * 9;
+    const tipX = x + c * 26 - s * 11;
+    const tipY = y + s * 26 + c * 11;
     ctx.strokeStyle = ch.primary;
-    ctx.lineWidth = 7;
+    ctx.lineWidth = 14;
     ctx.beginPath();
-    ctx.moveTo(hx, hy);
-    ctx.lineTo(sx - c * 3, sy - s * 3);
+    ctx.moveTo(shX, shY);
+    ctx.lineTo(tipX, tipY);
     ctx.stroke();
-    ctx.strokeStyle = ch.trim;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    // Big raised pauldron disc (the readable "covers with his shoulder" beat).
+    // Fist
     ctx.fillStyle = ch.primary;
-    ctx.strokeStyle = ch.trim;
-    ctx.lineWidth = 2.25;
     ctx.beginPath();
-    ctx.ellipse(sx, sy, 13, 10, a + 0.45 * lead, 0, Math.PI * 2);
+    ctx.arc(tipX, tipY, 5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.stroke();
-    // Trim ridge on the pauldron
-    ctx.strokeStyle = ch.trim;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.ellipse(sx, sy, 8, 6, a + 0.45 * lead, 0, Math.PI * 2);
-    ctx.stroke();
-    // Gauntlet fist at the forward edge
-    ctx.fillStyle = ch.trim;
-    ctx.beginPath();
-    ctx.arc(sx + c * 3, sy + s * 3, 4, 0, Math.PI * 2);
-    ctx.fill();
+
     ctx.restore();
   }
 
@@ -1048,7 +1039,7 @@ export class Renderer {
             ? weaponPose(sprinting, mine ? f.me!.sprint!.weaponDelay : (p.wd ?? 0))
             : 1;
         // Guard: slight body turn into the leading shoulder (same layers, no shield overlay).
-        const guardTwist = guarding ? -0.32 : 0;
+        const guardTwist = guarding ? -0.6 : 0;
         const bodyA = a + guardTwist;
         if (this.assets.draw(ctx, body, frame, x, y, bodyA)) {
           // Weapon: held in the aim direction. v0.6.0 hotfix: while sprinting it is NOT drawn
@@ -1057,9 +1048,9 @@ export class Renderer {
           // While guarding the gun is tucked in across the body so the raised pauldron reads.
           const e = pose * pose * (3 - 2 * pose);
           const guardTuck = guarding ? 1 : 0;
-          const back = rec * e + 6 * (1 - e) + 14 * guardTuck;
-          const wRot = (1 - e) * 0.7 + 0.75 * guardTuck;
-          const wScale = (0.9 + 0.1 * e) * (1 - 0.12 * guardTuck);
+          const back = rec * e + 6 * (1 - e) + 12 * guardTuck;
+          const wRot = (1 - e) * 0.7 + 0.95 * guardTuck;
+          const wScale = (0.9 + 0.1 * e) * (1 - 0.1 * guardTuck);
           this.heldPose.set(p.id, {
             x,
             y,
@@ -1075,28 +1066,31 @@ export class Renderer {
               ctx,
               held,
               0,
-              x - Math.cos(a) * back + Math.sin(a) * 4 * guardTuck,
-              y - Math.sin(a) * back - Math.cos(a) * 4 * guardTuck,
+              x - Math.cos(a) * back + Math.sin(a) * 14 * guardTuck,
+              y - Math.sin(a) * back - Math.cos(a) * 14 * guardTuck,
               a + wRot,
               wScale,
             );
             ctx.globalAlpha = 1;
           }
           if (pose < 1) this.drawRunningArms(ch, x, y, a, w.dist, 1 - pose);
-          // Helmet / pauldrons follow the twisted torso; raised covering arm drawn on top.
-          this.assets.draw(ctx, `${body}_top`, 0, x, y, bodyA);
-          if (guarding) this.drawGuardBrace(ch, x, y, a);
+          if (guarding) {
+            // Skip stock _top — twin gold-rimmed pauldrons form a disc when twisted.
+            this.drawGuardBrace(ch, x, y, a);
+          } else {
+            this.assets.draw(ctx, `${body}_top`, 0, x, y, bodyA);
+          }
         } else {
           ctx.fillStyle = ch.primary;
           ctx.beginPath();
           ctx.arc(x, y, PLAYER.radius, 0, Math.PI * 2);
           ctx.fill();
-          if (guarding) this.drawGuardBrace(ch, x, y, a);
+          if (guarding) this.drawGuardBrace(ch, x, y, bodyA);
           if (pose > 0) {
             ctx.strokeStyle = ch.trim;
             ctx.lineWidth = 5;
             ctx.globalAlpha = pose;
-            const reach = guarding ? 16 : 26;
+            const reach = guarding ? 12 : 26;
             ctx.beginPath();
             ctx.moveTo(x, y);
             ctx.lineTo(x + Math.cos(a) * reach * pose, y + Math.sin(a) * reach * pose);

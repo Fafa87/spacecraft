@@ -11,14 +11,23 @@ import type { Player, World } from '../types.js';
 import { damagePlayer } from './combat.js';
 import { effectiveFire, sprintFacing } from './movement.js';
 
-/** Grants a weapon to a player (no-op if owned). Returns true if newly granted. */
-export function grantWeapon(world: World, player: Player, weaponId: string): boolean {
+/**
+ * Grants a weapon to a player (no-op if owned). Returns true if newly granted.
+ * `announce` (default true) emits an `unlock` HUD event — wave unlocks want that; crate
+ * pickups pass false because they already emit `pickup` (avoids a double toast).
+ */
+export function grantWeapon(
+  world: World,
+  player: Player,
+  weaponId: string,
+  opts?: { announce?: boolean },
+): boolean {
   if (player.weapons.includes(weaponId)) return false;
   const def = world.content.weapon(weaponId);
   player.weapons.push(weaponId);
   player.weapons.sort((a, b) => world.content.weapon(a).slot - world.content.weapon(b).slot);
   player.ammo[weaponId] = def.magazine;
-  world.events.push({ e: 'unlock', p: player.id, w: weaponId });
+  if (opts?.announce !== false) world.events.push({ e: 'unlock', p: player.id, w: weaponId });
   return true;
 }
 

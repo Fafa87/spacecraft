@@ -49,3 +49,18 @@ describe('director escalation', () => {
     expect(late.length).toBeGreaterThan(early.length);
   });
 });
+
+describe('weapon spread cones', () => {
+  it('matches the post-+80% table (melta stays pin-point)', () => {
+    const byId = Object.fromEntries(WEAPONS.map((w) => [w.id, w.spread]));
+    expect(byId).toMatchObject({
+      bolt_rifle: 0.126,
+      heavy_bolter: 0.3024,
+      flamer: 1.386,
+      plasma_gun: 0.0756,
+      meltagun: 0,
+      frag_grenade: 0.1008,
+    });
+  });
+});
+

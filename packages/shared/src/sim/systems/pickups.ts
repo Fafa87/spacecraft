@@ -15,7 +15,9 @@ export function updatePickups(world: World, dt: number): void {
         if (p.hp >= p.maxHp) continue;
         p.hp = Math.min(p.maxHp, p.hp + PICKUP.medkitHeal);
       } else if (pk.weapon) {
-        if (!grantWeapon(world, p, pk.weapon)) {
+        // Silent grant: the `pickup` event below is the one toast (grantWeapon would also
+        // emit `unlock` and the HUD would show the same banner twice).
+        if (!grantWeapon(world, p, pk.weapon, { announce: false })) {
           // Already owned: refill that weapon and patch up a little.
           p.ammo[pk.weapon] = world.content.weapon(pk.weapon).magazine;
           p.hp = Math.min(p.maxHp, p.hp + PICKUP.medkitHeal / 2);

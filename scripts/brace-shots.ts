@@ -4,7 +4,7 @@
  *   npx tsx scripts/brace-shots.ts [clientUrl]   # default http://localhost:5173/
  *
  *  - docs/review/brace-idle.png      — standing still, not guarding
- *  - docs/review/brace-guard.png     — RMB held, front shield arc visible
+ *  - docs/review/brace-guard.png     — RMB held, pauldron/arm cover pose
  *  - docs/review/brace-guard-zoom.png — crop around the marine
  *  - docs/review/brace-touch.png     — touch landscape with GUARD button pressed
  *  - docs/review/rules-link-style.png — main menu ZASADY / RULES link (gold, not blue)
