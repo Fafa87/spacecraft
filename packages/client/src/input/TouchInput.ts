@@ -177,7 +177,7 @@ export class TouchInput implements InputSource {
         <button class="tb main" data-act="reload" aria-label="Reload">⟳<span>RELOAD</span></button>
         ${canFs ? '<button class="tb" data-act="fullscreen" aria-label="Fullscreen">⛶</button>' : ''}
       </div>
-      <button class="tb hold guard-btn" data-act="guard" aria-label="Defensive stance (hold)">🛡<span>GUARD</span></button>`;
+      <button class="tb hold guard-btn" data-act="guard" aria-label="Defensive stance (hold)">▣<span>GUARD</span></button>`;
     host.append(this.layer);
 
     const on = <K extends keyof HTMLElementEventMap>(

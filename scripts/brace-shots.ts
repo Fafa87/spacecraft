@@ -171,6 +171,8 @@ const browser = await puppeteer.launch({
   if (btn) {
     const box = await btn.boundingBox();
     check(!!box && box.x > 400, `GUARD is on the right (x=${box?.x})`);
+    // Must sit in the bottom-right pocket (below the weapon column), not mid-stack.
+    check(!!box && box.y + box.height > 300, `GUARD is low on screen (bottom=${box ? box.y + box.height : '?'})`);
     await btn.hover();
     // pointer down and hold
     const cdp = await p.createCDPSession();

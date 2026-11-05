@@ -304,7 +304,7 @@ export class Hud {
     } else if (s.me) this.health(ctx, h, s.me);
     if (L.team) this.team(ctx, s, L.team.top, L.team.cols, L.team.rowH);
     if (s.me) {
-      if (touch) this.weaponColumn(ctx, w, s.me);
+      if (touch) this.weaponColumn(ctx, w, h, s.me);
       else this.weapons(ctx, w, h, s.me);
       if (s.me.br && s.me.st === 'alive') this.braced(ctx, w, touch ? h - 24 : h - 122, s.now ?? 0);
     }
@@ -846,14 +846,21 @@ export class Hud {
     ctx.fillText(me.sp ? 'SPRINT' : 'READY…', x + cw / 2, y + ch / 2 + 4);
   }
 
-  /** Touch layout: big tappable weapon slots stacked under the minimap on the right. */
-  private weaponColumn(ctx: CanvasRenderingContext2D, w: number, me: PlayerSnap): void {
+  /**
+   * Touch layout: big tappable weapon slots stacked under the minimap on the right.
+   * Leaves a bottom-right pocket (~66 CSS px) clear for the holdable GUARD button so the two
+   * never overlap on short landscape phones.
+   */
+  private weaponColumn(ctx: CanvasRenderingContext2D, w: number, h: number, me: PlayerSnap): void {
     const order = this.content.weaponOrder;
     const cols = order.length > 5 ? 2 : 1;
     const rows = Math.ceil(order.length / cols);
     const cw = cols > 1 ? 84 : 92;
-    const chh = 56;
     const y0 = 164;
+    const guardPocket = 66; // .guard-btn height + gap above the home indicator
+    const avail = Math.max(40, h - y0 - guardPocket);
+    const gap = 6;
+    const chh = Math.min(56, Math.max(40, Math.floor((avail - (rows - 1) * gap) / rows)));
     order.forEach((def, i) => {
       const col = cols > 1 ? i % cols : 0;
       const row = cols > 1 ? Math.floor(i / cols) : i;

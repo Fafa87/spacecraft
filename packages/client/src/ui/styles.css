@@ -598,15 +598,15 @@ body.touch-mode canvas#game.playing ~ .touch-layer {
 .tb.pressed {
   background: rgba(255, 192, 74, 0.45);
 }
-/* Holdable defensive stance on the right (away from the bottom centre system strip). */
+/* Holdable defensive stance: bottom-right corner, below the weapon column (was mid-right and overlapped slots). */
 .guard-btn {
   position: absolute;
-  right: max(18px, env(safe-area-inset-right));
-  bottom: max(96px, calc(env(safe-area-inset-bottom) + 88px));
-  width: 72px;
-  height: 72px;
+  right: max(10px, env(safe-area-inset-right));
+  bottom: max(10px, calc(env(safe-area-inset-bottom) + 6px));
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
-  font-size: 22px;
+  font-size: 18px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -614,11 +614,12 @@ body.touch-mode canvas#game.playing ~ .touch-layer {
   line-height: 1;
   border-color: rgba(232, 196, 106, 0.55);
   color: #e8c46a;
+  z-index: 2;
 }
 .guard-btn span {
-  font-size: 9px;
+  font-size: 8px;
   letter-spacing: 0.08em;
-  margin-top: 3px;
+  margin-top: 2px;
 }
 .guard-btn.pressed {
   background: rgba(232, 196, 106, 0.4);

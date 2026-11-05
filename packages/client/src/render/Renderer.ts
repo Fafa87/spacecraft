@@ -914,38 +914,61 @@ export class Renderer {
   }
 
   /**
-   * Defensive stance: raised front plate — a bright forward arc and planted boots (distinct
-   * from the heavy-bolter brace bipod behind the marine).
+   * Defensive stance pose (no shield graphic): Space Marine covers with the leading pauldron and
+   * raised gauntlet — same spirit as the sprint run-arms, just planted and covering the front.
+   * Drawn over body + helmet/_top so the raised pauldron clearly covers the front.
    */
-  private drawGuardStance(x: number, y: number, a: number, time: number): void {
+  private drawGuardBrace(ch: ChapterDef, x: number, y: number, a: number): void {
     const { ctx } = this;
     const c = Math.cos(a);
     const s = Math.sin(a);
-    const pulse = 0.55 + 0.45 * Math.sin(time * 7);
+    // Leading shoulder shoved forward into the threat (covers the front arc).
+    const lead = 1;
+    const sx = x + c * 14 - s * 16 * lead;
+    const sy = y + s * 14 + c * 16 * lead;
     ctx.save();
-    // Front shield arc (in the aim direction).
-    ctx.strokeStyle = `rgba(210, 230, 255, ${0.35 + 0.35 * pulse})`;
-    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    // Trailing shoulder settles back — body turned into the brace.
+    const tx = x - c * 4 + s * 12 * lead;
+    const ty = y - s * 4 - c * 12 * lead;
+    ctx.fillStyle = ch.primary;
+    ctx.strokeStyle = ch.trim;
+    ctx.lineWidth = 1.75;
     ctx.beginPath();
-    ctx.arc(x, y, 34, a - 0.95, a + 0.95);
+    ctx.ellipse(tx, ty, 7.5, 5.5, a - 0.25 * lead, 0, Math.PI * 2);
+    ctx.fill();
     ctx.stroke();
-    ctx.strokeStyle = `rgba(232, 196, 106, ${0.45 * pulse})`;
+    // Forearm bar across the torso (raised covering arm).
+    const hx = x + c * 2 - s * 4 * lead;
+    const hy = y + s * 2 + c * 4 * lead;
+    ctx.strokeStyle = ch.primary;
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(hx, hy);
+    ctx.lineTo(sx - c * 3, sy - s * 3);
+    ctx.stroke();
+    ctx.strokeStyle = ch.trim;
     ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(x, y, 28, a - 0.75, a + 0.75);
     ctx.stroke();
-    // Planted boots under the marine.
-    for (const side of [-1, 1]) {
-      const fx = x - s * side * 16 + c * 4;
-      const fy = y + c * side * 16 + s * 4;
-      ctx.fillStyle = 'rgba(18, 20, 28, 0.9)';
-      ctx.beginPath();
-      ctx.ellipse(fx, fy, 9, 5, a, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = `rgba(180, 210, 255, ${0.5 * pulse})`;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-    }
+    // Big raised pauldron disc (the readable "covers with his shoulder" beat).
+    ctx.fillStyle = ch.primary;
+    ctx.strokeStyle = ch.trim;
+    ctx.lineWidth = 2.25;
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, 13, 10, a + 0.45 * lead, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // Trim ridge on the pauldron
+    ctx.strokeStyle = ch.trim;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, 8, 6, a + 0.45 * lead, 0, Math.PI * 2);
+    ctx.stroke();
+    // Gauntlet fist at the forward edge
+    ctx.fillStyle = ch.trim;
+    ctx.beginPath();
+    ctx.arc(sx + c * 3, sy + s * 3, 4, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
   }
 
@@ -969,7 +992,6 @@ export class Renderer {
 
       if (p.br && p.st === 'alive') this.drawBraceStance(x, y, a, time, p.w);
       const guarding = p.st === 'alive' && (p.id === f.myId ? !!f.me?.guarding : p.gd === 1);
-      if (guarding) this.drawGuardStance(x, y, a, time);
       if (sprinting) this.drawSprintTrail(p, x, y, a, f.dt);
       this.drawShadow(x, y, PLAYER.radius + 6);
       ctx.strokeStyle = color;
@@ -1025,19 +1047,26 @@ export class Renderer {
           p.st === 'alive'
             ? weaponPose(sprinting, mine ? f.me!.sprint!.weaponDelay : (p.wd ?? 0))
             : 1;
-        if (this.assets.draw(ctx, body, frame, x, y, a)) {
+        // Guard: slight body turn into the leading shoulder (same layers, no shield overlay).
+        const guardTwist = guarding ? -0.32 : 0;
+        const bodyA = a + guardTwist;
+        if (this.assets.draw(ctx, body, frame, x, y, bodyA)) {
           // Weapon: held in the aim direction. v0.6.0 hotfix: while sprinting it is NOT drawn
           // at all (the back-slung pose looked odd); over the ready delay it fades in and
           // raises from a lowered, pulled-in pose to the aim. Same for local and remote marines.
+          // While guarding the gun is tucked in across the body so the raised pauldron reads.
           const e = pose * pose * (3 - 2 * pose);
-          const back = rec * e + 6 * (1 - e);
+          const guardTuck = guarding ? 1 : 0;
+          const back = rec * e + 6 * (1 - e) + 14 * guardTuck;
+          const wRot = (1 - e) * 0.7 + 0.75 * guardTuck;
+          const wScale = (0.9 + 0.1 * e) * (1 - 0.12 * guardTuck);
           this.heldPose.set(p.id, {
             x,
             y,
             a,
             back,
-            rot: (1 - e) * 0.7,
-            scale: 0.9 + 0.1 * e,
+            rot: wRot,
+            scale: wScale,
             w: p.w,
           });
           if (weaponDrawn(pose)) {
@@ -1046,27 +1075,31 @@ export class Renderer {
               ctx,
               held,
               0,
-              x - Math.cos(a) * back,
-              y - Math.sin(a) * back,
-              a + (1 - e) * 0.7,
-              0.9 + 0.1 * e,
+              x - Math.cos(a) * back + Math.sin(a) * 4 * guardTuck,
+              y - Math.sin(a) * back - Math.cos(a) * 4 * guardTuck,
+              a + wRot,
+              wScale,
             );
             ctx.globalAlpha = 1;
           }
           if (pose < 1) this.drawRunningArms(ch, x, y, a, w.dist, 1 - pose);
-          this.assets.draw(ctx, `${body}_top`, 0, x, y, a);
+          // Helmet / pauldrons follow the twisted torso; raised covering arm drawn on top.
+          this.assets.draw(ctx, `${body}_top`, 0, x, y, bodyA);
+          if (guarding) this.drawGuardBrace(ch, x, y, a);
         } else {
           ctx.fillStyle = ch.primary;
           ctx.beginPath();
           ctx.arc(x, y, PLAYER.radius, 0, Math.PI * 2);
           ctx.fill();
+          if (guarding) this.drawGuardBrace(ch, x, y, a);
           if (pose > 0) {
             ctx.strokeStyle = ch.trim;
             ctx.lineWidth = 5;
             ctx.globalAlpha = pose;
+            const reach = guarding ? 16 : 26;
             ctx.beginPath();
             ctx.moveTo(x, y);
-            ctx.lineTo(x + Math.cos(a) * 26 * pose, y + Math.sin(a) * 26 * pose);
+            ctx.lineTo(x + Math.cos(a) * reach * pose, y + Math.sin(a) * reach * pose);
             ctx.stroke();
             ctx.globalAlpha = 1;
           }
