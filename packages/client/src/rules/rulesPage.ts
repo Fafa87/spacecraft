@@ -1,8 +1,9 @@
 /** Rules & instructions (Polish), plus the generated compendium. */
 import {
   GAME_VERSION,
-  MARINE_DEFLECTION,
+  MARINE_AIM_RECOIL,
   MARINE_DIRECTIONAL_ARMOUR,
+  MARINE_GUARD,
   MARINE_SPRINT,
   MAX_PLAYERS,
   PLAYER,
@@ -11,6 +12,7 @@ import {
   dropRates,
   type ContentRegistry,
 } from '@sms/shared';
+import { boardFor } from '../devPreview.js';
 import { escapeHtml as esc } from '../ui/format.js';
 import { compendiumHtml } from './compendium.js';
 
@@ -20,6 +22,13 @@ export function rulesHtml(c: ContentRegistry): string {
     .filter((w) => w.unlockAtWave === 0)
     .map((w) => esc(w.name))
     .join(', ');
+  const bursts = ws
+    .filter((w) => w.projectile.endBurst)
+    .map((w) => {
+      const b = w.projectile.endBurst!;
+      return `<li><b>${esc(w.name)}: błysk na końcu zasięgu</b> — gdy pocisk doleci do końca zasięgu (${Math.round(w.projectile.speed * w.projectile.lifetime)} px), błyska małym wybuchem cieplnym: ${b.damage} obrażeń w promieniu ${b.radius} px (na krawędzi ${Math.round(b.edgeFactor * 100)}%). Działa też po przebiciu celów (promień leci dalej); nie ma błysku po wyjściu poza arenę. Rani tylko Tyranidów, nigdy marines.</li>`;
+    })
+    .join('');
   const unlocks = ws
     .filter((w) => w.unlockAtWave)
     .map((w) => `<li><b>${esc(w.name)}</b> — na starcie fali ${w.unlockAtWave}</li>`)
@@ -27,9 +36,10 @@ export function rulesHtml(c: ContentRegistry): string {
   const boss = c.enemy(c.director.bosses.enemy).name;
   const d = c.director;
   const A = MARINE_DIRECTIONAL_ARMOUR;
+  const G = MARINE_GUARD;
   const SP = MARINE_SPRINT;
   const sec = (v: number) => `${String(Number(v.toFixed(2))).replace('.', ',')} s`;
-  const pc = (v: number) => `${Math.round(v * 100)}%`;
+  const pc = (v: number) => `${String(Number((v * 100).toFixed(1))).replace('.', ',')}%`;
   const mul = (v: number) => `×${String(v).replace('.', ',')}`;
   const num = (v: number) => String(Number(v.toFixed(2))).replace('.', ',');
   const soloDrops = dropRates(d, 1);
@@ -44,6 +54,11 @@ export function rulesHtml(c: ContentRegistry): string {
     .filter((e) => e.ranged && !defl[e.ranged.projectile.kind])
     .map((e) => esc(e.name))
     .join(', ');
+  const board = boardFor(leaderboardBoard(GAME_VERSION));
+  const boardShare =
+    board !== GAME_VERSION
+      ? `; v${esc(GAME_VERSION)} dzieli tę tablicę z v${esc(board)} (bez osobnego boards/${esc(GAME_VERSION)})`
+      : '';
   return `
 <header class="top">
   <a class="back" href="./">← WRÓĆ DO GRY</a>
@@ -51,7 +66,7 @@ export function rulesHtml(c: ContentRegistry): string {
   <p class="muted">Wersja v${GAME_VERSION}</p>
 </header>
 <nav class="toc">
-  <a href="#cel">Cel</a><a href="#sterowanie">Sterowanie</a><a href="#sprint">Sprint</a><a href="#tryby">Tryby</a><a href="#multi">Multiplayer</a><a href="#glos">Czat głosowy</a><a href="#bron">Broń</a><a href="#pancerz">Pancerz</a><a href="#wrogowie">Tyranidzi</a><a href="#punkty">Punkty</a><a href="#rady">Rady</a><a href="#kompendium">Kompendium</a>
+  <a href="#cel">Cel</a><a href="#sterowanie">Sterowanie</a><a href="#sprint">Sprint</a><a href="#tryby">Tryby</a><a href="#multi">Multiplayer</a><a href="#glos">Czat głosowy</a><a href="#bron">Broń</a><a href="#odrzut">Odrzut</a><a href="#pancerz">Pancerz</a><a href="#postawa">Postawa obronna</a><a href="#wrogowie">Tyranidzi</a><a href="#punkty">Punkty</a><a href="#rady">Rady</a><a href="#kompendium">Kompendium</a>
 </nav>
 <section id="cel"><h2>Cel gry</h2>
   <p>Jesteś Space Marine broniącym zrujnowanej iglicy ula. Tyranidzi atakują <b>falami</b> z wyłomów w ścianach i szybów w podłodze. Następna fala rusza dopiero, gdy zginie cała poprzednia (po ${d.waves.breather} s przerwy). Każda fala jest większa, a potwory mają więcej życia. Co ${d.bosses.everyWave}. fala od ${d.bosses.firstWave}. prowadzi boss — <b>${esc(boss)}</b>.</p>
@@ -65,6 +80,7 @@ export function rulesHtml(c: ContentRegistry): string {
       <li><b>Lewy przycisk / Spacja</b> — strzał (przytrzymaj przy broni automatycznej)</li>
       <li><b>1–${ws.length}</b>, <b>Q / E</b>, <b>kółko myszy</b> — zmiana broni</li>
       <li><b>Shift</b> (przytrzymaj) — sprint</li>
+      <li><b>Prawy przycisk myszy</b> (przytrzymaj) — postawa obronna (tylko stojąc w miejscu)</li>
       <li><b>R</b> — przeładowanie</li>
       <li><b>M</b> — wycisz dźwięk</li>
       <li><b>Esc</b> — menu / wyjście (w grze solo pauza)</li>
@@ -74,6 +90,7 @@ export function rulesHtml(c: ContentRegistry): string {
       <li><b>Prawy kciuk</b> — celowanie i automatyczny ogień</li>
       <li><b>Sprint lewym kciukiem</b> — to jedyny sposób na sprint na telefonie (bez osobnego przycisku). Gdy gałka dojdzie do okręgu drążka, marine idzie pełnym marszem (okrąg i gałka robią się złote). Za nim jest krótka przerwa, a dalej zewnętrzny, przerywany czerwono-pomarańczowy pierścień „»”: wypchnij kciuk do niego, a sprintujesz, dopóki go tam trzymasz (pierścień się zapala). Cofnięcie do środka kończy sprint. Szary pierścień z napisem NO STAMINA / FIRING znaczy, że sprint teraz nie ruszy (za mało kondycji albo trzymasz spust).</li>
       <li><b>Dotknij ikony broni</b> — zmiana broni</li>
+      <li><b>🛡 GUARD</b> (przytrzymaj, prawa strona) — postawa obronna (tylko stojąc w miejscu)</li>
       <li><b>⟳</b> — przeładowanie, <b>🔊</b> — dźwięk, <b>⏸</b> — menu</li>
       <li><b>⛶</b> — pełny ekran (Android). Na iPhonie: Udostępnij → „Do ekranu początkowego”, potem uruchamiaj grę z ikony.</li>
       <li>Najlepiej grać poziomo.</li>
@@ -128,6 +145,16 @@ export function rulesHtml(c: ContentRegistry): string {
     <li><b>Zaparcie</b>: niektóre ciężkie bronie, gdy stoisz w miejscu, strzelają szybciej i celniej.</li>
     <li><b>Plazma się grzeje</b>: powyżej kreski strzały są przeładowane (mocniejsze), na szczycie broń się przegrzewa i rani strzelca.</li>
     <li><b>Siła vs Wytrzymałość i pancerz</b>: lekka broń odbija się od pancerza Carnifexa, Meltagun przebija wszystko.</li>
+    ${bursts}
+  </ul>
+</section>
+<section id="odrzut"><h2>Odrzut</h2>
+  <p>Każdy strzał <b>kopie celownik</b> lekko w bok (losowo, częściej w prawo). Celownik na ekranie pokazuje dokładnie, gdzie poleci następny pocisk; jasna kropka — gdzie naprawdę wskazuje mysz lub drążek. Odchylenie samo wraca w ułamku sekundy.</p>
+  <ul>
+    <li><b>Stojąc</b> (i w zaparciu) odrzut to tylko <b>${mul(MARINE_AIM_RECOIL.standingMul)}</b> — strzelaj z miejsca, gdy liczy się celność.</li>
+    <li><b>W marszu</b> odrzut jest pełny (${mul(MARINE_AIM_RECOIL.walkingMul)}), proporcjonalnie do prędkości.</li>
+    <li>Najmocniej kopie <b>Meltagun</b>, w serii najbardziej rozjeżdża się <b>Heavy Bolter</b>; Miotacz ognia prawie nie ma odrzutu. Liczby — w kompendium.</li>
+    <li>W grze przez sieć celownik gościa nadąża za odrzutem z opóźnieniem pingu.</li>
   </ul>
 </section>
 <section id="pancerz"><h2>Pancerz kierunkowy</h2>
@@ -137,8 +164,18 @@ export function rulesHtml(c: ContentRegistry): string {
     <li><b>Boki</b> — obrażenia <b>${mul(A.side)}</b></li>
     <li><b>Tył</b> (±${A.rearArcDeg}° od pleców) — obrażenia <b>${mul(A.rear)}</b></li>
   </ul>
-  <p><b>Rykoszet</b>: pocisk Tyranida, który trafi w przedni pancerz, może się od niego odbić — nie zadaje wtedy obrażeń, a od marine sypią się iskry. Najsłabsze pociski odbijają się w ${pc(MARINE_DEFLECTION.maxChance)} przypadków, mocniejsze rzadziej (najmniej ${pc(MARINE_DEFLECTION.minChance)}): ${deflList}.${noDefl ? ` Pocisk wybuchowy (${noDefl}) nigdy się nie odbija.` : ''} Ciosy wręcz i wybuchy nie odbijają się nigdy.</p>
+  <p><b>Rykoszet</b>: pocisk Tyranida, który trafi w przedni pancerz, może się od niego odbić — nie zadaje wtedy obrażeń, a od marine sypią się iskry. Szansa zależy od rodzaju pocisku — najsłabsze odbijają się najczęściej, mocniejsze rzadziej: ${deflList}.${noDefl ? ` Pocisk wybuchowy (${noDefl}) nigdy się nie odbija.` : ''} Ciosy wręcz i wybuchy nie odbijają się nigdy.</p>
   <p>Przegrzanie plazmy rani zawsze tak samo, niezależnie od kierunku. Twój wybuch, który zahaczy brata, liczy się od środka wybuchu.</p>
+  <p class="muted">Stałe: <code>packages/shared/src/data/armour.ts</code> (<code>MARINE_DIRECTIONAL_ARMOUR</code>, <code>MARINE_DEFLECTION</code>). Szanse rykoszetu per pocisk — w danych wrogów / tabeli w kompendium.</p>
+</section>
+<section id="postawa"><h2>Postawa obronna</h2>
+  <p>Przytrzymaj <b>prawy przycisk myszy</b> (PC) albo <b>🛡 GUARD</b> (telefon, prawa strona), stojąc w miejscu. Każdy ruch natychmiast kończy postawę. To nie to samo co <b>zaparcie</b> ciężkiej broni (szybszy ogień / ciaśniejszy stożek po chwili bez ruchu) — postawa działa z każdą bronią i dotyczy tylko obrony.</p>
+  <ul>
+    <li><b>Pancerz przedni +${Math.round(G.frontArmourBonus * 100)}%</b> — mnożnik obrażeń z przodu spada z ${mul(A.front)} do <b>${mul(G.frontMul)}</b> (ciosy wręcz, pociski i wybuchy z przedniej ćwiartki).</li>
+    <li><b>Rykoszet</b>: szansa, że pocisk <em>nie</em> odbije się od przedniego pancerza, jest ×${num(G.nonDeflectFactor)} (czyli szansa odbicia rośnie: ${pc(0.5)} bazowe → ${pc(1 - G.nonDeflectFactor * (1 - 0.5))}). Formuła: <code>1 − ${num(G.nonDeflectFactor)}·(1 − baza)</code>.</li>
+    <li><b>Trafienie, które mimo to przeszło</b> (pocisk z przodu, bez rykoszetu) dostaje jeszcze <b>${mul(G.landedDamageMul)}</b> obrażeń (−${Math.round((1 - G.landedDamageMul) * 100)}%). Ciosy wręcz i wybuchy dostają tylko twardszy przedni pancerz — bez tej dodatkowej zniżki.</li>
+  </ul>
+  <p class="muted">Stałe: <code>packages/shared/src/data/guard.ts</code> (<code>MARINE_GUARD</code>). Symulacja: <code>Player.guarding</code>; sieć: flaga <code>gd</code>.</p>
 </section>
 <section id="wrogowie"><h2>Tyranidzi</h2><ul>
   ${[...c.enemies.values()]
@@ -151,7 +188,7 @@ export function rulesHtml(c: ContentRegistry): string {
 </ul></section>
 <section id="punkty"><h2>Punkty i ranking</h2>
   <p>Zabicie daje punkty marine, który zadał ostatni cios (wartości w kompendium). Na koniec misji widzisz podsumowanie oddziału i listę wszystkich zabitych Tyranidów.</p>
-  <p>Ranking (<b>HONOURED DEAD</b>) jest osobny dla każdej wersji gry (obecnie tablica <b>${esc(leaderboardBoard(GAME_VERSION))}</b>) i dla każdej liczby graczy. Są dwie listy: najdłuższe przetrwanie oddziału i najwyższe wyniki marines.</p>
+  <p>Ranking (<b>HONOURED DEAD</b>) jest osobny dla każdej wersji gry (obecnie tablica <b>${esc(board)}</b>${boardShare}) i dla każdej liczby graczy. Są dwie listy: najdłuższe przetrwanie oddziału i najwyższe wyniki marines.</p>
 </section>
 <section id="rady"><h2>Rady</h2><ul>
   <li>Trzymajcie się razem — podniesienie brata ratuje misję.</li>

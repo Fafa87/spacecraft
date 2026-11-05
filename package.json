@@ -1,6 +1,6 @@
 {
   "name": "space-marine-survival",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "type": "module",
   "description": "Top-down co-op (1-4 players) swarm survival game for the web.",
@@ -36,7 +36,8 @@
     "rules": "tsx scripts/firestore-rules.ts",
     "test:rules": "firebase emulators:exec --only firestore --project demo-sms \"vitest run --config vitest.rules.config.ts\"",
     "check:firestore": "tsx scripts/check-firestore.ts",
-    "deploy:pages": "tsx scripts/deploy-pages.ts"
+    "deploy:pages": "tsx scripts/deploy-pages.ts",
+    "deploy:dev": "tsx scripts/deploy-dev.ts"
   },
   "engines": {
     "node": ">=20"

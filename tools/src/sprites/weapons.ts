@@ -225,11 +225,18 @@ const icons: SpriteDef[] = weapons.map(({ id, sprites }) => ({
   draw: (ctx) => drawWeaponIcon(ctx, id),
 }));
 
+/**
+ * Held overlays extend past the marine frame (barrels reach ~48 px ahead of the centre), so the
+ * canvas is wider than the marine and anchored on the marine centre. Before v0.7 they were drawn
+ * into the 72 px marine frame and every barrel was clipped at 36 px.
+ */
+export const HELD_W = C + 56;
 const held: SpriteDef[] = weapons.map(({ id, sprites }) => ({
   key: sprites.held,
   group: 'weapon',
-  w: MARINE_SIZE,
+  w: HELD_W,
   h: MARINE_SIZE,
+  anchor: [C / HELD_W, 0.5],
   scale: MARINE_SCALE,
   frames: 1,
   prompt: `Top-down ${id.replace('_', ' ')} held by an armoured soldier facing right, weapon only (transparent elsewhere), grip at the soldier's right hand`,

@@ -112,6 +112,19 @@ h2 {
   color: var(--muted);
   margin: 6px 0 0;
 }
+.dev-badge {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 3px 10px;
+  border: 1px solid #e0a030;
+  border-radius: 3px;
+  background: rgba(224, 160, 48, 0.16);
+  color: #f0c060;
+  font:
+    700 12px/1.4 ui-monospace,
+    monospace;
+  letter-spacing: 0.12em;
+}
 label {
   display: block;
   font-size: 11px;
@@ -284,6 +297,7 @@ button.primary:hover:not(:disabled) {
   min-width: 0;
   padding: 6px 2px;
 }
+.tabs[hidden],
 .tabs button[hidden] {
   display: none;
 }
@@ -584,6 +598,33 @@ body.touch-mode canvas#game.playing ~ .touch-layer {
 .tb.pressed {
   background: rgba(255, 192, 74, 0.45);
 }
+/* Holdable defensive stance: bottom-right corner, below the weapon column (was mid-right and overlapped slots). */
+.guard-btn {
+  position: absolute;
+  right: max(10px, env(safe-area-inset-right));
+  bottom: max(10px, calc(env(safe-area-inset-bottom) + 6px));
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  font-size: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  border-color: rgba(232, 196, 106, 0.55);
+  color: #e8c46a;
+  z-index: 2;
+}
+.guard-btn span {
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+.guard-btn.pressed {
+  background: rgba(232, 196, 106, 0.4);
+  box-shadow: 0 0 14px rgba(232, 196, 106, 0.45);
+}
 /* touch phone held in portrait: full-screen "rotate your device" (input paused meanwhile) */
 .rotate-overlay {
   display: none;
@@ -794,10 +835,21 @@ input:focus {
   min-height: 1.3em;
   margin: -4px 0 8px;
 }
-.versions-link {
+.versions-link,
+.rules-link {
   color: var(--accent);
   cursor: pointer;
   text-decoration: underline dotted;
+}
+a.rules-link:link,
+a.rules-link:visited,
+a.rules-link:hover,
+a.rules-link:active {
+  color: var(--accent);
+  text-decoration: underline dotted;
+}
+a.rules-link:hover {
+  color: var(--accent2);
 }
 .versions-list {
   list-style: none;

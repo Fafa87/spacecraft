@@ -5,6 +5,7 @@ import {
   type SquadSummary,
   type RunResult,
 } from '@sms/shared';
+import { runForBoard } from '../devPreview.js';
 import { AudioEngine } from '../audio/AudioEngine.js';
 import { config, getServerInfo } from '../config.js';
 import { GameClient } from '../game/GameClient.js';
@@ -169,7 +170,7 @@ export class App {
   }
 
   private submit(r: RunResult) {
-    return this.store.submit(r);
+    return this.store.submit(runForBoard(r));
   }
 
   private solo(name: string, demo = false): void {

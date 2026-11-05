@@ -1,4 +1,5 @@
 import { GAME_VERSION, leaderboardBoard, sanitizeName, type ContentRegistry } from '@sms/shared';
+import { DEV_PREVIEW } from '../../devPreview.js';
 import type { HighscoreStore } from '../../highscores/index.js';
 import { storage } from '../../util/storage.js';
 import { $, html } from '../dom.js';
@@ -37,6 +38,7 @@ export function createMenuScreen(actions: MenuActions, opts: MenuOptions): HTMLE
       <img class="emblem" src="${escapeHtml(opts.baseUrl)}ui/emblem.png" alt="" width="256" height="128">
       <h1>${escapeHtml(main)}${sub ? `<span>: ${escapeHtml(sub)}</span>` : ''}</h1>
       <p class="tagline">${escapeHtml(opts.content.subtitle)}</p>
+      ${DEV_PREVIEW ? `<div class="dev-badge" title="Unversioned dev preview — scores go to a separate DEV board">DEV PREVIEW ${escapeHtml(DEV_PREVIEW)}</div>` : ''}
       <div class="scroll">The hive spires have gone dark. Hold the breach until the last bolt is spent.</div>
     </div>
     <div class="cols">
@@ -54,14 +56,14 @@ export function createMenuScreen(actions: MenuActions, opts: MenuOptions): HTMLE
         </div>
         <div class="error" id="err"></div>
         <div class="help">
-          <span class="kbm-only"><b>WASD</b> move · <b>Mouse</b> aim · <b>LMB / Space</b> fire · <b>1-${opts.content.weaponOrder.length}</b> / <b>Q E</b> / wheel switch weapon · <b>R</b> reload · <b>M</b> mute<br></span>
-          <span class="touch-only"><b>Left thumb</b> move · <b>Right thumb</b> aim &amp; auto-fire · <b>tap a weapon</b> to switch · <b>⟳</b> reload · <b>⛶</b> fullscreen<br></span>
+          <span class="kbm-only"><b>WASD</b> move · <b>Mouse</b> aim · <b>LMB / Space</b> fire · <b>RMB</b> guard · <b>1-${opts.content.weaponOrder.length}</b> / <b>Q E</b> / wheel switch weapon · <b>R</b> reload · <b>M</b> mute<br></span>
+          <span class="touch-only"><b>Left thumb</b> move · <b>Right thumb</b> aim &amp; auto-fire · <b>🛡 GUARD</b> hold (right) · <b>tap a weapon</b> to switch · <b>⟳</b> reload · <b>⛶</b> fullscreen<br></span>
           Stand next to a downed battle-brother to revive them. Wargear unlocks over time; supply crates drop on the map. Plasma runs hot: past the line shots are supercharged, at the top it vents and burns you.
         </div>
         <div id="mixer"></div>
-        <div class="muted small" id="meta"><a class="rules-link" href="rules.html">ZASADY / RULES</a> · v${GAME_VERSION} · <span id="status">checking highscore server…</span>${opts.dedicated ? ' · dedicated host mode' : ' · P2P (browser-hosted)'}</div>
+        <div class="muted small" id="meta"><a class="rules-link" href="rules.html">ZASADY / RULES</a> · v${GAME_VERSION}${DEV_PREVIEW ? `-dev+${escapeHtml(DEV_PREVIEW)}` : ''} · <span id="status">checking highscore server…</span>${opts.dedicated ? ' · dedicated host mode' : ' · P2P (browser-hosted)'}</div>
       </div>
-      <div class="card scores"><h2>HONOURED DEAD · v${leaderboardBoard(GAME_VERSION)} BOARD</h2></div>
+      <div class="card scores"><h2>HONOURED DEAD · ${DEV_PREVIEW ? 'DEV' : `v${leaderboardBoard(GAME_VERSION)}`} BOARD</h2></div>
     </div>
     <p class="disclaimer">Unofficial, non-commercial fan project. Not affiliated with or endorsed by Games Workshop. Warhammer 40,000 and related marks are trademarks of Games Workshop Ltd. All art and sound here is procedurally generated.</p>
   </div>`);

@@ -1,5 +1,6 @@
 import {
   DECAL_VARIANTS,
+  muzzleDef,
   weaponRolesLabel,
   type ContentRegistry,
   type GameEvent,
@@ -93,14 +94,18 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
           volume: mine ? 1 : 0.6,
           priority: mine ? 8 : undefined,
         });
+      // Visual barrel tip of the weapon as drawn (before this shot's recoil slide); falls back
+      // to the sim muzzle (ev.x/ev.y, on the aim line) if the marine was not drawn yet.
+      const tip = r.muzzleWorld(ev.p, ev.w) ?? { x: ev.x, y: ev.y, a: ev.a };
+      const mx = tip.x;
+      const my = tip.y;
+      const dir = tip.a;
+      r.registerShot(ev.x, ev.y, ev.a, mx, my);
       r.kick(ev.p, vis.recoil * (ev.s ? 1.6 : 1));
-      // ev.x/ev.y is the muzzle position
-      const mx = ev.x;
-      const my = ev.y;
       if (ev.w === 'flamer') {
         P.burst(mx, my, 3, {
           speed: 70,
-          dir: ev.a,
+          dir,
           spread: 0.5,
           color: '#ffb050',
           maxLife: 0.22,
@@ -109,7 +114,7 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
         });
         P.burst(mx, my, 1, {
           speed: 40,
-          dir: ev.a,
+          dir,
           color: '#3a2a20',
           maxLife: 0.9,
           size: 6,
@@ -125,7 +130,7 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
           sprite: 'fx_muzzle',
           maxLife: 0.07,
           size: vis.muzzle * big,
-          angle: ev.a,
+          angle: dir,
           additive: true,
           drag: 0,
           color: vis.muzzleColor,
@@ -133,7 +138,7 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
         if (ev.w === 'plasma_gun' || ev.w === 'meltagun')
           P.burst(mx, my, ev.s ? 10 : 5, {
             speed: 120,
-            dir: ev.a,
+            dir,
             spread: 0.8,
             color: vis.muzzleColor,
             maxLife: 0.25,
@@ -141,10 +146,11 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
             additive: true,
           });
         if (vis.casing) {
-          const side = ev.a + Math.PI / 2;
+          const side = dir + Math.PI / 2; // ejection port on the marine's right
+          const breech = muzzleDef(ev.w).breech;
           P.spawn({
-            x: mx - Math.cos(ev.a) * 10,
-            y: my - Math.sin(ev.a) * 10,
+            x: mx - Math.cos(dir) * breech,
+            y: my - Math.sin(dir) * breech,
             vx: Math.cos(side) * 130 + (Math.random() - 0.5) * 40,
             vy: Math.sin(side) * 130,
             maxLife: 0.55,
@@ -312,6 +318,61 @@ export function playEvent(ev: GameEvent, fx: FxContext): void {
       break;
     }
     case 'boom': {
+      if (ev.k === 'melta') {
+        // Meltagun miss: a small heat flash where the beam runs out — white-hot core, a thin
+        // orange heat ring, a red heat bloom, a few embers and a light scorch. No fireball, smoke or shake.
+        const scale = ev.r / 64;
+        audio.play('melta_impact', { x: ev.x, y: ev.y, volume: 0.45 });
+        P.spawn({
+          x: ev.x,
+          y: ev.y,
+          shape: 'sprite',
+          sprite: 'fx_ring',
+          maxLife: 0.28,
+          size: scale * 0.35,
+          grow: 3.2,
+          additive: true,
+          drag: 0,
+          color: '#ff7040',
+        });
+        // heat bloom: stacked additive discs read as a soft red→orange gradient
+        for (const [f, color, life] of [
+          [0.6, '#4a1006', 0.34],
+          [0.46, '#6a1c08', 0.3],
+          [0.34, '#8a3010', 0.26],
+        ] as const) {
+          P.spawn({
+            x: ev.x,
+            y: ev.y,
+            maxLife: life,
+            size: ev.r * f,
+            grow: 1.3,
+            additive: true,
+            drag: 0,
+            color,
+          });
+        }
+        P.spawn({
+          x: ev.x,
+          y: ev.y,
+          maxLife: 0.2,
+          size: ev.r * 0.18,
+          additive: true,
+          drag: 0,
+          color: '#fff0c8',
+        });
+        P.burst(ev.x, ev.y, 9, {
+          speed: 160,
+          color: '#ffb070',
+          maxLife: 0.45,
+          size: 2,
+          shape: 'spark',
+          additive: true,
+          drag: 4,
+        });
+        r.addDecal('decal_scorch_1', ev.x, ev.y, scale * 0.8, 0.6);
+        break;
+      }
       // bolt shells (r≈30) already have their impact crack; spore bursts squelch; frags boom
       if (ev.r >= 110) audio.play('explosion', { x: ev.x, y: ev.y });
       else if (ev.r >= 60) audio.play('nid_spore_burst', { x: ev.x, y: ev.y });

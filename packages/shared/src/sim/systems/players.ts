@@ -1,4 +1,5 @@
 import { PLAYER } from '../../constants.js';
+import { isGuarding } from '../../data/guard.js';
 import { stepSprint } from '../../data/sprint.js';
 import { dist2 } from '../../math/vec.js';
 import type { Player, World } from '../types.js';
@@ -17,25 +18,33 @@ export function updatePlayerMovement(world: World, dt: number): void {
   for (const p of world.players) {
     if (p.state !== 'alive') {
       p.fireSlow = 0;
+      p.moveFrac = 0;
       p.sprint.sprinting = false;
       p.sprint.weaponDelay = 0;
+      p.guarding = false;
       continue;
     }
     p.invuln = Math.max(0, p.invuln - dt);
     const def = world.content.weapon(p.current);
     const { mx, my } = p.input;
     trackStillness(p, mx, my, dt);
+    const moving = isMoving(mx, my);
     stepSprint(
       p.sprint,
       p.input.sprint === true,
-      isMoving(mx, my),
+      moving,
       !isReviving(world, p),
       dt,
       p.input.fire === true,
     );
+    // Defensive stance: hold input while standing still. Any move cancels immediately.
+    p.guarding = isGuarding(p.input.guard === true, true, moving);
     p.fireSlow = stepFireSlow(p.fireSlow, effectiveFire(p.input.fire, p.sprint), dt);
     const speed = p.sprint.sprinting ? marineSprintSpeed() : marineMoveSpeed(def, p.fireSlow);
+    const x0 = p.x;
+    const y0 = p.y;
     stepPlayerMovement(p, mx, my, speed, dt, world.map.arena);
+    p.moveFrac = speed > 0 ? Math.min(1, Math.hypot(p.x - x0, p.y - y0) / (speed * dt)) : 0;
   }
 }
 

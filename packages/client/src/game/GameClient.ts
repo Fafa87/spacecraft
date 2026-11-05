@@ -1,5 +1,6 @@
 import {
   Emitter,
+  isMoving,
   marineMoveSpeed,
   playerMoveSpeed,
   stepFireSlow,
@@ -25,6 +26,7 @@ import { EnemyAudio } from './enemyAudio.js';
 import { isImmediate, playEvent, type FxContext, type NoticeKind } from './fx.js';
 import { SnapshotBuffer } from './interpolation.js';
 import { Predictor } from './prediction.js';
+import { RecoilMirror, recoilReticle } from './recoil.js';
 import { createLeaveDialog } from '../ui/leaveDialog.js';
 import { isRotateBlocked, onRotateBlockedChange } from '../input/orientation.js';
 
@@ -53,7 +55,10 @@ export class GameClient extends Emitter<GameClientEvents> {
   private inputAcc = 0;
   /** Predicted firing slow-down 0..1 (mirrors Player.fireSlow on the host). */
   private fireSlow = 0;
+  /** Raw input aim (mouse / stick) we send; the host adds its recoil offset. */
   private aim = 0;
+  /** Host aim recoil for our marine, recovering between snapshots (data/recoil.ts). */
+  private readonly recoil = new RecoilMirror();
   private lastEventTick = -1;
   private hurt = 0;
   private fps = 60;
@@ -201,13 +206,17 @@ export class GameClient extends Emitter<GameClientEvents> {
   /** Render facing: the run direction while sprinting (the host does the same), else the aim. */
   private facing(me: PlayerSnap | undefined): number {
     const sp = this.mySprint(me);
-    if (!sp?.sprinting) return this.aim;
+    if (!sp?.sprinting) return this.aim + this.recoil.angle(performance.now());
     const m = this.input.read().move;
     return m.x !== 0 || m.y !== 0 ? Math.atan2(m.y, m.x) : this.aim;
   }
 
   /** Last fire input we sent (stick feedback: a held trigger blocks the start of a sprint). */
   private lastFire = false;
+  /** Last guard input + move axes (local defensive-stance pose before the snapshot catches up). */
+  private lastGuard = false;
+  private lastMx = 0;
+  private lastMy = 0;
   private wasSprinting = false;
 
   /** Subtle haptic tick when a sprint really starts (touch on Android only; harmless no-op elsewhere). */
@@ -248,6 +257,8 @@ export class GameClient extends Emitter<GameClientEvents> {
     this.buffer.push(snap, performance.now());
     const me = this.me(snap);
     if (me) this.predictor.reconcile(me.x, me.y, me.seq, me.st === 'alive', hostSprint(me));
+    if (me?.st === 'alive' && !me.sp) this.recoil.sync(me.rc, me.w, performance.now());
+    else this.recoil.reset();
     const ctx = this.fxContext(snap);
     for (const ev of snap.events) if (isImmediate(ev, this.myId)) playEvent(ev, ctx);
   }
@@ -276,8 +287,12 @@ export class GameClient extends Emitter<GameClientEvents> {
         slot,
         reload: actions.reload,
         ...(alive && intent.sprint ? { sprint: true } : {}),
+        ...(alive && intent.guard ? { guard: true } : {}),
       });
       this.lastFire = sent.fire;
+      this.lastGuard = sent.guard === true;
+      this.lastMx = sent.mx;
+      this.lastMy = sent.my;
       // Sprint + firing slow-down exactly like the host sim (shared pure helpers), driven by our
       // own inputs: the sprint state steps first, then the (effective) trigger slows us down.
       const sprintOk = me.stm !== undefined && !this.reviving(latest!);
@@ -361,7 +376,15 @@ export class GameClient extends Emitter<GameClientEvents> {
       b: sample.b,
       t: sample.t,
       myId: this.myId,
-      me: myPos ? { ...myPos, aim: this.facing(meLatest), sprint: this.mySprint(meLatest) } : null,
+      me: myPos
+        ? {
+            ...myPos,
+            aim: this.facing(meLatest),
+            sprint: this.mySprint(meLatest),
+            // Prefer live input so the pose appears the tick we hold still; fall back to host gd.
+            guarding: (this.lastGuard && !isMoving(this.lastMx, this.lastMy)) || meLatest?.gd === 1,
+          }
+        : null,
       nowMs: now,
       dt,
     });
@@ -396,7 +419,7 @@ export class GameClient extends Emitter<GameClientEvents> {
       notices: this.notices,
       ping: this.conn.session.rtt,
       fps: this.fps,
-      crosshair: this.crosshair(),
+      ...this.crosshairs(myPos, now),
       touch: this.input.active === 'touch' ? this.input.touch.sticks(stickSim) : null,
       inset: safeAreaInsets(),
       roomCode: this.conn.roomCode,
@@ -427,17 +450,36 @@ export class GameClient extends Emitter<GameClientEvents> {
     this.audio.setMusicIntensity(this.intensity);
   }
 
-  /** Crosshair position in CSS px: the mouse on PC, a reticle along the aim stick on touch. */
-  private crosshair(): { x: number; y: number } | null {
-    if (this.input.active === 'kbm') return { x: this.input.kbm.mouseX, y: this.input.kbm.mouseY };
-    if (!this.input.touch.aimStick.vector.active || !this.predictor.ready) return null;
+  /**
+   * Crosshair in CSS px: the mouse on PC, a reticle along the aim stick on touch — rotated around
+   * the marine by the aim recoil (the exact aim the host shoots with) and pushed out by its kick.
+   * `crosshairRaw` = the unrecoiled input point (a faint dot while the two differ).
+   */
+  private crosshairs(
+    myPos: { x: number; y: number } | null,
+    nowMs: number,
+  ): { crosshair: { x: number; y: number } | null; crosshairRaw: { x: number; y: number } | null } {
     const cam = this.renderer.camera;
-    const p = this.predictor.pos;
-    const d = 150;
-    return {
-      x: (p.x - cam.x) * cam.zoom + cam.width / 2 + Math.cos(this.aim) * d,
-      y: (p.y - cam.y) * cam.zoom + cam.height / 2 + Math.sin(this.aim) * d,
+    const p = myPos ?? (this.predictor.ready ? this.predictor.pos : null);
+    let raw: { x: number; y: number } | null = null;
+    if (this.input.active === 'kbm') raw = { x: this.input.kbm.mouseX, y: this.input.kbm.mouseY };
+    else if (this.input.touch.aimStick.vector.active && p) {
+      const d = 150;
+      raw = {
+        x: (p.x - cam.x) * cam.zoom + cam.width / 2 + Math.cos(this.aim) * d,
+        y: (p.y - cam.y) * cam.zoom + cam.height / 2 + Math.sin(this.aim) * d,
+      };
+    }
+    if (!raw || !p) return { crosshair: raw, crosshairRaw: null };
+    const rc = this.recoil.angle(nowMs);
+    if (rc === 0) return { crosshair: raw, crosshairRaw: null };
+    const marine = {
+      x: (p.x - cam.x) * cam.zoom + cam.width / 2,
+      y: (p.y - cam.y) * cam.zoom + cam.height / 2,
     };
+    const shown = recoilReticle(raw, marine, rc, this.recoil.push(nowMs) * cam.zoom);
+    const off = Math.hypot(shown.x - raw.x, shown.y - raw.y);
+    return { crosshair: shown, crosshairRaw: off > 2 ? raw : null };
   }
 
   private drawWaiting(): void {

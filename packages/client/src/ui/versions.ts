@@ -1,4 +1,5 @@
 import { GAME_VERSION } from '@sms/shared';
+import { DEV_PREVIEW, isDevBoardVersion } from '../devPreview.js';
 import { escapeHtml } from './format.js';
 
 /** One entry of /spacecraft/versions.json (written by scripts/deploy-pages.ts). */
@@ -11,10 +12,11 @@ export interface VersionEntry {
 
 /**
  * Site root of the Pages deploy: BASE_URL without a trailing `vX.Y.Z/` segment, so both the
- * latest build (/spacecraft/) and frozen builds (/spacecraft/v0.2.0/) find the same list.
+ * latest build (/spacecraft/), frozen builds (/spacecraft/v0.2.0/) and the dev preview
+ * (/spacecraft/dev/) find the same list.
  */
 export function siteRoot(base = import.meta.env.BASE_URL): string {
-  return base.replace(/v\d+\.\d+\.\d+\/?$/, '');
+  return base.replace(/(v\d+\.\d+\.\d+|dev)\/?$/, '');
 }
 
 export async function loadVersions(): Promise<VersionEntry[]> {
@@ -22,7 +24,8 @@ export async function loadVersions(): Promise<VersionEntry[]> {
     const r = await fetch(`${siteRoot()}versions.json`, { cache: 'no-cache' });
     if (!r.ok) return [];
     const j = (await r.json()) as { versions?: VersionEntry[] };
-    return Array.isArray(j.versions) ? j.versions : [];
+    // the hidden dev-preview board (0.0.0) is never a real version
+    return Array.isArray(j.versions) ? j.versions.filter((v) => !isDevBoardVersion(v.version)) : [];
   } catch {
     return [];
   }
@@ -34,13 +37,15 @@ export function createVersionsLink(): HTMLElement {
   wrap.className = 'versions';
   wrap.hidden = true;
   void loadVersions().then((list) => {
-    const older = list.filter((v) => v.version !== GAME_VERSION);
+    // The dev preview is never in the list, so every listed version is "other" there.
+    const current = DEV_PREVIEW ? null : GAME_VERSION;
+    const older = list.filter((v) => v.version !== current);
     if (!older.length) return;
     wrap.hidden = false;
     wrap.innerHTML = ` · <a class="versions-link" role="button" tabindex="0">Previous versions</a><ul class="versions-list" hidden>${list
       .map(
         (v) =>
-          `<li><a href="${escapeHtml(v.path)}">v${escapeHtml(v.version)}</a> — ${escapeHtml(v.title)} <span class="muted">(${escapeHtml(v.date)})</span>${v.version === GAME_VERSION ? ' <span class="tag you">CURRENT</span>' : ''}</li>`,
+          `<li><a href="${escapeHtml(v.path)}">v${escapeHtml(v.version)}</a> — ${escapeHtml(v.title)} <span class="muted">(${escapeHtml(v.date)})</span>${v.version === current ? ' <span class="tag you">CURRENT</span>' : ''}</li>`,
       )
       .join('')}</ul>`;
     const link = wrap.querySelector('.versions-link') as HTMLElement;

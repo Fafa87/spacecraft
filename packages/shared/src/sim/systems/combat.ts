@@ -1,5 +1,11 @@
 import { PICKUP, PLAYER } from '../../constants.js';
-import { armourMul, saveChance, woundMul, type ExplosionSpec } from '../../data/index.js';
+import {
+  armourMul,
+  MARINE_GUARD,
+  saveChance,
+  woundMul,
+  type ExplosionSpec,
+} from '../../data/index.js';
 import { dist } from '../../math/vec.js';
 import { allocId } from '../world.js';
 import { dropCaps } from './director.js';
@@ -114,7 +120,8 @@ export function damagePlayer(
   if (source) {
     const dx = 'dirX' in source ? source.dirX : source.fromX - player.x;
     const dy = 'dirX' in source ? source.dirY : source.fromY - player.y;
-    amount *= armourMul(player.aim, dx, dy);
+    const front = player.guarding ? MARINE_GUARD.frontMul : undefined;
+    amount *= armourMul(player.aim, dx, dy, front);
   }
   player.hp -= amount;
   player.invuln = PLAYER.hurtInvuln;
@@ -138,6 +145,8 @@ export interface ExplodeOpts {
    * (full damage to marines). Used for chain blasts set off by a kill.
    */
   creditPlayerId?: number;
+  /** Projectile kind for an end-of-range burst (sent as the boom event's `k`, client FX). */
+  kind?: string;
 }
 
 /** Radial damage with linear falloff to `edgeFactor` at the rim; the blast's own S / AP apply. */
@@ -148,7 +157,13 @@ export function explode(
   spec: ExplosionSpec,
   opts: ExplodeOpts,
 ): void {
-  world.events.push({ e: 'boom', x: Math.round(x), y: Math.round(y), r: spec.radius });
+  world.events.push({
+    e: 'boom',
+    x: Math.round(x),
+    y: Math.round(y),
+    r: spec.radius,
+    ...(opts.kind ? { k: opts.kind } : {}),
+  });
   const falloff = (d: number) =>
     spec.damage * (1 - (1 - spec.edgeFactor) * Math.min(1, d / spec.radius));
   if (opts.hurtsEnemies) {

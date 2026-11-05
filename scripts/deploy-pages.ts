@@ -4,6 +4,7 @@
  * Layout on gh-pages (served at https://<owner>.github.io/<repo>/):
  *   /                 latest build (BASE_PATH=/<repo>/)
  *   /vX.Y.Z/          frozen build of every released version (BASE_PATH=/<repo>/vX.Y.Z/)
+ *   /dev/             unversioned dev preview (scripts/deploy-dev.ts); kept as is, never listed
  *   /versions.json    { versions: [{ version, date, title, path }] }, newest first; read by the
  *                     "Previous versions" link in the menu
  *
@@ -121,9 +122,10 @@ function main(): void {
   const wt = fs.mkdtempSync(path.join(os.tmpdir(), 'ghp-'));
   run('git', ['worktree', 'add', '--detach', wt, 'origin/gh-pages']);
   try {
-    // Root: drop everything except .git, frozen version folders and versions.json.
+    // Root: drop everything except .git, frozen version folders, the dev preview and versions.json.
     for (const f of fs.readdirSync(wt)) {
-      if (f === '.git' || /^v\d+\.\d+\.\d+$/.test(f) || f === 'versions.json') continue;
+      if (f === '.git' || /^v\d+\.\d+\.\d+$/.test(f) || f === 'dev' || f === 'versions.json')
+        continue;
       fs.rmSync(path.join(wt, f), { recursive: true, force: true });
     }
     fs.cpSync(rootStage, wt, { recursive: true });

@@ -1,7 +1,13 @@
 import { PLAYER } from '../../constants.js';
 import { dist2 } from '../../math/vec.js';
 import type { SpatialHash } from '../spatialHash.js';
-import { armourArc, enemyProjectileDeflectChances, MARINE_DEFLECTION } from '../../data/index.js';
+import {
+  armourArc,
+  enemyProjectileDeflectChances,
+  guardDeflectChance,
+  MARINE_DEFLECTION,
+  MARINE_GUARD,
+} from '../../data/index.js';
 import type { Enemy, Player, Projectile, World } from '../types.js';
 import { damageEnemy, damagePlayer, explode } from './combat.js';
 
@@ -22,14 +28,10 @@ export function updateProjectiles(world: World, enemyHash: SpatialHash<Enemy>, d
     pr.x += pr.vx * dt;
     pr.y += pr.vy * dt;
     pr.life -= dt;
-    if (
-      pr.life <= 0 ||
-      pr.x < 0 ||
-      pr.y < 0 ||
-      pr.x > world.map.arena.width ||
-      pr.y > world.map.arena.height
-    ) {
-      detonate(world, pr);
+    const outside =
+      pr.x < 0 || pr.y < 0 || pr.x > world.map.arena.width || pr.y > world.map.arena.height;
+    if (pr.life <= 0 || outside) {
+      detonate(world, pr, !outside);
       continue;
     }
     if (pr.deflected) continue; // a ricochet hits nothing
@@ -78,6 +80,8 @@ function hitEnemies(
   hits.sort((a, b) => a.t - b.t);
   for (const { enemy } of hits) {
     if (pr.dead) return;
+    // Pierce spent but coasting to an end-of-range burst: ignore further targets.
+    if (pr.pierceLeft < 0) return;
     pr.hit.push(enemy.id);
     if (pr.explosion) {
       // Mass-reactive: direct hit (if any) and then the blast on the target.
@@ -117,7 +121,11 @@ function hitEnemies(
         world.events.push({ e: 'bnc', x: Math.round(enemy.x), y: Math.round(enemy.y), k: pr.kind });
     } else if (pr.kind !== 'flame' && pr.kind !== 'slash')
       world.events.push({ e: 'hit', x: Math.round(enemy.x), y: Math.round(enemy.y), k: pr.kind });
-    if (pr.pierceLeft-- <= 0) pr.dead = true;
+    if (pr.pierceLeft-- <= 0) {
+      // Melta (endBurst): keep flying to max range for the ground flash even after the last pierce.
+      // Other beams die on the final target as before.
+      if (!pr.endBurst) pr.dead = true;
+    }
   }
 }
 
@@ -127,15 +135,17 @@ function hitPlayers(world: World, pr: Projectile, x0: number, y0: number): void 
     const r = PLAYER.radius + pr.radius;
     if (segmentDist2(x0, y0, pr.x, pr.y, p.x, p.y) <= r * r) {
       if (tryDeflect(world, pr, p)) return;
-      if (pr.damage > 0)
+      if (pr.damage > 0) {
         // Armour faces the incoming shot: source direction = against its travel (or its
         // segment start if it has somehow stopped).
-        damagePlayer(
-          world,
-          p,
-          pr.damage,
-          pr.vx || pr.vy ? { dirX: -pr.vx, dirY: -pr.vy } : { fromX: x0, fromY: y0 },
-        );
+        const src = pr.vx || pr.vy ? { dirX: -pr.vx, dirY: -pr.vy } : { fromX: x0, fromY: y0 };
+        const dx = pr.vx || pr.vy ? -pr.vx : x0 - p.x;
+        const dy = pr.vx || pr.vy ? -pr.vy : y0 - p.y;
+        let dmg = pr.damage;
+        // A front hit that got past the plate while guarding takes a further −30%.
+        if (p.guarding && armourArc(p.aim, dx, dy) === 'front') dmg *= MARINE_GUARD.landedDamageMul;
+        damagePlayer(world, p, dmg, src);
+      }
       if (pr.explosion) {
         detonate(world, pr);
         return;
@@ -166,7 +176,8 @@ export function deflectChance(world: World, kind: string): number {
 function tryDeflect(world: World, pr: Projectile, p: Player): boolean {
   if (pr.owner !== 'enemy' || pr.explosion || !(pr.vx || pr.vy)) return false;
   if (armourArc(p.aim, -pr.vx, -pr.vy) !== 'front') return false;
-  const chance = deflectChance(world, pr.kind);
+  let chance = deflectChance(world, pr.kind);
+  if (p.guarding) chance = guardDeflectChance(chance);
   if (!(chance > 0) || !world.rng.chance(chance)) return false;
   // Mirror the velocity across the plate (normal = facing), then a little seeded jitter.
   const nx = Math.cos(p.aim);
@@ -199,7 +210,8 @@ function tryDeflect(world: World, pr: Projectile, p: Player): boolean {
   return true;
 }
 
-function detonate(world: World, pr: Projectile): void {
+/** `atRange` = the projectile ran out of lifetime inside the arena (not a hit, not off-map). */
+function detonate(world: World, pr: Projectile, atRange = false): void {
   if (pr.dead) return;
   pr.dead = true;
   if (pr.explosion) {
@@ -207,6 +219,16 @@ function detonate(world: World, pr: Projectile): void {
       hurtsEnemies: pr.owner === 'player',
       hurtsPlayers: pr.owner === 'enemy' || !!pr.explosion.friendlyFire,
       sourcePlayerId: pr.owner === 'player' ? pr.ownerId : undefined,
+    });
+  } else if (atRange && pr.endBurst && !pr.deflected) {
+    // End-of-range burst (meltagun): always at max range — misses and piercing hits alike.
+    // No burst after a deflection or after leaving the arena (`atRange` is false off-map).
+    // Same friendly-fire rule as other blasts: marine bursts hurt enemies only unless friendlyFire.
+    explode(world, pr.x, pr.y, pr.endBurst, {
+      hurtsEnemies: pr.owner === 'player',
+      hurtsPlayers: pr.owner === 'enemy' || !!pr.endBurst.friendlyFire,
+      sourcePlayerId: pr.owner === 'player' ? pr.ownerId : undefined,
+      kind: pr.kind,
     });
   }
 }

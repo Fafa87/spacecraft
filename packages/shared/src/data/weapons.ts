@@ -18,7 +18,7 @@ export const WEAPONS: WeaponDef[] = [
     magazine: 30,
     reloadTime: 1.5,
     pellets: 1,
-    spread: 0.05,
+    spread: 0.126,
     moveSpeedMul: 1,
     fireMoveMul: 0.8,
     projectile: {
@@ -50,7 +50,7 @@ export const WEAPONS: WeaponDef[] = [
     magazine: 90,
     reloadTime: 2.6,
     pellets: 1,
-    spread: 0.12,
+    spread: 0.3024,
     moveSpeedMul: 0.9,
     fireMoveMul: 0.65,
     // Braced: standing still for braceDelay s -> +70% fire rate, tighter cone.
@@ -91,7 +91,7 @@ export const WEAPONS: WeaponDef[] = [
     magazine: 110,
     reloadTime: 2.2,
     pellets: 2,
-    spread: 0.55,
+    spread: 1.386,
     moveSpeedMul: 0.95,
     fireMoveMul: 0.85,
     projectile: {
@@ -129,7 +129,7 @@ export const WEAPONS: WeaponDef[] = [
     magazine: 20,
     reloadTime: 1.8,
     pellets: 1,
-    spread: 0.03,
+    spread: 0.0756,
     moveSpeedMul: 0.95,
     fireMoveMul: 0.8,
     projectile: {
@@ -189,6 +189,8 @@ export const WEAPONS: WeaponDef[] = [
       ap: 4,
       pierce: 3,
       knockback: 220,
+      // A miss still flashes the floor at max range: ~23% of the frag's damage, ~55% of its radius.
+      endBurst: { radius: 66, damage: 25, edgeFactor: 0.35, strength: 4, ap: 0 },
     },
     unlockAtWave: 6,
     crateWeight: 5,
@@ -207,7 +209,7 @@ export const WEAPONS: WeaponDef[] = [
     magazine: 3,
     reloadTime: 2.4,
     pellets: 1,
-    spread: 0.04,
+    spread: 0.1008,
     moveSpeedMul: 1,
     fireMoveMul: 0.9,
     projectile: {

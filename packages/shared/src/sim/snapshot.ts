@@ -1,3 +1,4 @@
+import { RECOIL_WIRE } from '../data/recoil.js';
 import { round } from '../math/vec.js';
 import { remainingEnemies } from './systems/director.js';
 import { isBraced } from './systems/weapons.js';
@@ -33,12 +34,16 @@ export interface PlayerSnap {
   sc: number;
   /** Braced (bracing weapon equipped, standing still long enough). */
   br?: 1;
+  /** Aim recoil offset (rad, 1/2000 steps; omitted when 0). The `a` above already includes it. */
+  rc?: number;
   /** Sprinting (v0.5.3-dev; optional so v5 peers without it still decode). */
   sp?: 1;
   /** Sprint stamina in seconds (0..MARINE_SPRINT.staminaMaxS). Absent from older hosts. */
   stm?: number;
   /** Seconds until the weapon is ready again after a sprint (absent/0 = ready). */
   wd?: number;
+  /** Defensive stance (guard) active. Optional so older peers ignore it. */
+  gd?: 1;
 }
 
 /** Spawn point state in Snapshot.sp: idle, telegraphing (about to emerge), active (emerging). */
@@ -129,6 +134,11 @@ function sprintFields(p: Player): { sp?: 1; stm: number; wd?: number } {
   return out;
 }
 
+function recoilFields(p: Player): { rc?: number } {
+  const rc = Math.round(p.recoil * RECOIL_WIRE.scale) / RECOIL_WIRE.scale;
+  return rc !== 0 ? { rc } : {};
+}
+
 function heatFields(world: World, p: Player): { ht?: number; vt?: 1 } {
   const heat = world.content.weapon(p.current).heat;
   if (!heat) return {};
@@ -177,8 +187,10 @@ export function buildSnapshot(world: World, bleedOutTime: number): Snapshot {
       k: p.kills,
       sc: p.score,
       ...(isBraced(p, c.weapon(p.current)) ? { br: 1 as const } : {}),
+      ...(p.guarding ? { gd: 1 as const } : {}),
       ...heatFields(world, p),
       ...sprintFields(p),
+      ...recoilFields(p),
     })),
     enemies: world.enemies.map((e) => [
       e.id,

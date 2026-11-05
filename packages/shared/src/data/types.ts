@@ -37,6 +37,12 @@ export interface ProjectileSpec {
   drag?: number;
   knockback: number;
   explosion?: ExplosionSpec;
+  /**
+   * Burst at the end of the projectile's range (lifetime runs out inside the arena), e.g. the
+   * meltagun's heat flash. Fires after a miss or after piercing hits — the beam keeps flying to
+   * max range. Not after a deflection, not when it leaves the arena.
+   */
+  endBurst?: ExplosionSpec;
 }
 
 /**

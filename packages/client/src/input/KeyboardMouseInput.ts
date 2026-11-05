@@ -1,8 +1,8 @@
 import type { ActionIntent, ContinuousIntent, InputSource } from './InputSource.js';
 
 /**
- * Keyboard + mouse: WASD/arrows move, mouse aims, LMB/Space fires, Shift (hold) sprints,
- * 1-9 / Q E / wheel switch weapons, R reloads. Behaviour is identical to the pre-abstraction InputState.
+ * Keyboard + mouse: WASD/arrows move, mouse aims, LMB/Space fires, Shift (hold) sprints, RMB (hold) defensive stance,
+ * 1-9 / Q E / wheel switch weapons, R reloads.
  */
 export class KeyboardMouseInput implements InputSource {
   readonly kind = 'kbm' as const;
@@ -10,6 +10,8 @@ export class KeyboardMouseInput implements InputSource {
   mouseX = 0;
   mouseY = 0;
   mouseDown = false;
+  /** RMB held = defensive stance. */
+  mouseRight = false;
   /** True once the mouse has moved over the page (so we have a real aim point). */
   hasPointer = false;
   private latchedSlot = 0;
@@ -45,6 +47,7 @@ export class KeyboardMouseInput implements InputSource {
     on(window, 'blur', () => {
       this.keys.clear();
       this.mouseDown = false;
+      this.mouseRight = false;
     });
     on(window, 'mousemove', (e) => {
       const r = canvas.getBoundingClientRect();
@@ -58,9 +61,11 @@ export class KeyboardMouseInput implements InputSource {
     });
     on(canvas, 'mousedown', (e) => {
       if (e.button === 0) this.mouseDown = true;
+      if (e.button === 2) this.mouseRight = true;
     });
     on(window, 'mouseup', (e) => {
       if (e.button === 0) this.mouseDown = false;
+      if (e.button === 2) this.mouseRight = false;
     });
     on(canvas, 'contextmenu', (e) => e.preventDefault());
     on(canvas, 'wheel', (e) => {
@@ -84,6 +89,7 @@ export class KeyboardMouseInput implements InputSource {
       aim: { kind: 'screen', x: this.mouseX, y: this.mouseY },
       fire: this.mouseDown || this.down('Space'),
       sprint: this.down('ShiftLeft') || this.down('ShiftRight'),
+      guard: this.mouseRight,
     };
   }
 

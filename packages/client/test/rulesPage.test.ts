@@ -32,8 +32,16 @@ describe('rules page', () => {
     for (const v of [A.front, A.side, A.rear])
       expect(t).toContain(`×${String(v).replace('.', ',')}`);
     const ch = enemyProjectileDeflectChances(defaultContent.enemies.values());
-    for (const v of Object.values(ch).filter((x) => x > 0))
-      expect(t).toContain(`${Math.round(v * 100)}%`);
+    const pc = (v: number) => `${String(Number((v * 100).toFixed(1))).replace('.', ',')}%`;
+    for (const v of Object.values(ch).filter((x) => x > 0)) {
+      expect(t).toContain(pc(v));
+      expect(html).toContain(pc(v));
+    }
+    expect(ch.fleshborer).toBe(0.6);
+    expect(t).toContain('60%');
+    expect(t).toContain('14,7%');
+    expect(html).toContain('<b>Termagant</b> 60%');
+    expect(html).toMatch(/Warrior<\/b> 14,7%/);
     expect(html).toContain('id="pancerz"');
     expect(html).toContain('Pancerz kierunkowy i rykoszety');
   });

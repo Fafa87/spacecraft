@@ -39,23 +39,36 @@ export function armourArc(facing: number, dx: number, dy: number): ArmourArc {
   return 'side';
 }
 
-/** Damage multiplier for a hit from (dx, dy) relative to the marine, given its facing. */
-export function armourMul(facing: number, dx: number, dy: number): number {
-  return MARINE_DIRECTIONAL_ARMOUR[armourArc(facing, dx, dy)];
+/**
+ * Damage multiplier for a hit from (dx, dy) relative to the marine, given its facing.
+ * Optional `frontOverride` (e.g. MARINE_GUARD.frontMul while guarding) replaces the idle
+ * front multiplier; side/rear are unchanged. Keeps armour.ts free of a cycle on guard.ts.
+ */
+export function armourMul(facing: number, dx: number, dy: number, frontOverride?: number): number {
+  const arc = armourArc(facing, dx, dy);
+  if (arc === 'front' && frontOverride !== undefined) return frontOverride;
+  return MARINE_DIRECTIONAL_ARMOUR[arc];
 }
 
 /**
  * Front-plate deflection: an enemy projectile (not melee, not blasts) striking the FRONT arc may
- * ricochet off the ceramite. The weakest Tyranid shot glances off `maxChance` of the time;
- * harder-hitting shots less often: chance = maxChance × weakestDamage / damage, clamped to
- * [minChance, maxChance]. "Damage" is the projectile's base `damage` from the enemy table
- * (synapse buffs don't change the odds). Explosive shells (Biovore spore) never deflect: they
- * burst on impact. A deflected shot does no damage, is mirrored off the plate (small seeded
- * jitter, slowed), turns harmless to everyone and fades out within `fadeTime` seconds.
+ * ricochet off the ceramite with an explicit per-projectile chance (`chanceByProjectile`, keyed by
+ * projectile kind). A direct-fire projectile kind missing from the table uses `defaultChance`.
+ * Explosive shells (Biovore spore) and harmless shots never deflect, whatever the table says:
+ * they burst on impact. Synapse buffs don't change the odds. A deflected shot does no damage, is
+ * mirrored off the plate (small seeded jitter, slowed), turns harmless to everyone and fades out
+ * within `fadeTime` seconds.
  */
 export const MARINE_DEFLECTION = {
-  maxChance: 0.3,
-  minChance: 0.05,
+  /** Chance per enemy projectile kind (front-arc hits only). */
+  chanceByProjectile: {
+    /** Termagant fleshborer, the weakest shot (v0.6.0: 30 %, doubled). */
+    fleshborer: 0.6,
+    /** Tyranid Warrior deathspitter, the stronger shot (v0.6.0: 21 %, −30 %). */
+    deathspitter: 0.147,
+  } as Readonly<Record<string, number>>,
+  /** Any future direct-fire projectile not in the table. */
+  defaultChance: 0.15,
   /** Max ± rotation (radians) applied to the mirrored direction. */
   jitter: 0.35,
   /** Speed multiplier of the ricochet. */
@@ -69,20 +82,25 @@ interface RangedEnemyLike {
   ranged?: { projectile: { kind: string; damage: number; explosion?: unknown } };
 }
 
+/** Deflection chance for one projectile spec (0 for explosive / harmless shots). */
+export function projectileDeflectChance(spec: {
+  kind: string;
+  damage: number;
+  explosion?: unknown;
+}): number {
+  if (spec.explosion || !(spec.damage > 0)) return 0;
+  const { chanceByProjectile, defaultChance } = MARINE_DEFLECTION;
+  return Object.prototype.hasOwnProperty.call(chanceByProjectile, spec.kind)
+    ? chanceByProjectile[spec.kind]!
+    : defaultChance;
+}
+
 /** Deflection chance per enemy projectile kind (0 for explosive / harmless shots). */
 export function enemyProjectileDeflectChances(
   enemies: Iterable<RangedEnemyLike>,
 ): Record<string, number> {
-  const specs = [...enemies].flatMap((e) => (e.ranged ? [e.ranged.projectile] : []));
-  const direct = specs.filter((s) => !s.explosion && s.damage > 0);
-  const weakest = Math.min(...direct.map((s) => s.damage));
   const out: Record<string, number> = {};
-  const { maxChance, minChance } = MARINE_DEFLECTION;
-  for (const s of specs) {
-    out[s.kind] =
-      s.explosion || !(s.damage > 0)
-        ? 0
-        : Math.min(maxChance, Math.max(minChance, (maxChance * weakest) / s.damage));
-  }
+  for (const e of enemies)
+    if (e.ranged) out[e.ranged.projectile.kind] = projectileDeflectChance(e.ranged.projectile);
   return out;
 }

@@ -207,3 +207,15 @@ export const DEFAULT_WEAPON_VISUAL: WeaponVisual = {
   shake: 0,
   casing: false,
 };
+
+/**
+ * Muzzle-anchored tracer streak per player projectile kind (length px, colour): drawn behind the
+ * shot but never further back than the barrel tip, so the first frames visibly leave the muzzle.
+ */
+export const PROJECTILE_TRACERS: Record<string, { len: number; color: string; width: number }> = {
+  bolt: { len: 26, color: '#ffd070', width: 2 },
+  heavy_bolt: { len: 34, color: '#ffc060', width: 2.6 },
+  plasma: { len: 24, color: '#8fe4ff', width: 3 },
+  plasma_super: { len: 32, color: '#c8f4ff', width: 4 },
+  melta: { len: 30, color: '#ffb070', width: 3.4 },
+};

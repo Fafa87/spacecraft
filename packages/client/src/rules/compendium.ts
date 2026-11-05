@@ -4,8 +4,10 @@
  */
 import {
   GAME_VERSION,
+  MARINE_AIM_RECOIL,
   MARINE_DEFLECTION,
   MARINE_DIRECTIONAL_ARMOUR,
+  MARINE_GUARD,
   MARINE_SPRINT,
   MAX_PLAYERS,
   PICKUP,
@@ -15,6 +17,8 @@ import {
   enemyProjectileDeflectChances,
   expectedDps,
   expectedShotDamage,
+  recoilRecoveryTime,
+  weaponRecoil,
   sustainedDps,
   saveChance,
   weaponProfileLabel,
@@ -59,7 +63,7 @@ export function weaponTable(c: ContentRegistry): string {
       `${w.slot}. ${esc(w.name)}`,
       esc(w.roles.join(' · ')),
       esc(weaponProfileLabel(w)),
-      `${n(p.damage, 1)}${w.pellets > 1 ? ` ×${w.pellets}` : ''}${p.explosion ? ` + wybuch ${n(p.explosion.damage)} (r ${p.explosion.radius})` : ''}`,
+      `${n(p.damage, 1)}${w.pellets > 1 ? ` ×${w.pellets}` : ''}${p.explosion ? ` + wybuch ${n(p.explosion.damage)} (r ${p.explosion.radius})` : ''}${p.endBurst ? ` (koniec zasięgu: ${n(p.endBurst.damage)}, r ${p.endBurst.radius})` : ''}`,
       `${n(1 / w.fireInterval, 2)}/s`,
       `${w.magazine}`,
       `${n(w.reloadTime, 2)} s`,
@@ -100,6 +104,10 @@ export function weaponSpecials(c: ContentRegistry): string {
     if (p.explosion)
       s.push(
         `wybuch: ${n(p.explosion.damage)} obrażeń w promieniu ${p.explosion.radius} px (na krawędzi ${pct(p.explosion.edgeFactor)})${p.explosion.strength !== undefined ? `, S${p.explosion.strength} AP${ap(p.explosion.ap)}` : ''}${p.explosion.friendlyFire ? ', <b>rani też marines</b>' : ''}`,
+      );
+    if (p.endBurst)
+      s.push(
+        `wybuch na końcu zasięgu (pudło albo po przebiciu — promień leci do max; nie po wyjściu z areny): ${n(p.endBurst.damage)} obrażeń w promieniu ${p.endBurst.radius} px (na krawędzi ${pct(p.endBurst.edgeFactor)})${p.endBurst.strength !== undefined ? `, S${p.endBurst.strength} AP${ap(p.endBurst.ap)}` : ''}, ${p.endBurst.friendlyFire ? '<b>rani też marines</b>' : 'tylko wrogowie'}`,
       );
     if (w.braceDelay !== undefined)
       s.push(
@@ -329,6 +337,10 @@ export function marineTable(c: ContentRegistry): string {
         'Pancerz (przód / boki / tył)',
         `×${n(MARINE_DIRECTIONAL_ARMOUR.front, 2)} / ×${n(MARINE_DIRECTIONAL_ARMOUR.side, 2)} / ×${n(MARINE_DIRECTIONAL_ARMOUR.rear, 2)} obrażeń`,
       ],
+      [
+        'Postawa obronna — przód',
+        `×${n(MARINE_GUARD.frontMul, 2)} (+${Math.round(MARINE_GUARD.frontArmourBonus * 100)}% pancerza); rykoszet: nie-odbicie ×${n(MARINE_GUARD.nonDeflectFactor, 2)}; trafiony pocisk ×${n(MARINE_GUARD.landedDamageMul, 2)}`,
+      ],
       ['Apteczka', `+${PICKUP.medkitHeal} życia, leży ${PICKUP.lifetime} s`],
       ['Arena', `${c.map.arena.width} × ${c.map.arena.height} px`],
       ['Symulacja', `${TICK_RATE} ticków/s`],
@@ -361,6 +373,37 @@ export function sprintTable(): string {
   );
 }
 
+/** Aim recoil per weapon + movement multipliers (data/recoil.ts). */
+export function recoilTable(c: ContentRegistry): string {
+  const R = MARINE_AIM_RECOIL;
+  const RAD = Math.PI / 180;
+  const rows = c.weaponOrder.map((w) => {
+    const r = weaponRecoil(w.id);
+    return [
+      `${w.slot}. ${esc(w.name)}`,
+      `${n(r.kickDeg, 2)}°`,
+      `${n(r.kickDeg * R.standingMul, 3)}°`,
+      r.kickDistPx ? `${n(r.kickDistPx, 1)} px` : '—',
+      `${n(r.maxDeg, 1)}°`,
+      `${n(recoilRecoveryTime(r), 2)} s`,
+    ];
+  });
+  const note = `Mnożnik: stojąc / w zaparciu ×${n(R.standingMul, 2)}, w pełnym marszu ×${n(R.walkingMul, 2)} (pomiędzy — proporcjonalnie do prędkości). Kierunek kopnięcia losowy, ${pct(0.5 + R.signBias)} w prawo. Limit odchylenia na broń; powrót wykładniczy (70% w podanym czasie). Odchylenie ${deg(1 * RAD)} na ${n(300, 0)} px to ~${n(300 * Math.tan(1 * RAD), 1)} px.`;
+  return (
+    table(
+      [
+        'Broń',
+        'Kopnięcie (marsz)',
+        'Kopnięcie (stojąc)',
+        'Odepchnięcie celownika',
+        'Maks. odchylenie',
+        'Powrót 70%',
+      ],
+      rows,
+    ) + `<p class="muted">${note}</p>`
+  );
+}
+
 /** Directional armour arcs + front-plate ricochet chances (data/armour.ts). */
 export function armourTables(c: ContentRegistry): string {
   const A = MARINE_DIRECTIONAL_ARMOUR;
@@ -390,7 +433,7 @@ export function armourTables(c: ContentRegistry): string {
         esc(p.kind),
         p.explosion ? `wybuch ${n(p.explosion.damage)}` : `${n(p.damage)}`,
         p.explosion ? '—' : `${n(hit, 1)}`,
-        ch > 0 ? pct(ch) : '0% (wybuchowy)',
+        ch > 0 ? pct(ch, 1) : '0% (wybuchowy)',
         p.explosion ? '—' : n(hit * (1 - ch), 2),
       ];
     });
@@ -405,10 +448,30 @@ export function armourTables(c: ContentRegistry): string {
     ],
     rows,
   );
+  const G = MARINE_GUARD;
+  const guard = table(
+    ['Efekt postawy obronnej (stój + trzymanie)', 'Wartość'],
+    [
+      [
+        'Pancerz przedni',
+        `×${n(G.frontMul, 2)} (zamiast ×${n(A.front, 2)}; +${Math.round(G.frontArmourBonus * 100)}%)`,
+      ],
+      [
+        'Szansa rykoszetu',
+        `1 − ${n(G.nonDeflectFactor, 2)}·(1 − baza) — np. baza 50% → ${pct(1 - G.nonDeflectFactor * 0.5, 1)}`,
+      ],
+      [
+        'Pocisk z przodu, który przeszedł',
+        `×${n(G.landedDamageMul, 2)} obrażeń (−${Math.round((1 - G.landedDamageMul) * 100)}%)`,
+      ],
+      ['Sterowanie', 'RMB (PC) / 🛡 GUARD (telefon); koniec przy ruchu'],
+    ],
+  );
   return `${arcs}
-  <p class="muted">Kąt liczony między kierunkiem celowania marine a kierunkiem do źródła: atakujący (wręcz, szarża), kierunek, z którego nadleciał pocisk, albo środek wybuchu. Obrażenia bez kierunku (przegrzanie plazmy) — ×${n(A.side, 2)}. Wybuchy i ciosy wręcz też dostają mnożnik strony, ale nie mają rykoszetu. Mnożnik działa razem z synapsą (obrażenia × synapsa × strona).</p>
+  <p class="muted">Kąt liczony między kierunkiem celowania marine a kierunkiem do źródła: atakujący (wręcz, szarża), kierunek, z którego nadleciał pocisk, albo środek wybuchu. Obrażenia bez kierunku (przegrzanie plazmy) — ×${n(A.side, 2)}. Wybuchy i ciosy wręcz też dostają mnożnik strony, ale nie mają rykoszetu. Mnożnik działa razem z synapsą (obrażenia × synapsa × strona). Stałe: <code>data/armour.ts</code>, postawa: <code>data/guard.ts</code>.</p>
   <h4>Rykoszet z przedniego pancerza</h4>${defl}
-  <p class="muted">Szansa = ${pct(D.maxChance)} × (obrażenia najsłabszego pocisku Tyranidów / obrażenia tego pocisku), w granicach ${pct(D.minChance)}–${pct(D.maxChance)}. Liczą się bazowe obrażenia pocisku (synapsa ich nie zmienia). Odbity pocisk nie rani nikogo, odlatuje lustrzanie od pancerza (±${n((D.jitter * 180) / Math.PI, 0)}°, ${pct(D.speedMul)} prędkości) i znika po ${n(D.fadeTime, 2)} s.</p>`;
+  <p class="muted">Szansa jest stała dla każdego rodzaju pocisku (tabela w danych gry); nowy pocisk bez wpisu dostaje ${pct(D.defaultChance, 1)}, pociski wybuchowe 0%. Synapsa jej nie zmienia. Odbity pocisk nie rani nikogo, odlatuje lustrzanie od pancerza (±${n((D.jitter * 180) / Math.PI, 0)}°, ${pct(D.speedMul)} prędkości) i znika po ${n(D.fadeTime, 2)} s.</p>
+  <h4>Postawa obronna</h4>${guard}`;
 }
 
 /** Full compendium body (inside the <details>). */
@@ -419,6 +482,7 @@ export function compendiumHtml(c: ContentRegistry): string {
   <h3>Sprint</h3>${sprintTable()}
   <h3>Pancerz kierunkowy i rykoszety</h3>${armourTables(c)}
   <h3>Bronie</h3>${weaponTable(c)}
+  <h3>Odrzut (odchylenie celownika)</h3>${recoilTable(c)}
   <h4>Cechy specjalne</h4>${weaponSpecials(c)}
   <h3>Tyranidzi</h3>${enemyTable(c)}
   <h3>DPS broni vs każdy Tyranid (ciągły ogień, bez przeładowań)</h3>${dpsMatrix(c, 'burst')}

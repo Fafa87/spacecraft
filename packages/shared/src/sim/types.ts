@@ -22,6 +22,11 @@ export interface PlayerInput {
    * (missing = not sprinting).
    */
   sprint?: boolean;
+  /**
+   * Defensive stance held (dev). Optional so protocol v5 inputs without it stay valid
+   * (missing = not guarding). Only takes effect while standing still.
+   */
+  guard?: boolean;
 }
 
 export const emptyInput = (): PlayerInput => ({
@@ -74,8 +79,14 @@ export interface Player {
   stillTime: number;
   /** Firing slow-down 0..1: 1 while the trigger is held, eases to 0 after release. */
   fireSlow: number;
+  /** Aim recoil: lateral offset (rad) added to the input aim, recovers over time (data/recoil.ts). */
+  recoil: number;
+  /** Last tick's movement as a fraction 0..1 of the current walking speed (recoil scaling). */
+  moveFrac: number;
   /** Sprint stamina / state / post-sprint weapon delay (see data/sprint.ts). */
   sprint: SprintState;
+  /** Defensive stance active this tick (input held + standing still; see data/guard.ts). */
+  guarding: boolean;
   damageDealt: number;
   /** Survival second this marine died (or null). */
   diedAt: number | null;
@@ -143,6 +154,8 @@ export interface Projectile {
   drag: number;
   knockback: number;
   explosion?: ExplosionSpec;
+  /** Burst where the shot runs out of range, if it hit nothing (data ProjectileSpec.endBurst). */
+  endBurst?: ExplosionSpec;
   /**
    * Start of the swept-collision segment for the next tick. Set on spawn to the
    * shooter's position so point-blank targets inside the muzzle offset are hit.
@@ -174,7 +187,8 @@ export type GameEvent =
   | { e: 'shot'; p: number; w: string; x: number; y: number; a: number; s?: 1 }
   | { e: 'hit'; x: number; y: number; k: string }
   | { e: 'die'; t: string; x: number; y: number }
-  | { e: 'boom'; x: number; y: number; r: number }
+  /** `k` = projectile kind for a end-of-range burst (e.g. 'melta'); absent = a normal blast. */
+  | { e: 'boom'; x: number; y: number; r: number; k?: string }
   | { e: 'spit'; x: number; y: number; t?: string }
   | { e: 'bite'; p: number; t?: string }
   | { e: 'overheat'; p: number }

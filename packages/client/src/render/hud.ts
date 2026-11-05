@@ -49,6 +49,8 @@ export interface HudState {
   fps: number;
   /** Crosshair in CSS px (mouse cursor, or projected aim on touch); null = hidden. */
   crosshair: { x: number; y: number } | null;
+  /** Input point before aim recoil (faint dot while the reticle is kicked off it). */
+  crosshairRaw?: { x: number; y: number } | null;
   /** Touch sticks when the touch layout is active; null = PC layout. */
   touch: StickView[] | null;
   /** Safe-area insets in CSS px (notches). */
@@ -302,7 +304,7 @@ export class Hud {
     } else if (s.me) this.health(ctx, h, s.me);
     if (L.team) this.team(ctx, s, L.team.top, L.team.cols, L.team.rowH);
     if (s.me) {
-      if (touch) this.weaponColumn(ctx, w, s.me);
+      if (touch) this.weaponColumn(ctx, w, h, s.me);
       else this.weapons(ctx, w, h, s.me);
       if (s.me.br && s.me.st === 'alive') this.braced(ctx, w, touch ? h - 24 : h - 122, s.now ?? 0);
     }
@@ -342,7 +344,10 @@ export class Hud {
     // sticks + crosshair are positioned in raw CSS px
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (s.touch) this.sticks(ctx, cw, ch, s.touch, s.me?.st === 'alive');
-    if (s.me?.st === 'alive' && s.crosshair) this.crosshair(ctx, s.crosshair);
+    if (s.me?.st === 'alive' && s.crosshair) {
+      if (s.crosshairRaw) this.crosshairDot(ctx, s.crosshairRaw);
+      this.crosshair(ctx, s.crosshair);
+    }
     ctx.restore();
   }
 
@@ -841,14 +846,21 @@ export class Hud {
     ctx.fillText(me.sp ? 'SPRINT' : 'READY…', x + cw / 2, y + ch / 2 + 4);
   }
 
-  /** Touch layout: big tappable weapon slots stacked under the minimap on the right. */
-  private weaponColumn(ctx: CanvasRenderingContext2D, w: number, me: PlayerSnap): void {
+  /**
+   * Touch layout: big tappable weapon slots stacked under the minimap on the right.
+   * Leaves a bottom-right pocket (~66 CSS px) clear for the holdable GUARD button so the two
+   * never overlap on short landscape phones.
+   */
+  private weaponColumn(ctx: CanvasRenderingContext2D, w: number, h: number, me: PlayerSnap): void {
     const order = this.content.weaponOrder;
     const cols = order.length > 5 ? 2 : 1;
     const rows = Math.ceil(order.length / cols);
     const cw = cols > 1 ? 84 : 92;
-    const chh = 56;
     const y0 = 164;
+    const guardPocket = 66; // .guard-btn height + gap above the home indicator
+    const avail = Math.max(40, h - y0 - guardPocket);
+    const gap = 6;
+    const chh = Math.min(56, Math.max(40, Math.floor((avail - (rows - 1) * gap) / rows)));
     order.forEach((def, i) => {
       const col = cols > 1 ? i % cols : 0;
       const row = cols > 1 ? Math.floor(i / cols) : i;
@@ -1175,6 +1187,14 @@ export class Hud {
       ctx.textAlign = 'left';
       ctx.fillText(s.debug, 12, h - 96);
     }
+  }
+
+  /** Where the mouse / stick really points while recoil has kicked the reticle off it. */
+  private crosshairDot(ctx: CanvasRenderingContext2D, pos: { x: number; y: number }): void {
+    ctx.fillStyle = 'rgba(240,216,144,0.45)';
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 2, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   private crosshair(ctx: CanvasRenderingContext2D, pos: { x: number; y: number }): void {
